@@ -3,222 +3,384 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BK GOMOKU : REAL 3D</title>
+<title>BK 오목 : Human-like Balance</title>
 <style>
-  /* 1. 전체 분위기 및 배경 설정 */
-  body {
-    /* 어둡고 고급스러운 스튜디오 조명 분위기 */
-    background: radial-gradient(circle at center, #333, #0a0a0a 80%);
-    color: #e0e0e0; margin: 0; padding: 20px 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    touch-action: manipulation; box-sizing: border-box;
+  /* 1. 레이아웃 */
+  body{
+    margin:0;
+    padding:14px 0;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    touch-action:manipulation;
+    box-sizing:border-box;
+
+    /* 다다미 + 우측 천 느낌 (사진 근사) */
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,0) 70%,
+        rgba(0,0,0,0.35) 70%,
+        rgba(0,0,0,0.60) 100%
+      ),
+      repeating-linear-gradient(90deg, #b8a77f 0 14px, #b1a078 14px 28px),
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 2px, rgba(0,0,0,0) 2px 14px);
+    color:#1b120a;
   }
 
-  header { 
-    width: 92vw; max-width: 480px; margin-bottom: 25px; 
-    display: flex; flex-direction: column; align-items: center;
-  }
-  
-  h1 { 
-    margin: 0 0 10px 0; font-size: 2.8rem; color: #d4af37; /* 프리미엄 골드 */
-    letter-spacing: 5px; text-transform: uppercase; font-weight: 300; 
-    text-shadow: 0 2px 15px rgba(212, 175, 55, 0.5); /* 골드 빛번짐 효과 */
-  }
-  
-  #status { 
-    font-weight: 700; font-size: 1.4rem; color: #fff;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    background: rgba(255,255,255,0.05); padding: 10px 25px; border-radius: 50px;
-    backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-  }
-  .turn-indicator { font-size: 0.9rem; color: #aaa; font-weight: normal; }
-  .opponent-rank {
-    font-size: 0.9rem; color: #d4af37; font-weight: normal;
-    margin-left: 5px; padding-left: 15px; border-left: 1px solid #444;
+  header{
+    width:92vw;
+    max-width:560px;
+    margin-bottom:10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding-top:6px;
   }
 
-  .hidden { display: none !important; }
-
-  /* 2. 메뉴 화면 (럭셔리 테마) */
-  #menu { 
-    background: linear-gradient(145deg, #1e1e1e, #0f0f0f); 
-    padding: 50px 30px; border-radius: 24px; 
-    border: 1px solid #333; margin-top: 5vh;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.8); 
-    text-align: center; width: 90%; max-width: 400px; 
-  }
-  #menu h1 { font-size: 3rem; margin-bottom: 5px; }
-  .menu-sub { color: #888; margin-bottom: 40px; letter-spacing: 2px; font-size: 0.9rem; }
-  .option-group { margin-bottom: 35px; }
-  .option-title { font-weight: 600; margin-bottom: 15px; display: block; color: #bbb; font-size: 1rem; letter-spacing: 1px; }
-  
-  .color-group { display: flex; justify-content: center; gap: 15px; }
-  .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-
-  .choice-btn { 
-    padding: 15px 0; border: 1px solid #444; 
-    background: linear-gradient(to bottom, #2a2a2a, #1a1a1a); color: #999;
-    cursor: pointer; border-radius: 14px; 
-    font-size: 1rem; font-weight: 600; transition: all 0.2s ease; 
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
-  }
-  .choice-btn.selected { 
-    border-color: #d4af37; background: linear-gradient(to bottom, #d4af37, #aa8c2c); 
-    color: #111; text-shadow: 0 1px 0 rgba(255,255,255,0.3);
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5), inset 0 1px 0 rgba(255,255,255,0.4); transform: translateY(-2px);
-  }
-  
-  #start-btn { 
-    width: 100%; padding: 20px; 
-    background: linear-gradient(to bottom, #d4af37, #aa8c2c); color: #221; 
-    border: none; border-radius: 18px; 
-    font-size: 1.3rem; font-weight: 800; cursor: pointer; 
-    box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
-    margin-top: 20px; text-shadow: 0 1px 0 rgba(255,255,255,0.3);
-  }
-  #start-btn:active { transform: scale(0.98); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3); }
-
-  /* 3. ★핵심★ 리얼 3D 바둑판 구현 */
-  #game-wrapper {
-    position: relative; width: 92vw; height: 92vw;
-    max-width: 480px; max-height: 480px;
-    
-    /* A. 리얼 원목 텍스처 (CSS 그라데이션으로 나무결 표현) */
-    background-color: #cfa36e; /* 기본 나무색 */
-    background-image: 
-        /* 미세한 나무결 */
-        repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0px, rgba(0,0,0,0.04) 2px, transparent 2px, transparent 4px),
-        /* 큰 옹이/결 느낌 */
-        radial-gradient(ellipse at 70% 30%, rgba(100, 70, 40, 0.1) 0%, transparent 60%),
-        radial-gradient(ellipse at 30% 70%, rgba(120, 80, 50, 0.1) 0%, transparent 70%);
-    
-    /* B. 두께감과 입체감을 만드는 테두리 및 그림자 */
-    border-radius: 6px;
-    /* 테두리: 두꺼운 나무 프레임 느낌 */
-    border: 12px solid transparent;
-    border-image: linear-gradient(to bottom right, #9e7040, #704a20) 1;
-    box-shadow: 
-        /* 내부로 파인듯한 깊이감 */
-        inset 0 0 30px rgba(0,0,0,0.4),
-        /* 바닥에 닿는 진한 그림자 */
-        0 20px 40px rgba(0,0,0,0.8),
-        /* 전체적으로 퍼지는 빛번짐 */
-        0 0 100px rgba(212, 175, 55, 0.1);
-        
-    margin-bottom: 30px; 
-    /* 약간의 원근감 (선택사항, 모바일에서 과하면 뺄 것) */
-    /* transform: perspective(1000px) rotateX(5deg); */
+  h1{
+    margin:0 0 10px 0;
+    font-size:1.35rem;
+    color:rgba(0,0,0,0.55);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    font-weight:800;
   }
 
-  /* 격자 라인: 나무에 파인듯한 음각 효과 */
-  .line { position: absolute; background-color: #4a3525; opacity: 0.9; }
-  .h-line { 
-    height: 1px; left: 4%; right: 4%; 
-    box-shadow: 0 1px 0 rgba(255,255,255,0.1); /* 아래쪽에 밝은 선을 줘서 파인 느낌 */
-  }
-  .v-line { 
-    width: 1px; top: 4%; bottom: 4%; 
-    box-shadow: 1px 0 0 rgba(255,255,255,0.1);
-  }
-  
-  /* 화점 */
-  .dot { 
-    position: absolute; width: 7px; height: 7px; 
-    background: #4a3525; border-radius: 50%; 
-    transform: translate(-50%, -50%); pointer-events: none; 
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.5), 0 1px 1px rgba(255,255,255,0.2);
-  }
-  .click-area { position: absolute; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; }
+  #status{
+    font-weight:900;
+    font-size:1.2rem;
+    color:#1b120a;
+    margin-bottom:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
 
-  /* 4. ★핵심★ 극사실주의 3D 바둑돌 */
-  .stone { 
-    position: absolute; border-radius: 50%; 
-    transform: translate(-50%, -50%); z-index: 20; 
-    pointer-events: none; 
-    /* 돌이 떠보이게 만드는 깊고 부드러운 그림자 */
-    filter: drop-shadow(3px 5px 4px rgba(0,0,0,0.6));
+    background:rgba(255,255,255,0.55);
+    border:1px solid rgba(0,0,0,0.14);
+    border-radius:14px;
+    padding:10px 14px;
+    box-shadow:0 8px 18px rgba(0,0,0,0.12);
   }
-  
-  /* 흑돌: 매끈한 오석 느낌 (강한 하이라이트) */
-  .stone.black { 
-    /* 3단 그라데이션: 빛반사 -> 본체 -> 어두운 밑면 */
-    background: radial-gradient(circle at 30% 30%, #777, #1a1a1a 40%, #000 85%);
-    box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.3);
-  }
-  
-  /* 백돌: 조개/신소재 느낌 (부드러운 난반사) */
-  .stone.white { 
-    background: radial-gradient(circle at 30% 30%, #ffffff, #e0e0e0 40%, #b0b0b0 85%);
-    box-shadow: inset 0 -3px 5px rgba(0,0,0,0.2), inset 0 2px 3px rgba(255,255,255,0.8);
+  .turn-indicator{ font-size:0.95rem; color:rgba(0,0,0,0.55); font-weight:800; }
+  .opponent-rank{
+    font-size:0.9rem;
+    color:#7a4b14;
+    font-weight:900;
+    opacity:0.95;
+    margin-left:5px;
+    padding-left:10px;
+    border-left:1px solid rgba(0,0,0,0.18);
   }
 
-  /* 마지막 수 표시 (붉은색 보석 효과) */
-  .last-move::after { 
-    content: ''; position: absolute; top: 50%; left: 50%; width: 22%; height: 22%; 
-    border-radius: 50%; transform: translate(-50%, -50%); 
-    background: radial-gradient(circle at 30% 30%, #ff6b6b, #ff0000);
-    box-shadow: 0 0 10px #ff0000, inset 0 1px 3px rgba(255,255,255,0.5);
+  .hidden{ display:none !important; }
+
+  /* 2. 메뉴 화면 (기존 유지) */
+  #menu{
+    background:#1c1c1e;
+    padding:30px 20px;
+    border-radius:24px;
+    border:1px solid #333;
+    margin-top:5vh;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+    text-align:center;
+    width:90%;
+    max-width:380px;
+    color:#fff;
+  }
+  .option-group{ margin-bottom:25px; }
+  .option-title{ font-weight:700; margin-bottom:12px; display:block; color:#aaa; font-size:0.95rem; }
+  .color-group{ display:flex; justify-content:center; gap:10px; }
+
+  .level-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:8px;
   }
 
-  /* 훈수 마커 (빛나는 링) */
-  .hint-marker {
-    position: absolute; 
-    border: 3px solid rgba(212, 175, 55, 0.8); 
-    border-radius: 50%; transform: translate(-50%, -50%); z-index: 15;
-    pointer-events: none; box-shadow: 0 0 20px rgba(212, 175, 55, 0.8), inset 0 0 10px rgba(212, 175, 55, 0.5);
-    animation: pulse 1.5s infinite ease-in-out;
+  .choice-btn{
+    padding:12px 0;
+    border:1px solid #444;
+    background:#2c2c2e;
+    color:#bbb;
+    cursor:pointer;
+    border-radius:10px;
+    font-size:0.9rem;
+    font-weight:800;
+    transition:all 0.2s;
   }
-  @keyframes pulse {
-    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
-    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+  .choice-btn.selected{
+    border-color:#fff;
+    background:#fff;
+    color:#000;
+    box-shadow:0 0 10px rgba(255,255,255,0.25);
   }
 
-  /* 5. 하단 컨트롤 바 (골드 & 메탈) */
-  .control-bar {
-    width: 92vw; max-width: 480px;
-    display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px;
+  #start-btn{
+    width:100%;
+    padding:18px;
+    background:linear-gradient(135deg, #0A84FF, #0055AA);
+    color:white;
+    border:none;
+    border-radius:16px;
+    font-size:1.2rem;
+    font-weight:900;
+    cursor:pointer;
+    box-shadow:0 10px 24px rgba(10,132,255,0.35);
+    margin-top:10px;
+    touch-action:manipulation;
   }
-  .game-btn {
-    flex: 1; padding: 16px 0; border-radius: 14px;
-    font-size: 1.1rem; font-weight: 700;
-    cursor: pointer; transition: all 0.15s;
-    display: flex; justify-content: center; align-items: center; gap: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  
-  #hint-btn { 
-    background: linear-gradient(135deg, #333, #222); color: #d4af37; border-color: #d4af37;
-  }
-  #hint-btn:active { background: #d4af37; color: #000; transform: translateY(2px); }
-  
-  #undo-btn { 
-    background: linear-gradient(135deg, #2c2c2e, #1c1c1e); color: #ccc; 
-  }
-  #undo-btn:active { background: #eee; color: #000; transform: translateY(2px); }
-  
-  #exit-btn {
-    width: 92vw; max-width: 480px; padding: 15px 0;
-    background: transparent; border: 2px solid #333; color: #888;
-    border-radius: 14px; font-size: 1rem; cursor: pointer; font-weight: 600;
-    margin-bottom: 30px; transition: all 0.2s;
-  }
-  #exit-btn:hover { border-color: #555; color: #aaa; }
-  #exit-btn:active { background: #333; color: #fff; }
+  #start-btn:active{ transform:scale(0.96); }
 
+  /* 3. 사진 느낌의 "장면" */
+  #scene{
+    position:relative;
+    width:92vw;
+    max-width:560px;
+    aspect-ratio:1/1;
+    margin-bottom:14px;
+    overflow:visible;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* 4. 게임판(나무 보드 질감 + 두꺼운 프레임) */
+  #game-wrapper{
+    position:relative;
+    width:100%;
+    height:100%;
+    border-radius:4px;
+
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.16), rgba(0,0,0,0.10)),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 10px, rgba(0,0,0,0.03) 10px 20px),
+      linear-gradient(90deg, #d7aa66, #c98f49);
+
+    border:10px solid #7a4a1f;
+    outline:2px solid rgba(0,0,0,0.35);
+    box-shadow:
+      0 22px 50px rgba(0,0,0,0.30),
+      inset 0 0 0 2px rgba(0,0,0,0.32),
+      inset 0 0 28px rgba(0,0,0,0.10);
+  }
+  #game-wrapper::before{
+    content:"";
+    position:absolute;
+    inset:14px;
+    border:2px solid rgba(0,0,0,0.45);
+    pointer-events:none;
+  }
+
+  /* 바둑돌 그릇(장식) */
+  .bowl{
+    position:absolute;
+    width:96px;
+    height:96px;
+    border-radius:50%;
+    pointer-events:none;
+    filter:drop-shadow(0 10px 16px rgba(0,0,0,0.35));
+    z-index:1;
+  }
+  .bowl::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    box-shadow:
+      inset 0 0 0 3px rgba(255,255,255,0.18),
+      inset 0 -10px 20px rgba(0,0,0,0.18);
+  }
+  .bowl.white{
+    left:-46px;
+    top:22px;
+    background:radial-gradient(circle at 30% 30%, #f3e6cf 0%, #caa272 55%, #8b5830 100%);
+  }
+  .bowl.black{
+    right:-46px;
+    bottom:-46px;
+    background:radial-gradient(circle at 30% 30%, #f3e6cf 0%, #caa272 55%, #8b5830 100%);
+  }
+  .bowl.white::after{
+    content:"";
+    position:absolute;
+    inset:18px 16px 16px 18px;
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 24% 28%, #ffffff 0 7px, rgba(255,255,255,0) 8px),
+      radial-gradient(circle at 54% 34%, #f2f2f2 0 7px, rgba(255,255,255,0) 8px),
+      radial-gradient(circle at 40% 60%, #ededed 0 7px, rgba(255,255,255,0) 8px),
+      radial-gradient(circle at 70% 66%, #fafafa 0 7px, rgba(255,255,255,0) 8px),
+      radial-gradient(circle at 32% 82%, #f1f1f1 0 7px, rgba(255,255,255,0) 8px);
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,0.25));
+  }
+  .bowl.black::after{
+    content:"";
+    position:absolute;
+    inset:18px 16px 16px 18px;
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 28% 30%, #3a3a3a 0 7px, rgba(0,0,0,0) 8px),
+      radial-gradient(circle at 55% 36%, #111111 0 7px, rgba(0,0,0,0) 8px),
+      radial-gradient(circle at 42% 60%, #1a1a1a 0 7px, rgba(0,0,0,0) 8px),
+      radial-gradient(circle at 70% 66%, #0b0b0b 0 7px, rgba(0,0,0,0) 8px),
+      radial-gradient(circle at 34% 82%, #1a1a1a 0 7px, rgba(0,0,0,0) 8px);
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,0.35));
+  }
+
+  /* 그리드 */
+  .line{
+    position:absolute;
+    background-color:rgba(0,0,0,0.78);
+    pointer-events:none;
+    z-index:5;
+  }
+  .h-line{ height:2px; }
+  .v-line{ width:2px; }
+
+  .dot{
+    position:absolute;
+    width:7px;
+    height:7px;
+    background:rgba(0,0,0,0.78);
+    border-radius:50%;
+    transform:translate(-50%, -50%);
+    pointer-events:none;
+    z-index:6;
+  }
+
+  /* 좌표 */
+  .coord{
+    position:absolute;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-weight:900;
+    font-size:clamp(10px, 1.7vw, 14px);
+    color:rgba(0,0,0,0.55);
+    pointer-events:none;
+    user-select:none;
+    z-index:7;
+  }
+  .coord.y{ transform:translate(-50%, -50%); }
+  .coord.x{ transform:translate(-50%, -50%); }
+
+  .click-area{
+    position:absolute;
+    transform:translate(-50%, -50%);
+    z-index:10;
+    cursor:pointer;
+  }
+
+  /* 돌 디자인 (사진 톤에 맞게 약간 보정) */
+  .stone{
+    position:absolute;
+    border-radius:50%;
+    transform:translate(-50%, -50%);
+    z-index:20;
+    pointer-events:none;
+    box-shadow:
+      0 8px 10px rgba(0,0,0,0.22),
+      inset 0 2px 3px rgba(255,255,255,0.20);
+  }
+  .stone.black{
+    background:radial-gradient(circle at 30% 28%, #5a5a5a 0%, #1a1a1a 45%, #000 85%);
+  }
+  .stone.white{
+    background:radial-gradient(circle at 30% 28%, #ffffff 0%, #f0f0f0 55%, #bcbcbc 100%);
+    border:1px solid rgba(0,0,0,0.08);
+  }
+
+  /* 마지막 수(빨간 점) */
+  .last-move::after{
+    content:'';
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:16%;
+    height:16%;
+    border-radius:50%;
+    transform:translate(-50%, -50%);
+    background-color:#d42020;
+    box-shadow:0 0 6px rgba(212,32,32,0.85);
+  }
+
+  /* 훈수 마커 */
+  .hint-marker{
+    position:absolute;
+    border:3px dotted rgba(0,0,0,0.85);
+    border-radius:50%;
+    transform:translate(-50%, -50%);
+    z-index:15;
+    pointer-events:none;
+    box-shadow:0 0 10px rgba(0,0,0,0.35);
+    animation:pulse 1.5s infinite;
+  }
+  @keyframes pulse{
+    0%{ transform:translate(-50%, -50%) scale(0.9); opacity:0.55; }
+    50%{ transform:translate(-50%, -50%) scale(1.1); opacity:1; }
+    100%{ transform:translate(-50%, -50%) scale(0.9); opacity:0.55; }
+  }
+
+  /* 하단 버튼 */
+  .control-bar{
+    width:92vw;
+    max-width:560px;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .game-btn{
+    flex:1;
+    padding:16px 0;
+    border-radius:16px;
+    font-size:1.05rem;
+    font-weight:900;
+    cursor:pointer;
+    transition:all 0.15s;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:6px;
+  }
+  #hint-btn{
+    background:rgba(255,255,255,0.65);
+    border:1px solid rgba(0,0,0,0.20);
+    color:#1b120a;
+  }
+  #hint-btn:active{ transform:translateY(2px); background:rgba(255,255,255,0.85); }
+  #undo-btn{
+    background:rgba(0,0,0,0.55);
+    border:1px solid rgba(255,255,255,0.18);
+    color:#fff;
+  }
+  #undo-btn:active{ transform:translateY(2px); background:rgba(0,0,0,0.70); }
+
+  #exit-btn{
+    width:92vw;
+    max-width:560px;
+    padding:14px 0;
+    background:rgba(0,0,0,0.55);
+    border:1px solid rgba(255,255,255,0.18);
+    color:#fff;
+    border-radius:12px;
+    font-size:0.95rem;
+    cursor:pointer;
+    font-weight:900;
+  }
+  #exit-btn:active{ background:rgba(0,0,0,0.70); }
 </style>
 </head>
 <body>
 
 <div id="menu">
-  <h1>BK GOMOKU</h1>
-  <div class="menu-sub">THE REAL 3D EDITION</div>
-  
+  <h2 style="color:white; margin-bottom:30px;">BK 오목</h2>
+
   <div class="option-group">
-    <span class="option-title">내 돌 선택</span>
+    <span class="option-title">내 돌 선택 (자유 오목)</span>
     <div class="color-group">
       <button class="choice-btn selected" style="flex:1;" onclick="setOpt('color','black',this)">흑(●)</button>
       <button class="choice-btn" style="flex:1;" onclick="setOpt('color','white',this)">백(○)</button>
@@ -226,7 +388,7 @@
   </div>
 
   <div class="option-group">
-    <span class="option-title">AI 난이도 (사람같은 밸런스)</span>
+    <span class="option-title">상대 등급 (6급=입문 / 1급=최강)</span>
     <div class="level-grid">
       <button class="choice-btn" onclick="setOpt('level',1,this)">1등급</button>
       <button class="choice-btn" onclick="setOpt('level',2,this)">2등급</button>
@@ -236,7 +398,7 @@
       <button class="choice-btn selected" onclick="setOpt('level',6,this)">6등급</button>
     </div>
   </div>
-  
+
   <button id="start-btn" onclick="startGame()" ontouchstart="startGame()">대국 시작</button>
 </div>
 
@@ -246,7 +408,11 @@
     <div id="status"></div>
   </header>
 
-  <div id="game-wrapper"></div>
+  <div id="scene">
+    <div class="bowl white" aria-hidden="true"></div>
+    <div class="bowl black" aria-hidden="true"></div>
+    <div id="game-wrapper"></div>
+  </div>
 
   <div class="control-bar">
     <button id="hint-btn" class="game-btn" onclick="showHint()">✨ 훈수 보기</button>
@@ -256,19 +422,17 @@
 </div>
 
 <script>
-  // =================================================================
-  // [로직은 기존 Human-like Balance 버전과 완전히 동일합니다]
-  // 디자인(CSS)만 변경되었으므로, 스크립트 부분은 그대로 유지합니다.
-  // =================================================================
   const SIZE = 15;
-  const PADDING = 5.5; // 3D 프레임 두께 고려 여백 조정
+
+  /* 사진처럼 좌표 표시 공간이 필요해서 패딩 확장 */
+  const PADDING = 7.0;
   const ACTIVE_WIDTH = 100 - (PADDING * 2);
   const STEP = ACTIVE_WIDTH / (SIZE - 1);
-  const STONE_SIZE = STEP * 0.92; // 돌 크기 최적화
+  const STONE_SIZE = STEP * 0.92;
 
   let boardData = [], myColor = 'black', aiColor = 'white', level = 6, currPlayer = 'black', gameOver = false;
-  let moveHistory = []; 
-  let aiTimer = null;   
+  let moveHistory = [];
+  let aiTimer = null;
   let audioCtx = null;
 
   function initAudio() {
@@ -280,24 +444,19 @@
 
   function playClickSound() {
     try {
-      if (!audioCtx) return; 
-      // 더 묵직하고 울리는 착수음으로 변경
-      const bufferSize = audioCtx.sampleRate * 0.15; 
+      if (!audioCtx) return;
+      const bufferSize = audioCtx.sampleRate * 0.1;
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize/4));
-      
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
       const noise = audioCtx.createBufferSource();
       noise.buffer = buffer;
-      
       const filter = audioCtx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 600; // 더 낮은 주파수로 묵직하게
-      
+      filter.frequency.value = 1000;
       const gain = audioCtx.createGain();
       gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-      
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
       noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
       noise.start();
     } catch(e) {}
@@ -327,26 +486,62 @@
     gameEl.classList.remove('hidden');
     boardData = Array(SIZE).fill(null).map(() => Array(SIZE).fill(null));
     wrapper.innerHTML = '';
-    
-    currPlayer = 'black'; 
-    gameOver = false; 
-    moveHistory = []; 
+
+    currPlayer = 'black';
+    gameOver = false;
+    moveHistory = [];
     if(aiTimer) clearTimeout(aiTimer);
-    
+
     updateStatus();
 
-    // 격자 그리기
+    /* 그리드 라인 */
     for(let i=0; i<SIZE; i++) {
       let pos = getPos(i) + '%';
-      let h = document.createElement('div'); h.className='line h-line'; h.style.top=pos; wrapper.appendChild(h);
-      let v = document.createElement('div'); v.className='line v-line'; v.style.left=pos; wrapper.appendChild(v);
+
+      let h = document.createElement('div');
+      h.className='line h-line';
+      h.style.top=pos;
+      h.style.left=PADDING + '%';
+      h.style.right=PADDING + '%';
+      wrapper.appendChild(h);
+
+      let v = document.createElement('div');
+      v.className='line v-line';
+      v.style.left=pos;
+      v.style.top=PADDING + '%';
+      v.style.bottom=PADDING + '%';
+      wrapper.appendChild(v);
     }
-    // 화점
-    [3, 7, 11].forEach(r => [3, 7, 11].forEach(c => {
+
+    /* 사진처럼 4개 별점(점)만 표시 */
+    [[3,3],[3,11],[11,3],[11,11]].forEach(([r,c]) => {
       let dot = document.createElement('div'); dot.className='dot';
-      dot.style.top=getPos(r)+'%'; dot.style.left=getPos(c)+'%'; wrapper.appendChild(dot);
-    }));
-    // 클릭 영역
+      dot.style.top=getPos(r)+'%';
+      dot.style.left=getPos(c)+'%';
+      wrapper.appendChild(dot);
+    });
+
+    /* 좌표(A~O / 1~15) */
+    const letters = "ABCDEFGHIJKLMNO".split('');
+    for(let i=0; i<SIZE; i++){
+      // 좌측 숫자: 위=15, 아래=1
+      let y = document.createElement('div');
+      y.className='coord y';
+      y.textContent = String(SIZE - i);
+      y.style.top = getPos(i) + '%';
+      y.style.left = (PADDING - 3.3) + '%';
+      wrapper.appendChild(y);
+
+      // 하단 문자: A~O
+      let x = document.createElement('div');
+      x.className='coord x';
+      x.textContent = letters[i] || '';
+      x.style.left = getPos(i) + '%';
+      x.style.top = (100 - PADDING + 3.3) + '%';
+      wrapper.appendChild(x);
+    }
+
+    /* 클릭 영역 */
     for(let r=0; r<SIZE; r++) {
       for(let c=0; c<SIZE; c++) {
         let area = document.createElement('div'); area.className='click-area';
@@ -356,23 +551,25 @@
         wrapper.appendChild(area);
       }
     }
-    
+
     if(myColor === 'white') {
-        aiTimer = setTimeout(aiMove, 600);
+      aiTimer = setTimeout(aiMove, 600);
     }
   }
 
   function goBackToMenu() {
-    gameEl.classList.add('hidden'); menuEl.classList.remove('hidden'); wrapper.innerHTML = '';
+    gameEl.classList.add('hidden');
+    menuEl.classList.remove('hidden');
+    wrapper.innerHTML = '';
   }
 
   function userMove(r, c) {
     if(gameOver || currPlayer !== myColor || boardData[r][c]) return;
     placeStone(r, c, myColor);
     removeHint();
-    if(!gameOver) { 
-      currPlayer = aiColor; updateStatus(); 
-      aiTimer = setTimeout(aiMove, 500); 
+    if(!gameOver) {
+      currPlayer = aiColor; updateStatus();
+      aiTimer = setTimeout(aiMove, 500);
     }
   }
 
@@ -380,7 +577,7 @@
     boardData[r][c] = color;
     let prevLast = document.querySelector('.last-move');
     if(prevLast) prevLast.classList.remove('last-move');
-    
+
     let stone = document.createElement('div');
     stone.className = `stone ${color} last-move`;
     stone.style.width = STONE_SIZE + '%';
@@ -388,21 +585,21 @@
     stone.style.top = getPos(r) + '%';
     stone.style.left = getPos(c) + '%';
     wrapper.appendChild(stone);
-    
+
     moveHistory.push({r, c, color, el: stone});
     playClickSound();
-    
+
     if(checkWin(r, c, color)) {
       gameOver = true;
       let winText = (color==='black'?"흑(●) 승리!":"백(○) 승리!");
-      statusEl.innerHTML = `<span style="color:#d4af37; text-shadow:0 0 10px gold;">🏆 ${winText}</span>`;
+      statusEl.innerHTML = `<span style="color:#7a4b14">${winText}</span>`;
       setTimeout(()=>alert(winText), 200);
     }
   }
 
   function aiMove() {
     if(gameOver) return;
-    let bm = computeBestMove(aiColor, level); 
+    let bm = computeBestMove(aiColor, level);
     placeStone(bm.r, bm.c, aiColor);
     if(!gameOver) { currPlayer = myColor; updateStatus(); }
   }
@@ -411,34 +608,28 @@
     if(moveHistory.length === 0) return;
     if(aiTimer) clearTimeout(aiTimer);
     removeHint(); gameOver = false;
-    
+
     let lastMove = moveHistory[moveHistory.length-1];
-    if (lastMove.color === aiColor) { 
-        popStone(); 
-        if(moveHistory.length > 0) popStone(); 
-    } else { 
-        popStone(); 
-    }
-    
+    if (lastMove.color === aiColor) { popStone(); if(moveHistory.length > 0) popStone(); }
+    else { popStone(); }
+
     currPlayer = myColor; updateStatus();
-    
+
     let prevLast = document.querySelector('.last-move');
-    if(prevLast) prevLast.classList.remove('last-move'); 
-    if(moveHistory.length > 0) {
-        moveHistory[moveHistory.length-1].el.classList.add('last-move');
-    }
+    if(prevLast) prevLast.classList.remove('last-move');
+    if(moveHistory.length > 0) moveHistory[moveHistory.length-1].el.classList.add('last-move');
   }
 
   function popStone() {
     let item = moveHistory.pop();
-    boardData[item.r][item.c] = null; 
-    item.el.remove(); 
+    boardData[item.r][item.c] = null;
+    item.el.remove();
   }
 
   function showHint() {
     if(gameOver) return;
     removeHint();
-    let best = computeBestMove(currPlayer, 0); // 0 = 훈수
+    let best = computeBestMove(currPlayer, 0);
     let marker = document.createElement('div');
     marker.className = 'hint-marker';
     marker.style.width = STONE_SIZE + '%';
@@ -457,42 +648,45 @@
     let str = "";
     for(let k=-4; k<=4; k++) {
       let nr = r + dr*k, nc = c + dc*k;
-      if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) str += "2"; 
+      if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) str += "2";
       else {
         let val = boardData[nr][nc];
         if(val === null) str += "0";
         else if(val === color) str += "1";
-        else str += "2"; 
+        else str += "2";
       }
     }
     return str;
   }
 
-  // [AI 로직 유지]
   function computeBestMove(atkColor, lv) {
     let defColor = (atkColor === 'black' ? 'white' : 'black');
     let maxS = -Infinity, cands = [];
     let center = 7;
-    let defW = 1.0; 
-    
+
+    let defW = 1.0;
     switch(lv) {
-        case 0: defW = 1.5; break; 
-        case 1: defW = 1.0; break; 
-        case 2: defW = 0.8; break; 
-        case 3: defW = 0.6; break; 
-        case 4: defW = 0.4; break; 
-        case 5: defW = 0.2; break; 
-        case 6: defW = 0.05; break;
+      case 0: defW = 1.5; break;
+      case 1: defW = 1.0; break;
+      case 2: defW = 0.8; break;
+      case 3: defW = 0.6; break;
+      case 4: defW = 0.4; break;
+      case 5: defW = 0.2; break;
+      case 6: defW = 0.05; break;
     }
 
     for(let r=0; r<SIZE; r++) {
       for(let c=0; c<SIZE; c++) {
         if(boardData[r][c]) continue;
+
         let atkScore = getPatternScore(r, c, atkColor);
         let defScore = getPatternScore(r, c, defColor);
-        let total = atkScore + (defScore * defW); 
-        total -= (Math.abs(r-center) + Math.abs(c-center)); 
-        if(lv !== 0) total += Math.random() * 5; 
+
+        let total = atkScore + (defScore * defW);
+        total -= (Math.abs(r-center) + Math.abs(c-center));
+
+        if(lv !== 0) total += Math.random() * 5;
+
         if(total > maxS) { maxS=total; cands=[{r,c}]; }
         else if(total === maxS) cands.push({r,c});
       }
@@ -525,17 +719,17 @@
     });
   }
   function isValid(r, c, color) { return r>=0 && r<SIZE && c>=0 && c<SIZE && boardData[r][c]===color; }
-  
-  function updateStatus() { 
-    if(!gameOver) { 
+
+  function updateStatus() {
+    if(!gameOver) {
       let colorText = currPlayer==='black'?'흑(●)':'백(○)';
-      let colorStyle = currPlayer==='black'?'#fff':'#ccc'; 
+      let colorStyle = currPlayer==='black'?'#111':'#333';
       statusEl.innerHTML = `
-        <span style="color:${colorStyle}">${colorText}</span> 
+        <span style="color:${colorStyle}">${colorText}</span>
         <span class="turn-indicator">차례</span>
         <span class="opponent-rank">(상대: ${level}등급)</span>
       `;
-    } 
+    }
   }
 </script>
 </body>
