@@ -3,182 +3,210 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BK GOMOKU : 3D Premium</title>
+<title>BK GOMOKU : REAL 3D</title>
 <style>
-  /* 1. 레이아웃 & 배경 */
+  /* 1. 전체 분위기 및 배경 설정 */
   body {
-    background-color: #1a1a1a; /* 배경을 더 어둡게 하여 바둑판 강조 */
-    background-image: radial-gradient(circle at 50% 30%, #2a2a2a, #000);
-    color: #fff; margin: 0; padding: 10px 0;
+    /* 어둡고 고급스러운 스튜디오 조명 분위기 */
+    background: radial-gradient(circle at center, #333, #0a0a0a 80%);
+    color: #e0e0e0; margin: 0; padding: 20px 0;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     touch-action: manipulation; box-sizing: border-box;
   }
 
   header { 
-    width: 92vw; max-width: 450px; margin-bottom: 20px; 
-    display: flex; flex-direction: column; align-items: center; padding-top: 15px;
+    width: 92vw; max-width: 480px; margin-bottom: 25px; 
+    display: flex; flex-direction: column; align-items: center;
   }
   
   h1 { 
-    margin: 0 0 5px 0; font-size: 2.4rem; color: #d4af37; /* 금색 텍스트 */
-    letter-spacing: 3px; text-transform: uppercase; font-weight: 300; 
-    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    margin: 0 0 10px 0; font-size: 2.8rem; color: #d4af37; /* 프리미엄 골드 */
+    letter-spacing: 5px; text-transform: uppercase; font-weight: 300; 
+    text-shadow: 0 2px 15px rgba(212, 175, 55, 0.5); /* 골드 빛번짐 효과 */
   }
   
   #status { 
-    font-weight: 700; font-size: 1.4rem; color: #eee;
-    margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: rgba(255,255,255,0.1); padding: 8px 20px; border-radius: 30px;
-    backdrop-filter: blur(5px); box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    font-weight: 700; font-size: 1.4rem; color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(255,255,255,0.05); padding: 10px 25px; border-radius: 50px;
+    backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
   }
-  .turn-indicator { font-size: 0.9rem; color: #bbb; font-weight: normal; }
+  .turn-indicator { font-size: 0.9rem; color: #aaa; font-weight: normal; }
   .opponent-rank {
-    font-size: 0.85rem; color: #FFD700; font-weight: normal; opacity: 0.9;
-    margin-left: 5px; padding-left: 10px; border-left: 1px solid #555;
+    font-size: 0.9rem; color: #d4af37; font-weight: normal;
+    margin-left: 5px; padding-left: 15px; border-left: 1px solid #444;
   }
 
   .hidden { display: none !important; }
 
-  /* 2. 메뉴 화면 */
+  /* 2. 메뉴 화면 (럭셔리 테마) */
   #menu { 
-    background: linear-gradient(145deg, #222, #111); padding: 40px 25px; border-radius: 20px; 
+    background: linear-gradient(145deg, #1e1e1e, #0f0f0f); 
+    padding: 50px 30px; border-radius: 24px; 
     border: 1px solid #333; margin-top: 5vh;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6); 
-    text-align: center; width: 90%; max-width: 380px; 
+    box-shadow: 0 30px 80px rgba(0,0,0,0.8); 
+    text-align: center; width: 90%; max-width: 400px; 
   }
-  .option-group { margin-bottom: 30px; }
-  .option-title { font-weight: 600; margin-bottom: 15px; display: block; color: #aaa; font-size: 0.95rem; letter-spacing: 1px; }
+  #menu h1 { font-size: 3rem; margin-bottom: 5px; }
+  .menu-sub { color: #888; margin-bottom: 40px; letter-spacing: 2px; font-size: 0.9rem; }
+  .option-group { margin-bottom: 35px; }
+  .option-title { font-weight: 600; margin-bottom: 15px; display: block; color: #bbb; font-size: 1rem; letter-spacing: 1px; }
   
-  .color-group { display: flex; justify-content: center; gap: 12px; }
-  .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .color-group { display: flex; justify-content: center; gap: 15px; }
+  .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
   .choice-btn { 
-    padding: 14px 0; border: 1px solid #444; 
-    background: #2a2a2a; color: #888;
-    cursor: pointer; border-radius: 12px; 
-    font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease; 
+    padding: 15px 0; border: 1px solid #444; 
+    background: linear-gradient(to bottom, #2a2a2a, #1a1a1a); color: #999;
+    cursor: pointer; border-radius: 14px; 
+    font-size: 1rem; font-weight: 600; transition: all 0.2s ease; 
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
   }
   .choice-btn.selected { 
-    border-color: #d4af37; background: #d4af37; color: #000; 
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); transform: translateY(-2px);
+    border-color: #d4af37; background: linear-gradient(to bottom, #d4af37, #aa8c2c); 
+    color: #111; text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5), inset 0 1px 0 rgba(255,255,255,0.4); transform: translateY(-2px);
   }
   
   #start-btn { 
-    width: 100%; padding: 18px; 
-    background: linear-gradient(135deg, #d4af37, #aa8c2c); color: #000; 
-    border: none; border-radius: 15px; 
-    font-size: 1.2rem; font-weight: 800; cursor: pointer; 
-    box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3); margin-top: 10px;
-    touch-action: manipulation; transition: transform 0.1s;
+    width: 100%; padding: 20px; 
+    background: linear-gradient(to bottom, #d4af37, #aa8c2c); color: #221; 
+    border: none; border-radius: 18px; 
+    font-size: 1.3rem; font-weight: 800; cursor: pointer; 
+    box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    margin-top: 20px; text-shadow: 0 1px 0 rgba(255,255,255,0.3);
   }
-  #start-btn:active { transform: scale(0.97); }
+  #start-btn:active { transform: scale(0.98); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3); }
 
-  /* 3. 3D 바둑판 (핵심 디자인) */
+  /* 3. ★핵심★ 리얼 3D 바둑판 구현 */
   #game-wrapper {
     position: relative; width: 92vw; height: 92vw;
-    max-width: 450px; max-height: 450px;
-    /* 리얼 우드 텍스처 효과 */
-    background-color: #e6c288;
-    background-image: 
-        linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.03) 75%, rgba(0,0,0,0.03)), 
-        linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.03) 75%, rgba(0,0,0,0.03));
-    background-size: 20px 20px;
-    background-position: 0 0, 10px 10px;
+    max-width: 480px; max-height: 480px;
     
-    border: 8px solid #8b5a2b; /* 나무 프레임 */
-    border-radius: 4px;
+    /* A. 리얼 원목 텍스처 (CSS 그라데이션으로 나무결 표현) */
+    background-color: #cfa36e; /* 기본 나무색 */
+    background-image: 
+        /* 미세한 나무결 */
+        repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0px, rgba(0,0,0,0.04) 2px, transparent 2px, transparent 4px),
+        /* 큰 옹이/결 느낌 */
+        radial-gradient(ellipse at 70% 30%, rgba(100, 70, 40, 0.1) 0%, transparent 60%),
+        radial-gradient(ellipse at 30% 70%, rgba(120, 80, 50, 0.1) 0%, transparent 70%);
+    
+    /* B. 두께감과 입체감을 만드는 테두리 및 그림자 */
+    border-radius: 6px;
+    /* 테두리: 두꺼운 나무 프레임 느낌 */
+    border: 12px solid transparent;
+    border-image: linear-gradient(to bottom right, #9e7040, #704a20) 1;
     box-shadow: 
-        inset 0 0 20px rgba(0,0,0,0.2), /* 내부 그림자 */
-        0 20px 50px rgba(0,0,0,0.6); /* 외부 그림자 */
-    margin-bottom: 25px; 
+        /* 내부로 파인듯한 깊이감 */
+        inset 0 0 30px rgba(0,0,0,0.4),
+        /* 바닥에 닿는 진한 그림자 */
+        0 20px 40px rgba(0,0,0,0.8),
+        /* 전체적으로 퍼지는 빛번짐 */
+        0 0 100px rgba(212, 175, 55, 0.1);
+        
+    margin-bottom: 30px; 
+    /* 약간의 원근감 (선택사항, 모바일에서 과하면 뺄 것) */
+    /* transform: perspective(1000px) rotateX(5deg); */
   }
 
-  /* 격자 라인 (더 선명하게) */
-  .line { position: absolute; background-color: #2c1e12; pointer-events: none; opacity: 0.8; }
-  .h-line { height: 1px; left: 5%; right: 5%; } /* 끝부분 살짝 띄움 */
-  .v-line { width: 1px; top: 5%; bottom: 5%; }
+  /* 격자 라인: 나무에 파인듯한 음각 효과 */
+  .line { position: absolute; background-color: #4a3525; opacity: 0.9; }
+  .h-line { 
+    height: 1px; left: 4%; right: 4%; 
+    box-shadow: 0 1px 0 rgba(255,255,255,0.1); /* 아래쪽에 밝은 선을 줘서 파인 느낌 */
+  }
+  .v-line { 
+    width: 1px; top: 4%; bottom: 4%; 
+    box-shadow: 1px 0 0 rgba(255,255,255,0.1);
+  }
   
-  /* 화점 (작고 진하게) */
+  /* 화점 */
   .dot { 
-    position: absolute; width: 6px; height: 6px; 
-    background: #2c1e12; border-radius: 50%; 
+    position: absolute; width: 7px; height: 7px; 
+    background: #4a3525; border-radius: 50%; 
     transform: translate(-50%, -50%); pointer-events: none; 
-    box-shadow: 0 1px 1px rgba(255,255,255,0.2);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.5), 0 1px 1px rgba(255,255,255,0.2);
   }
   .click-area { position: absolute; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; }
 
-  /* 4. 3D 바둑돌 디자인 (하이라이트 & 그림자) */
+  /* 4. ★핵심★ 극사실주의 3D 바둑돌 */
   .stone { 
     position: absolute; border-radius: 50%; 
     transform: translate(-50%, -50%); z-index: 20; 
     pointer-events: none; 
-    /* 돌 그림자 (입체감의 핵심) */
-    box-shadow: 2px 3px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(0,0,0,0.2);
+    /* 돌이 떠보이게 만드는 깊고 부드러운 그림자 */
+    filter: drop-shadow(3px 5px 4px rgba(0,0,0,0.6));
   }
   
-  /* 흑돌: 매트한 블랙 + 상단 광원 */
+  /* 흑돌: 매끈한 오석 느낌 (강한 하이라이트) */
   .stone.black { 
-    background: radial-gradient(circle at 35% 35%, #555, #111 20%, #000 80%);
+    /* 3단 그라데이션: 빛반사 -> 본체 -> 어두운 밑면 */
+    background: radial-gradient(circle at 30% 30%, #777, #1a1a1a 40%, #000 85%);
+    box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.3);
   }
   
-  /* 백돌: 부드러운 화이트 + 상단 광원 */
+  /* 백돌: 조개/신소재 느낌 (부드러운 난반사) */
   .stone.white { 
-    background: radial-gradient(circle at 35% 35%, #fff, #eee 30%, #ccc 80%);
+    background: radial-gradient(circle at 30% 30%, #ffffff, #e0e0e0 40%, #b0b0b0 85%);
+    box-shadow: inset 0 -3px 5px rgba(0,0,0,0.2), inset 0 2px 3px rgba(255,255,255,0.8);
   }
 
-  /* 마지막 수 표시 (붉은 보석 느낌) */
+  /* 마지막 수 표시 (붉은색 보석 효과) */
   .last-move::after { 
-    content: ''; position: absolute; top: 50%; left: 50%; width: 20%; height: 20%; 
+    content: ''; position: absolute; top: 50%; left: 50%; width: 22%; height: 22%; 
     border-radius: 50%; transform: translate(-50%, -50%); 
-    background-color: #ff3b30; 
-    box-shadow: 0 0 8px #ff0000;
+    background: radial-gradient(circle at 30% 30%, #ff6b6b, #ff0000);
+    box-shadow: 0 0 10px #ff0000, inset 0 1px 3px rgba(255,255,255,0.5);
   }
 
-  /* 훈수 마커 */
+  /* 훈수 마커 (빛나는 링) */
   .hint-marker {
     position: absolute; 
-    border: 2px solid rgba(0,0,0,0.5); 
-    background: rgba(255, 215, 0, 0.3);
+    border: 3px solid rgba(212, 175, 55, 0.8); 
     border-radius: 50%; transform: translate(-50%, -50%); z-index: 15;
-    pointer-events: none; box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-    animation: pulse 1.5s infinite;
+    pointer-events: none; box-shadow: 0 0 20px rgba(212, 175, 55, 0.8), inset 0 0 10px rgba(212, 175, 55, 0.5);
+    animation: pulse 1.5s infinite ease-in-out;
   }
   @keyframes pulse {
-    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
-    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
   }
 
-  /* 5. 하단 컨트롤 바 */
+  /* 5. 하단 컨트롤 바 (골드 & 메탈) */
   .control-bar {
-    width: 92vw; max-width: 450px;
-    display: flex; justify-content: space-between; gap: 12px; margin-bottom: 15px;
+    width: 92vw; max-width: 480px;
+    display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px;
   }
   .game-btn {
-    flex: 1; padding: 16px 0; border-radius: 12px;
-    font-size: 1.05rem; font-weight: 700;
+    flex: 1; padding: 16px 0; border-radius: 14px;
+    font-size: 1.1rem; font-weight: 700;
     cursor: pointer; transition: all 0.15s;
-    display: flex; justify-content: center; align-items: center; gap: 6px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
   }
   
   #hint-btn { 
-    background: #333; border: 1px solid #d4af37; color: #d4af37; 
+    background: linear-gradient(135deg, #333, #222); color: #d4af37; border-color: #d4af37;
   }
   #hint-btn:active { background: #d4af37; color: #000; transform: translateY(2px); }
   
   #undo-btn { 
-    background: #2c2c2e; border: 1px solid #555; color: #eee; 
+    background: linear-gradient(135deg, #2c2c2e, #1c1c1e); color: #ccc; 
   }
   #undo-btn:active { background: #eee; color: #000; transform: translateY(2px); }
   
   #exit-btn {
-    width: 92vw; max-width: 450px; padding: 14px 0;
-    background: transparent; border: 1px solid #444; color: #888;
-    border-radius: 12px; font-size: 0.9rem; cursor: pointer; font-weight: 500;
-    margin-bottom: 20px;
+    width: 92vw; max-width: 480px; padding: 15px 0;
+    background: transparent; border: 2px solid #333; color: #888;
+    border-radius: 14px; font-size: 1rem; cursor: pointer; font-weight: 600;
+    margin-bottom: 30px; transition: all 0.2s;
   }
+  #exit-btn:hover { border-color: #555; color: #aaa; }
   #exit-btn:active { background: #333; color: #fff; }
 
 </style>
@@ -187,7 +215,7 @@
 
 <div id="menu">
   <h1>BK GOMOKU</h1>
-  <p style="color:#666; font-size:0.8rem; margin-bottom:30px;">PREMIUM 3D EDITION</p>
+  <div class="menu-sub">THE REAL 3D EDITION</div>
   
   <div class="option-group">
     <span class="option-title">내 돌 선택</span>
@@ -198,7 +226,7 @@
   </div>
 
   <div class="option-group">
-    <span class="option-title">AI 난이도</span>
+    <span class="option-title">AI 난이도 (사람같은 밸런스)</span>
     <div class="level-grid">
       <button class="choice-btn" onclick="setOpt('level',1,this)">1등급</button>
       <button class="choice-btn" onclick="setOpt('level',2,this)">2등급</button>
@@ -228,12 +256,15 @@
 </div>
 
 <script>
-  // [로직은 기존 Human-like Balance 버전과 동일]
+  // =================================================================
+  // [로직은 기존 Human-like Balance 버전과 완전히 동일합니다]
+  // 디자인(CSS)만 변경되었으므로, 스크립트 부분은 그대로 유지합니다.
+  // =================================================================
   const SIZE = 15;
-  const PADDING = 5.0; // 3D 보드는 여백을 조금 더 줌
+  const PADDING = 5.5; // 3D 프레임 두께 고려 여백 조정
   const ACTIVE_WIDTH = 100 - (PADDING * 2);
   const STEP = ACTIVE_WIDTH / (SIZE - 1);
-  const STONE_SIZE = STEP * 0.9; // 돌 크기를 살짝 키워 입체감 강조
+  const STONE_SIZE = STEP * 0.92; // 돌 크기 최적화
 
   let boardData = [], myColor = 'black', aiColor = 'white', level = 6, currPlayer = 'black', gameOver = false;
   let moveHistory = []; 
@@ -250,19 +281,23 @@
   function playClickSound() {
     try {
       if (!audioCtx) return; 
-      const bufferSize = audioCtx.sampleRate * 0.1; 
+      // 더 묵직하고 울리는 착수음으로 변경
+      const bufferSize = audioCtx.sampleRate * 0.15; 
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize/4));
+      
       const noise = audioCtx.createBufferSource();
       noise.buffer = buffer;
-      // 소리를 조금 더 둔탁하게(나무에 돌 놓는 소리 흉내) 필터 조정
+      
       const filter = audioCtx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 800; 
+      filter.frequency.value = 600; // 더 낮은 주파수로 묵직하게
+      
       const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      
       noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
       noise.start();
     } catch(e) {}
@@ -306,7 +341,7 @@
       let h = document.createElement('div'); h.className='line h-line'; h.style.top=pos; wrapper.appendChild(h);
       let v = document.createElement('div'); v.className='line v-line'; v.style.left=pos; wrapper.appendChild(v);
     }
-    // 화점 (3, 7, 11)
+    // 화점
     [3, 7, 11].forEach(r => [3, 7, 11].forEach(c => {
       let dot = document.createElement('div'); dot.className='dot';
       dot.style.top=getPos(r)+'%'; dot.style.left=getPos(c)+'%'; wrapper.appendChild(dot);
@@ -360,7 +395,6 @@
     if(checkWin(r, c, color)) {
       gameOver = true;
       let winText = (color==='black'?"흑(●) 승리!":"백(○) 승리!");
-      // 승리 메시지도 고급스럽게
       statusEl.innerHTML = `<span style="color:#d4af37; text-shadow:0 0 10px gold;">🏆 ${winText}</span>`;
       setTimeout(()=>alert(winText), 200);
     }
@@ -404,7 +438,7 @@
   function showHint() {
     if(gameOver) return;
     removeHint();
-    let best = computeBestMove(currPlayer, 0); // 0 = 훈수 (God Mode)
+    let best = computeBestMove(currPlayer, 0); // 0 = 훈수
     let marker = document.createElement('div');
     marker.className = 'hint-marker';
     marker.style.width = STONE_SIZE + '%';
@@ -434,12 +468,11 @@
     return str;
   }
 
-  // [AI 로직 유지: Human-like]
+  // [AI 로직 유지]
   function computeBestMove(atkColor, lv) {
     let defColor = (atkColor === 'black' ? 'white' : 'black');
     let maxS = -Infinity, cands = [];
     let center = 7;
-
     let defW = 1.0; 
     
     switch(lv) {
@@ -449,21 +482,17 @@
         case 3: defW = 0.6; break; 
         case 4: defW = 0.4; break; 
         case 5: defW = 0.2; break; 
-        case 6: defW = 0.05; break; // 방어 거의 안함
+        case 6: defW = 0.05; break;
     }
 
     for(let r=0; r<SIZE; r++) {
       for(let c=0; c<SIZE; c++) {
         if(boardData[r][c]) continue;
-        
         let atkScore = getPatternScore(r, c, atkColor);
         let defScore = getPatternScore(r, c, defColor);
-        
         let total = atkScore + (defScore * defW); 
         total -= (Math.abs(r-center) + Math.abs(c-center)); 
-
         if(lv !== 0) total += Math.random() * 5; 
-
         if(total > maxS) { maxS=total; cands=[{r,c}]; }
         else if(total === maxS) cands.push({r,c});
       }
