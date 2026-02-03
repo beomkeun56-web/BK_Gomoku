@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BK 오목 : Human-like Balance</title>
+<style>
+  /* 1. 레이아웃 */
+  body {
+    background-color: #050505; color: #fff; margin: 0; padding: 10px 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    touch-action: manipulation; box-sizing: border-box;
+  }
+
+  header { 
+    width: 92vw; max-width: 450px; margin-bottom: 15px; 
+    display: flex; flex-direction: column; align-items: center; padding-top: 20px;
+  }
+  
+  h1 { 
+    margin: 0 0 10px 0; font-size: 2.2rem; color: #888; 
+    letter-spacing: 4px; text-transform: uppercase; font-weight: 200; 
+  }
+  
+  #status { 
+    font-weight: 800; font-size: 1.6rem; color: #fff;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4); margin-bottom: 5px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .turn-indicator { font-size: 1rem; color: #aaa; font-weight: normal; }
+  .opponent-rank {
+    font-size: 0.9rem; color: #FFD700; font-weight: normal; opacity: 0.9;
+    margin-left: 5px; padding-left: 10px; border-left: 1px solid #444;
+  }
+
+  .hidden { display: none !important; }
+
+  /* 2. 메뉴 화면 */
+  #menu { 
+    background: #1c1c1e; padding: 30px 20px; border-radius: 24px; 
+    border: 1px solid #333; margin-top: 5vh;
+    box-shadow: 0 20px 50px rgba(255,255,255,0.05); 
+    text-align: center; width: 90%; max-width: 380px; 
+  }
+  .option-group { margin-bottom: 25px; }
+  .option-title { font-weight: 600; margin-bottom: 12px; display: block; color: #aaa; font-size: 0.95rem; }
+  
+  .color-group { display: flex; justify-content: center; gap: 10px; }
+  
+  /* 6등급 그리드 레이아웃 */
+  .level-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+
+  .choice-btn { 
+    padding: 12px 0; border: 1px solid #444; 
+    background: #2c2c2e; color: #888;
+    cursor: pointer; border-radius: 10px; 
+    font-size: 0.9rem; font-weight: 600; transition: all 0.2s; 
+  }
+  .choice-btn.selected { 
+    border-color: #fff; background: #fff; color: #000; 
+    box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  }
+  
+  #start-btn { 
+    width: 100%; padding: 18px; 
+    background: linear-gradient(135deg, #0A84FF, #0055AA); color: white; 
+    border: none; border-radius: 16px; 
+    font-size: 1.2rem; font-weight: 700; cursor: pointer; 
+    box-shadow: 0 5px 20px rgba(10, 132, 255, 0.4); margin-top: 10px;
+    touch-action: manipulation;
+  }
+  #start-btn:active { transform: scale(0.96); }
+
+  /* 3. 게임판 */
+  #game-wrapper {
+    position: relative; width: 92vw; height: 92vw;
+    max-width: 450px; max-height: 450px;
+    background-color: #dcb35c; border: 4px solid #5d4037; border-radius: 6px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); margin-bottom: 15px; 
+  }
+  .line { position: absolute; background-color: #000; pointer-events: none; opacity: 0.7; }
+  .h-line { height: 1px; left: 4%; right: 4%; }
+  .v-line { width: 1px; top: 4%; bottom: 4%; }
+  .dot { position: absolute; width: 5px; height: 5px; background: #000; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+  .click-area { position: absolute; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; }
+
+  /* 돌 디자인 */
+  .stone { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; box-shadow: 2px 3px 5px rgba(0,0,0,0.4); }
+  .stone.black { background: radial-gradient(circle at 35% 35%, #666 0%, #000 85%); }
+  .stone.white { background: radial-gradient(circle at 35% 35%, #fff 0%, #ddd 60%, #999 100%); }
+  .last-move::after { content: ''; position: absolute; top: 50%; left: 50%; width: 20%; height: 20%; border-radius: 50%; transform: translate(-50%, -50%); background-color: #ff3b30; box-shadow: 0 0 6px #ff0000; }
+
+  /* 훈수 마커 */
+  .hint-marker {
+    position: absolute; border: 3px dotted #000; 
+    border-radius: 50%; transform: translate(-50%, -50%); z-index: 15;
+    pointer-events: none; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+  }
+
+  /* 하단 버튼 */
+  .control-bar {
+    width: 92vw; max-width: 450px;
+    display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px;
+  }
+  .game-btn {
+    flex: 1; padding: 18px 0; border-radius: 16px;
+    font-size: 1.1rem; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; justify-content: center; align-items: center; gap: 6px;
+  }
+  #hint-btn { background: #333; border: 1px solid #FFD700; color: #FFD700; }
+  #hint-btn:active { background: #FFD700; color: #000; transform: translateY(2px); }
+  #undo-btn { background: #2c2c2e; border: 1px solid #666; color: #eee; }
+  #undo-btn:active { background: #eee; color: #000; transform: translateY(2px); }
+  #exit-btn {
+    width: 92vw; max-width: 450px; padding: 14px 0;
+    background: transparent; border: 1px solid #444; color: #888;
+    border-radius: 12px; font-size: 0.95rem; cursor: pointer; font-weight: 600;
+  }
+  #exit-btn:active { background: #333; color: #fff; }
+
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <h2 style="color:white; margin-bottom:30px;">BK 오목</h2>
+  
+  <div class="option-group">
+    <span class="option-title">내 돌 선택 (자유 오목)</span>
+    <div class="color-group">
+      <button class="choice-btn selected" style="flex:1;" onclick="setOpt('color','black',this)">흑(●)</button>
+      <button class="choice-btn" style="flex:1;" onclick="setOpt('color','white',this)">백(○)</button>
+    </div>
+  </div>
+
+  <div class="option-group">
+    <span class="option-title">상대 등급 (6급=입문 / 1급=최강)</span>
+    <div class="level-grid">
+      <button class="choice-btn" onclick="setOpt('level',1,this)">1등급</button>
+      <button class="choice-btn" onclick="setOpt('level',2,this)">2등급</button>
+      <button class="choice-btn" onclick="setOpt('level',3,this)">3등급</button>
+      <button class="choice-btn" onclick="setOpt('level',4,this)">4등급</button>
+      <button class="choice-btn" onclick="setOpt('level',5,this)">5등급</button>
+      <button class="choice-btn selected" onclick="setOpt('level',6,this)">6등급</button>
+    </div>
+  </div>
+  
+  <button id="start-btn" onclick="startGame()" ontouchstart="startGame()">대국 시작</button>
+</div>
+
+<div id="game" class="hidden">
+  <header>
+    <h1>BK GOMOKU</h1>
+    <div id="status"></div>
+  </header>
+
+  <div id="game-wrapper"></div>
+
+  <div class="control-bar">
+    <button id="hint-btn" class="game-btn" onclick="showHint()">✨ 훈수 보기</button>
+    <button id="undo-btn" class="game-btn" onclick="undoMove()">↩ 무르기</button>
+  </div>
+  <button id="exit-btn" onclick="goBackToMenu()">메뉴로 나가기</button>
+</div>
+
+<script>
+  const SIZE = 15;
+  const PADDING = 4.0; 
+  const ACTIVE_WIDTH = 100 - (PADDING * 2);
+  const STEP = ACTIVE_WIDTH / (SIZE - 1);
+  const STONE_SIZE = STEP * 0.85; 
+
+  let boardData = [], myColor = 'black', aiColor = 'white', level = 6, currPlayer = 'black', gameOver = false;
+  let moveHistory = []; 
+  let aiTimer = null;   
+  let audioCtx = null;
+
+  function initAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch(e) {}
+  }
+
+  function playClickSound() {
+    try {
+      if (!audioCtx) return; 
+      const bufferSize = audioCtx.sampleRate * 0.1; 
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1000;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+      noise.start();
+    } catch(e) {}
+  }
+
+  const wrapper = document.getElementById('game-wrapper');
+  const statusEl = document.getElementById('status');
+  const menuEl = document.getElementById('menu');
+  const gameEl = document.getElementById('game');
+
+  function getPos(idx) { return PADDING + (idx * STEP); }
+
+  function setOpt(type, val, btn) {
+    if(window.event) window.event.stopPropagation();
+    if(type==='color') { myColor=val; aiColor=(val==='black'?'white':'black'); }
+    if(type==='level') level = parseInt(val);
+    let container = btn.parentElement;
+    container.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+
+  function startGame() {
+    if(window.event) window.event.preventDefault();
+    initAudio();
+
+    menuEl.classList.add('hidden');
+    gameEl.classList.remove('hidden');
+    boardData = Array(SIZE).fill(null).map(() => Array(SIZE).fill(null));
+    wrapper.innerHTML = '';
+    
+    currPlayer = 'black'; 
+    gameOver = false; 
+    moveHistory = []; 
+    if(aiTimer) clearTimeout(aiTimer);
+    
+    updateStatus();
+
+    for(let i=0; i<SIZE; i++) {
+      let pos = getPos(i) + '%';
+      let h = document.createElement('div'); h.className='line h-line'; h.style.top=pos; wrapper.appendChild(h);
+      let v = document.createElement('div'); v.className='line v-line'; v.style.left=pos; wrapper.appendChild(v);
+    }
+    [3, 7, 11].forEach(r => [3, 7, 11].forEach(c => {
+      let dot = document.createElement('div'); dot.className='dot';
+      dot.style.top=getPos(r)+'%'; dot.style.left=getPos(c)+'%'; wrapper.appendChild(dot);
+    }));
+    for(let r=0; r<SIZE; r++) {
+      for(let c=0; c<SIZE; c++) {
+        let area = document.createElement('div'); area.className='click-area';
+        area.style.width = STEP + '%'; area.style.height = STEP + '%';
+        area.style.top=getPos(r)+'%'; area.style.left=getPos(c)+'%';
+        area.onclick = () => userMove(r, c);
+        wrapper.appendChild(area);
+      }
+    }
+    
+    if(myColor === 'white') {
+        aiTimer = setTimeout(aiMove, 600);
+    }
+  }
+
+  function goBackToMenu() {
+    gameEl.classList.add('hidden'); menuEl.classList.remove('hidden'); wrapper.innerHTML = '';
+  }
+
+  function userMove(r, c) {
+    if(gameOver || currPlayer !== myColor || boardData[r][c]) return;
+    placeStone(r, c, myColor);
+    removeHint();
+    if(!gameOver) { 
+      currPlayer = aiColor; updateStatus(); 
+      aiTimer = setTimeout(aiMove, 500); 
+    }
+  }
+
+  function placeStone(r, c, color) {
+    boardData[r][c] = color;
+    let prevLast = document.querySelector('.last-move');
+    if(prevLast) prevLast.classList.remove('last-move');
+    let stone = document.createElement('div');
+    stone.className = `stone ${color} last-move`;
+    stone.style.width = STONE_SIZE + '%';
+    stone.style.height = STONE_SIZE + '%';
+    stone.style.top = getPos(r) + '%';
+    stone.style.left = getPos(c) + '%';
+    wrapper.appendChild(stone);
+    moveHistory.push({r, c, color, el: stone});
+    playClickSound();
+    if(checkWin(r, c, color)) {
+      gameOver = true;
+      let winText = (color==='black'?"흑(●) 승리!":"백(○) 승리!");
+      statusEl.innerHTML = `<span style="color:#FFD700">${winText}</span>`;
+      setTimeout(()=>alert(winText), 200);
+    }
+  }
+
+  function aiMove() {
+    if(gameOver) return;
+    let bm = computeBestMove(aiColor, level); 
+    placeStone(bm.r, bm.c, aiColor);
+    if(!gameOver) { currPlayer = myColor; updateStatus(); }
+  }
+
+  function undoMove() {
+    if(moveHistory.length === 0) return;
+    if(aiTimer) clearTimeout(aiTimer);
+    removeHint(); gameOver = false;
+    let lastMove = moveHistory[moveHistory.length-1];
+    if (lastMove.color === aiColor) { popStone(); if(moveHistory.length > 0) popStone(); } 
+    else { popStone(); }
+    currPlayer = myColor; updateStatus();
+    let prevLast = document.querySelector('.last-move');
+    if(prevLast) prevLast.classList.remove('last-move'); 
+    if(moveHistory.length > 0) moveHistory[moveHistory.length-1].el.classList.add('last-move');
+  }
+
+  function popStone() {
+    let item = moveHistory.pop();
+    boardData[item.r][item.c] = null; 
+    item.el.remove(); 
+  }
+
+  function showHint() {
+    if(gameOver) return;
+    removeHint();
+    let best = computeBestMove(currPlayer, 0); // 0 = 훈수 (God Mode)
+    let marker = document.createElement('div');
+    marker.className = 'hint-marker';
+    marker.style.width = STONE_SIZE + '%';
+    marker.style.height = STONE_SIZE + '%';
+    marker.style.top = getPos(best.r) + '%';
+    marker.style.left = getPos(best.c) + '%';
+    wrapper.appendChild(marker);
+  }
+
+  function removeHint() {
+    let exist = document.querySelector('.hint-marker');
+    if(exist) exist.remove();
+  }
+
+  function getLineStr(r, c, dr, dc, color) {
+    let str = "";
+    for(let k=-4; k<=4; k++) {
+      let nr = r + dr*k, nc = c + dc*k;
+      if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) str += "2"; 
+      else {
+        let val = boardData[nr][nc];
+        if(val === null) str += "0";
+        else if(val === color) str += "1";
+        else str += "2"; 
+      }
+    }
+    return str;
+  }
+
+  // [수정된 AI 로직] 사람처럼 행동
+  function computeBestMove(atkColor, lv) {
+    let defColor = (atkColor === 'black' ? 'white' : 'black');
+    let maxS = -Infinity, cands = [];
+    let center = 7;
+
+    // 등급별 가중치 설정 (랜덤 노이즈 대폭 삭제)
+    let defW = 1.0; 
+    
+    switch(lv) {
+        case 0: defW = 1.5; break;  // 훈수: 방어 매우 잘함
+        case 1: defW = 1.0; break;  // 1등급: 공수 균형
+        case 2: defW = 0.8; break;  // 2등급
+        case 3: defW = 0.6; break;  // 3등급
+        case 4: defW = 0.4; break;  // 4등급: 방어 약함
+        case 5: defW = 0.2; break;  // 5등급: 공격 위주
+        case 6: defW = 0.05; break; // 6등급: 방어 무시 (공격만 함)
+    }
+
+    for(let r=0; r<SIZE; r++) {
+      for(let c=0; c<SIZE; c++) {
+        if(boardData[r][c]) continue;
+        
+        let atkScore = getPatternScore(r, c, atkColor);
+        let defScore = getPatternScore(r, c, defColor);
+        
+        // 5~6등급은 방어 점수를 거의 무시함 -> 중앙이나 자기 공격 라인에 둠
+        // 이상한 구석에 두지 않도록 '중앙 선호도'는 유지
+        let total = atkScore + (defScore * defW); 
+        total -= (Math.abs(r-center) + Math.abs(c-center)); 
+
+        // 아주 약간의 랜덤성 (동점 상황에서만 다양성 부여)
+        if(lv !== 0) total += Math.random() * 5; 
+
+        if(total > maxS) { maxS=total; cands=[{r,c}]; }
+        else if(total === maxS) cands.push({r,c});
+      }
+    }
+    return cands.length ? cands[Math.floor(Math.random()*cands.length)] : {r:7,c:7};
+  }
+
+  function getPatternScore(r, c, stoneColor) {
+    let totalScore = 0;
+    const directions = [[0,1], [1,0], [1,1], [1,-1]];
+    directions.forEach(d => {
+      let lineStr = getLineStr(r, c, d[0], d[1], stoneColor);
+      if(lineStr.includes("11111")) totalScore += 100000000;
+      else if(lineStr.includes("011110")) totalScore += 10000000;
+      else if(lineStr.includes("01111") || lineStr.includes("11110")) totalScore += 500000;
+      else if(lineStr.includes("01110") || lineStr.includes("010110") || lineStr.includes("011010")) totalScore += 200000;
+      else if(lineStr.includes("1110") || lineStr.includes("0111")) totalScore += 5000;
+      else if(lineStr.includes("0110") || lineStr.includes("01010")) totalScore += 3000;
+      else if(lineStr.includes("11")) totalScore += 100;
+    });
+    return totalScore;
+  }
+
+  function checkWin(r, c, color) {
+    return [[0,1],[1,0],[1,1],[1,-1]].some(d => {
+      let cnt = 1;
+      for(let k=1; k<6; k++) if(isValid(r+d[0]*k, c+d[1]*k, color)) cnt++; else break;
+      for(let k=1; k<6; k++) if(isValid(r-d[0]*k, c-d[1]*k, color)) cnt++; else break;
+      return cnt >= 5;
+    });
+  }
+  function isValid(r, c, color) { return r>=0 && r<SIZE && c>=0 && c<SIZE && boardData[r][c]===color; }
+  
+  function updateStatus() { 
+    if(!gameOver) { 
+      let colorText = currPlayer==='black'?'흑(●)':'백(○)';
+      let colorStyle = currPlayer==='black'?'#ffffff':'#cccccc'; 
+      statusEl.innerHTML = `
+        <span style="color:${colorStyle}">${colorText}</span> 
+        <span class="turn-indicator">차례</span>
+        <span class="opponent-rank">(상대: ${level}등급)</span>
+      `;
+    } 
+  }
+</script>
+</body>
+</html>
