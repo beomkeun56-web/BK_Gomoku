@@ -124,13 +124,14 @@
     display:flex; align-items:center; justify-content:center; transition:.15s}
   .choice-row .edit:hover{color:var(--gold)}
   .choice{
-    flex:1; min-width:0; text-align:left; background:#1b1c21; border:1px solid #26272d; color:var(--txt);
-    border-radius:16px; padding:13px 16px; cursor:pointer; transition:.15s; line-height:1.65; font-family:inherit; font-size:1em;
+    flex:1; min-width:0; text-align:left; background:#101115; border:1px solid #24252b; color:var(--txt);
+    border-radius:16px; padding:13px 16px; cursor:pointer; transition:.15s; line-height:1.65; font-size:1em;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","맑은 고딕","Malgun Gothic",system-ui,sans-serif;
   }
-  .choice:hover{background:#23242a; border-color:#36373e}
+  .choice:hover{background:#1a1b21; border-color:#34353c}
   .choice:active{transform:scale(.995)}
   .choice .act{color:var(--dim)}
-  .choice b{color:#fff; font-weight:700}
+  .choice b{color:#fff; font-weight:500}
 
   /* 추천 답변(추가 옵션) */
   .suggest-label{font-size:.78rem; font-weight:800; color:var(--gold); margin:4px 2px 8px; letter-spacing:.5px}
@@ -253,7 +254,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.46</span></div>
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.47</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -385,12 +386,19 @@
       <h2>↔ 기기 간 이어하기</h2>
       <button class="modal-x" id="snapClose">✕</button>
     </div>
-    <p class="desc"><b>파일로 저장</b>해 다른 기기(PC↔모바일)로 옮긴 뒤(카톡 '나에게 보내기' 등) <b>파일 불러오기</b>로 그대로 이어집니다. (API 키는 보안상 파일에 포함되지 않으니 새 기기에서 키만 다시 입력)</p>
+    <p class="desc">다른 기기(PC↔모바일)로 진행을 옮깁니다. (API 키는 보안상 제외 — 새 기기에서 키만 다시 입력)</p>
+    <p class="desc" style="margin-top:-6px"><b>방법 1 · 파일</b></p>
     <div class="row">
       <button class="save-btn" id="snapDownload" style="margin-top:0; flex:1">📄 파일로 저장</button>
       <button class="save-btn" id="snapUpload" style="margin-top:0; flex:1; background:#2a2d36">📂 파일 불러오기</button>
     </div>
-    <input type="file" id="snapFile" style="display:none">
+    <input type="file" id="snapFile" style="position:absolute; left:-9999px; width:1px; height:1px">
+    <p class="desc" style="margin:12px 0 4px"><b>방법 2 · 코드 복사/붙여넣기</b> (파일이 안 될 때)</p>
+    <textarea id="snapText" placeholder="여기 코드를 복사하거나, 다른 기기 코드를 붙여넣으세요" style="width:100%; height:120px; background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:10px; font-family:monospace; font-size:.72rem; word-break:break-all"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="mini-btn" id="snapCopy" style="flex:1">복사</button>
+      <button class="mini-btn" id="snapPasteImport" style="flex:1">코드로 불러오기</button>
+    </div>
     <div class="status-line" id="snapStatus"></div>
 
     <hr style="border:0; border-top:1px solid var(--line); margin:16px 0">
@@ -1416,7 +1424,19 @@ function applySaveCode(code){
 function snapMsg(t,cls){ $('snapStatus').textContent=t; $('snapStatus').className='status-line '+(cls||''); }
 $('btnSave').onclick=()=>{
   if(busy){ alert('응답 생성 중에는 잠시 후 시도하세요.'); return; }
+  try{ $('snapText').value=makeSaveCode(); }catch(e){ $('snapText').value=''; }
   snapMsg(''); $('snapOverlay').classList.add('on');
+};
+$('snapCopy').onclick=()=>{
+  const t=$('snapText'); t.select(); t.setSelectionRange(0,99999);
+  try{ if(navigator.clipboard) navigator.clipboard.writeText(t.value); else document.execCommand('copy'); }catch(e){ document.execCommand('copy'); }
+  snapMsg('복사했습니다.','ok');
+};
+$('snapPasteImport').onclick=()=>{
+  const code=$('snapText').value.trim();
+  if(!code){ snapMsg('코드를 붙여넣으세요.','err'); return; }
+  try{ applySaveCode(code); snapMsg('불러왔습니다. 화면 갱신…','ok'); setTimeout(()=>location.reload(),600); }
+  catch(e){ snapMsg('코드가 올바른지 확인하세요.','err'); }
 };
 // 텍스트 파일로 저장(다운로드)
 $('snapDownload').onclick=()=>{
