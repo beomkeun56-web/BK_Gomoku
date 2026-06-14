@@ -77,8 +77,9 @@
   .role{font-size:.78em; font-weight:800; letter-spacing:1px; margin-bottom:6px; color:var(--dim); text-align:left}
   .bubble{border:none; border-radius:0; padding:0; background:transparent; text-align:left}
   .msg.gm{margin-bottom:12px}
-  .msg.user{max-width:820px; margin-left:auto; margin-right:0; text-align:right}
-  .msg.user .bubble{border-right:3px solid var(--gold); padding:2px 11px 2px 0; color:var(--mut); text-align:right}
+  .msg.user{max-width:820px; margin:0 0 12px; display:flex; justify-content:flex-end}
+  .msg.user .bubble{display:inline-block; max-width:82%; background:#1c2536; border:1px solid #2e3a52;
+    border-radius:14px 14px 4px 14px; padding:8px 13px; color:#e6ebf7; text-align:left}
   .msg.user .role{display:none}
   .msg.gm .role{display:none}
 
@@ -492,7 +493,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 진행과제 1){} 2){} 3){}
 최근사건 1){} 2){} 3){}
 \`\`\`
-'이어하기'+스냅샷이면 그 상태에서 재개하고, 재개 첫 응답에도 현재 상황 브리핑과 3개 선택지를 출력한다. 10턴마다(10·20·30…) 응답 끝에 위 스냅샷을 자동으로 함께 출력한다.
+'이어하기'+스냅샷이면 그 상태에서 재개하고, 재개 첫 응답에도 현재 상황 브리핑과 3개 선택지를 출력한다. 스냅샷은 사용자가 '저장'을 입력했을 때만 출력하고, 자동(10턴마다 등)으로는 절대 출력하지 않는다.
 
 [명령어] 시작 / 저장 / 이어하기+스냅샷 / 상태 / 국정과제(과제) / 새 게임 / 삽화 / 이름변경 / 회담·예산·선거·인사.
 
@@ -610,9 +611,10 @@ function mdToHtml(s){
 /* ---------- Choices parsing ----------
    The GM emits a "✦ 어떻게 ...?" header followed by "1. **title** — desc".
    We split that block off the message body and render dedicated buttons. */
-const CHOICE_HEAD=/^#{1,6}\s*\**\s*✦?\s*어떻게\s*(하시겠습니까|응답하시겠습니까|시작하시겠습니까)\??\s*\**\s*$/m;
+// '어떻게 …겠습니까' 형태의 헤딩이면 선택지 블록으로 인식(동사 변형: 하시겠/대응하시겠/결정하시겠 등 모두)
+const CHOICE_HEAD=/^#{1,6}[^\n]*어떻게[^\n]*겠습니까[^\n]*$/m;
 // 스트리밍 중 선택지 헤더 조기 감지(부분 입력도 매칭) — 본문 타이핑을 여기서 멈춤
-const HEAD_DETECT=/(^|\n)\s*#{0,6}\s*\**\s*✦?\s*어떻게\s*(하시겠|응답하시겠|시작하시겠)/;
+const HEAD_DETECT=/(^|\n)#{1,6}[^\n]*어떻게[^\n]*겠/;
 function splitChoices(text){
   const m=text.match(CHOICE_HEAD);
   if(!m) return {body:text, choices:[]};
@@ -631,11 +633,22 @@ function splitChoices(text){
     if(dash.length>1){ title=dash[0].trim(); desc=dash.slice(1).join(' — ').trim(); }
     choices.push({n:String(n), title, desc});
     last=n;
-    if(choices.length>=3) break; // 최대 3개(중복 출력 방지)
+    if(choices.length>=4) break; // 최대 4개(시작 메뉴 4개 대응, 중복 블록은 위 break로 차단)
   }
-  // Only treat as choices if we found 2-3 numbered items
   if(choices.length<2) return {body:text, choices:[]};
   return {body:head.trimEnd(), choices};
+}
+
+// 평소 턴에 새어나오는 스탯/과제 변동 한 줄 알림을 화면에서 제거(자동 SAVE는 프롬프트에서 차단)
+function sanitizeBody(t){
+  if(!t) return t;
+  return t.split('\n').filter(line=>{
+    const s=line.trim();
+    if(/^[가-힣·]{2,7}\s*\d{1,3}\s*[▲▼]/.test(s)) return false;        // "평판 100 ▲2 · 원인: …"
+    if(/^(국력|경제|군사|외교|민심|국방|군사력|외교력)\s*\d{1,3}\b.*[▲▼]/.test(s)) return false;
+    if(/^과제\s*(달성|실패|신규)\s*[:：]/.test(s)) return false;
+    return true;
+  }).join('\n');
 }
 
 function renderChoices(choices){
@@ -896,21 +909,24 @@ async function runAssistant(){
   const {mdEl}=addMessage('assistant','',true);
   const typer=streamTyper(mdEl,'');
   let acc='';
-  const feed=()=>{ const m=acc.match(HEAD_DETECT); typer.setTarget(m?acc.slice(0,m.index):acc);
+  const feed=()=>{ const m=acc.match(HEAD_DETECT); typer.setTarget(sanitizeBody(m?acc.slice(0,m.index):acc));
     const {choices}=splitChoices(acc); if(choices.length>=2) renderChoices(choices); };
   try{
-    await streamLLM((tok)=>{ acc+=tok; feed(); });
-  }catch(e){
-    const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
-    acc+=em; typer.setTarget(acc);
+    try{
+      await streamLLM((tok)=>{ acc+=tok; feed(); });
+    }catch(e){
+      const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
+      acc+=em; typer.setTarget(acc);
+    }
+    await typer.finish();
+    const {body, choices}=splitChoices(acc);
+    renderGm(mdEl, sanitizeBody(body), false);
+    history.push({role:'assistant', content:acc}); saveHistory();
+    parseStats(acc); renderChoices(choices);
+    addGmFooter(mdEl.closest('.msg'));
+  } finally {
+    busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지
   }
-  await typer.finish();
-  const {body, choices}=splitChoices(acc);
-  renderGm(mdEl, body, false);
-  history.push({role:'assistant', content:acc}); saveHistory();
-  parseStats(acc); renderChoices(choices);
-  addGmFooter(mdEl.closest('.msg'));
-  busy=false; sendBtn.disabled=false;
 }
 
 function removeFooters(){ logEl.querySelectorAll('.gm-footer').forEach(f=>f.remove()); }
@@ -942,7 +958,7 @@ async function continueGen(){
   history.pop();
   history[history.length-1].content=acc;
   const {body, choices}=splitChoices(acc);
-  renderGm(mdEl, body, false);
+  renderGm(mdEl, sanitizeBody(body), false);
   saveHistory(); parseStats(acc); renderChoices(choices);
   addGmFooter(gm); busy=false; sendBtn.disabled=false;
 }
@@ -1234,7 +1250,7 @@ function restore(){
     let lastAssistant=null;
     for(const m of history){
       if(m.role==='user'){ addMessage('user', m.content); }
-      else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(m.content); mdEl.innerHTML=mdToHtml(body); lastAssistant=m.content; }
+      else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(m.content); mdEl.innerHTML=mdToHtml(sanitizeBody(body)); lastAssistant=m.content; }
     }
     if(lastAssistant){
       const {choices}=splitChoices(lastAssistant); renderChoices(choices);
