@@ -454,7 +454,16 @@
       <h2>✳ 상황 추가</h2>
       <button class="modal-x" id="sitClose">✕</button>
     </div>
-    <p class="desc">현재 상황에 어울리는 전개 안 중 하나를 고르면 그 사건이 펼쳐집니다. 직접 입력도 가능합니다.</p>
+    <p class="desc">테마를 고르면 현재 상황에 맞는 전개 안이 나옵니다. 하나를 고르면 그 사건이 펼쳐지고, 직접 입력도 가능합니다.</p>
+    <div class="ex" id="sitCats" style="margin-bottom:10px">
+      <button data-cat="현재 상황에 맞는" class="on">상황에 맞게</button>
+      <button data-cat="로맨스·연애·치정">로맨스</button>
+      <button data-cat="재산 축적·돈·이권">재산 축적</button>
+      <button data-cat="비리·뒷거래·부패 연루">비리 수행</button>
+      <button data-cat="신분 상승·승진·권력 도약">신분 상승</button>
+      <button data-cat="위기·스캔들·공격">위기</button>
+      <button data-cat="정치 공작·음모·배신">공작</button>
+    </div>
     <div class="opt-list" id="sitList"></div>
     <input type="text" id="sitManual" placeholder="직접 입력: 추가할 상황을 적으세요" style="margin-top:12px">
     <button class="save-btn" id="sitGo">이 상황 추가</button>
@@ -1113,7 +1122,7 @@ document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
 $('btnMenu').onclick=()=>$('topbar').classList.toggle('hidden');   // 상단 메뉴바 토글
 $('hudClose').onclick=hideHud;
 $('btnSlash').onclick=()=>$('cmdRow').classList.toggle('hidden');
-$('btnSuggest').onclick=suggestMore;
+$('btnSuggest').onclick=showSuggestTendency;
 $('btnAddSit').onclick=openSituation;
 $('sitClose').onclick=()=>$('sitOverlay').classList.remove('on');
 $('sitOverlay').addEventListener('click',e=>{ if(e.target===$('sitOverlay')) $('sitOverlay').classList.remove('on'); });
@@ -1122,16 +1131,26 @@ $('sitGo').onclick=()=>{
   $('sitOverlay').classList.remove('on');
   sendMessage('다음 상황을 지금 국면에 자연스럽게 전개해줘: '+v, '상황 추가: '+v);
 };
-async function openSituation(){
+let sitCat='현재 상황에 맞는';
+document.querySelectorAll('#sitCats button').forEach(b=>b.onclick=()=>{
+  sitCat=b.dataset.cat;
+  document.querySelectorAll('#sitCats button').forEach(x=>x.classList.toggle('on',x===b));
+  loadSituations();
+});
+function openSituation(){
   if(busy) return;
   if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); return; }
   $('sitManual').value='';
-  $('sitList').innerHTML='<div class="opt-loading">현재 상황에 맞는 안을 불러오는 중…</div>';
   $('sitOverlay').classList.add('on');
+  loadSituations();
+}
+async function loadSituations(){
+  $('sitList').innerHTML='<div class="opt-loading">'+esc(sitCat)+' 안을 불러오는 중…</div>';
   const last=[...history].reverse().find(m=>m.role==='assistant');
   const ctx=last?splitChoices(last.content).body.slice(-1600):'(게임 시작 전)';
+  const theme = sitCat==='현재 상황에 맞는' ? '현재 국면에 가장 어울리는' : ('"'+sitCat+'" 테마의');
   const prompt='현재 상황(직전 GM 응답):\n'+ctx+
-    '\n\n이 국면에서 새로 터질 만한, 서로 다른 방향의 돌발 상황·사건·변수 3가지를 제안하라. 각 줄 "짧은 제목 — 한 줄 설명" 형식으로 정확히 3줄만, 번호·머리말 없이 출력하라.';
+    '\n\n이 국면에서 새로 터질 만한, '+theme+' 서로 다른 방향의 돌발 상황·사건·변수 3가지를 제안하라. 각 줄 "짧은 제목 — 한 줄 설명" 형식으로 정확히 3줄만, 번호·머리말 없이 출력하라.';
   try{
     const out=await callOnce([{role:'user',content:prompt}], '너는 텍스트 국가운영 게임의 시나리오 작가다. 현실적이고 흥미로운 사건을 간결히 제안한다.');
     const opts=parseSituations(out);
@@ -1214,8 +1233,21 @@ function showHome(){
 $('brand')?.addEventListener?.('click',showHome);
 document.querySelector('.brand')?.addEventListener('click',showHome);
 
-/* 추천답변: 기존 3개 외에 새로운 추천 행동 2가지를 생성해 아래에 추가 */
-async function suggestMore(){
+/* 추천답변: 성향(강하게/약하게/혁신/비리 등) 선택 → 그 성향의 추천 2가지 */
+function showSuggestTendency(){
+  if(busy) return;
+  const last=[...history].reverse().find(m=>m.role==='assistant');
+  if(!last) return;
+  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); return; }
+  const tends=[['강하게','강경하게 정면돌파하는'],['약하게','온건·신중하게 한 발 물러서는'],['혁신적','파격적이고 창의적인'],['비리·공작','은밀한 비리·뒷거래·공작 등 어두운 수단의'],['상황대로','지금 상황에 가장 잘 맞는']];
+  let box=$('suggestBox'); if(box) box.remove();
+  box=document.createElement('div'); box.id='suggestBox';
+  box.innerHTML='<div class="suggest-label">✦ 추천 성향 선택</div><div class="ex" id="suggestTends"></div>';
+  choicesEl.appendChild(box);
+  const row=box.querySelector('#suggestTends');
+  tends.forEach(t=>{ const b=document.createElement('button'); b.textContent=t[0]; b.onclick=()=>suggestMore(t[1]); row.appendChild(b); });
+}
+async function suggestMore(tendency){
   if(busy) return;
   const last=[...history].reverse().find(m=>m.role==='assistant');
   if(!last){ return; }
@@ -1224,8 +1256,9 @@ async function suggestMore(){
   const existing=choices.map(c=>c.title).join(' / ');
   busy=true; sendBtn.disabled=true;
   showSuggestLoading(true);
+  const flavor=tendency?('성향은 '+tendency+' 방향으로, '):'';
   const prompt='현재 상황(직전 GM 응답 요약):\n'+body.slice(-1600)+
-    '\n\n위 상황에서 플레이어가 택할 수 있는, 이미 제시된 선택지("'+existing+'")와 겹치지 않는 새롭고 참신한 행동 2가지를 추천하라. 각 줄에 "짧은 제목 — 한 줄 설명" 형식으로 정확히 2줄만, 번호·머리말·다른 설명 없이 출력하라.';
+    '\n\n위 상황에서 플레이어가 택할 수 있는, 이미 제시된 선택지("'+existing+'")와 겹치지 않는 '+flavor+'새롭고 참신한 행동 2가지를 추천하라. 각 줄에 "짧은 제목 — 한 줄 설명" 형식으로 정확히 2줄만, 번호·머리말·다른 설명 없이 출력하라.';
   try{
     const out=await callOnce([{role:'user',content:prompt}], '너는 텍스트 국가운영 게임의 노련한 보좌관이다. 상황에 맞는 현실적이고 참신한 행동을 간결히 제안한다.');
     const extra=parseSuggestions(out);
