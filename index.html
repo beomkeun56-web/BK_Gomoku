@@ -11,13 +11,14 @@
     --gold:#e8c06a; --blue:#9ec5ff; --red:#ff8a8a; --green:#7fe0b0;
     --accent:#aab4ff;
     --fs:17px; /* 본문 글씨 크기 (조절 가능) */
+    --font:"Gungsuh","GungsuhChe","궁서","GungSeo","바탕","Batang","Noto Serif KR",serif;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
   html,body{height:100%}
   body{
     margin:0; background:#000;
     color:var(--txt);
-    font-family:"Gungsuh","GungsuhChe","궁서","GungSeo","바탕","Batang","Noto Serif KR",serif;
+    font-family:var(--font);
     display:flex; flex-direction:column; height:100dvh; overflow:hidden;
   }
 
@@ -76,6 +77,7 @@
   /* markdown styling */
   .md h1{font-size:1.72em; font-weight:800; margin:.3em 0 .45em; line-height:1.3}
   .md h2{font-size:1.3em; margin:1em 0 .45em; color:#fff}
+  .md h2.sec{border-top:1px solid var(--line); padding-top:1.15em; margin-top:1.5em}
   .md h3{font-size:1.06em; margin:.9em 0 .4em; color:var(--gold)}
   .md p{margin:.55em 0; line-height:1.8}
   .md ul,.md ol{margin:.5em 0; padding-left:1.3em; line-height:1.7}
@@ -283,6 +285,21 @@
       <div class="status-line" id="cfgStatus"></div>
     </div>
 
+    <div class="field">
+      <label>폰트 (글꼴 불러오기)</label>
+      <select id="fontSel">
+        <option value="gungsuh">궁서체 (기기 기본)</option>
+        <option value="batang">바탕·명조 (기기 기본)</option>
+        <option value="nanummyeongjo">나눔명조 (웹폰트)</option>
+        <option value="notoserif">노토 세리프 (웹폰트)</option>
+        <option value="nanumbrush">나눔손글씨 붓 (웹폰트)</option>
+        <option value="gowundodum">고운돋움 (웹폰트)</option>
+        <option value="nanumgothic">나눔고딕 (웹폰트)</option>
+        <option value="notosans">노토 산스 (웹폰트)</option>
+      </select>
+      <div class="hint">웹폰트는 선택 즉시 불러와 모든 기기에서 동일하게 보입니다. 궁서체·바탕은 기기에 설치된 글꼴을 사용합니다.</div>
+    </div>
+
     <button class="save-btn" id="cfgSave">저장하고 닫기</button>
   </div>
 </div>
@@ -453,6 +470,11 @@ const logEl=$('log'), choicesEl=$('choices'), inp=$('inp'), sendBtn=$('send');
 
 /* ---------- Markdown ---------- */
 if(window.marked){ marked.setOptions({breaks:true, gfm:true}); }
+function renderGm(mdEl, text, streaming){
+  mdEl.innerHTML = mdToHtml(text) + (streaming ? '<span class="cursor"></span>' : '');
+  // ✦ 로 시작하는 섹션 제목 위에 구분선 추가
+  mdEl.querySelectorAll('h2').forEach(h=>{ if((h.textContent||'').indexOf('✦')>=0) h.classList.add('sec'); });
+}
 function mdToHtml(s){
   if(window.marked) return marked.parse(s);
   // minimal fallback
@@ -673,12 +695,12 @@ async function runAssistant(){
   const {mdEl}=addMessage('assistant','',true);
   let acc='';
   try{
-    await streamLLM((tok)=>{ acc+=tok; const {body}=splitChoices(acc); mdEl.innerHTML=mdToHtml(body)+'<span class="cursor"></span>'; scrollDown(); });
+    await streamLLM((tok)=>{ acc+=tok; const {body}=splitChoices(acc); renderGm(mdEl, body, true); scrollDown(); });
   }catch(e){
     acc += (acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
   }
   const {body, choices}=splitChoices(acc);
-  mdEl.innerHTML=mdToHtml(body);
+  renderGm(mdEl, body, false);
   history.push({role:'assistant', content:acc}); saveHistory();
   parseStats(acc); renderChoices(choices);
   addGmFooter(mdEl.closest('.msg'));
@@ -705,12 +727,12 @@ async function continueGen(){
   let acc=history[history.length-1].content;
   history.push({role:'user', content:'직전 응답이 중간에 끊겼다. 처음부터 다시 쓰지 말고, 끊긴 부분 바로 다음부터 자연스럽게 이어서 계속 작성하라. (선택지로 끝맺을 것)'});
   try{
-    await streamLLM((tok)=>{ acc+=tok; const {body}=splitChoices(acc); mdEl.innerHTML=mdToHtml(body)+'<span class="cursor"></span>'; scrollDown(); });
+    await streamLLM((tok)=>{ acc+=tok; const {body}=splitChoices(acc); renderGm(mdEl, body, true); scrollDown(); });
   }catch(e){ acc+='\n\n⚠️ '+e.message; }
   history.pop();
   history[history.length-1].content=acc;
   const {body, choices}=splitChoices(acc);
-  mdEl.innerHTML=mdToHtml(body);
+  renderGm(mdEl, body, false);
   saveHistory(); parseStats(acc); renderChoices(choices);
   addGmFooter(gm); busy=false; sendBtn.disabled=false; scrollDown();
 }
@@ -741,6 +763,34 @@ function applyFont(){
 $('fsUp').onclick=()=>{ fontPx+=1; applyFont(); };
 $('fsDown').onclick=()=>{ fontPx-=1; applyFont(); };
 applyFont();
+
+/* ---------- Font family (웹폰트 불러오기) ---------- */
+const FONTS={
+  gungsuh:{stack:'"Gungsuh","GungsuhChe","궁서","GungSeo","바탕","Batang","Noto Serif KR",serif'},
+  batang:{stack:'"Batang","바탕","BatangChe","Noto Serif KR",serif'},
+  nanummyeongjo:{stack:'"Nanum Myeongjo",serif', link:'https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap'},
+  notoserif:{stack:'"Noto Serif KR",serif', link:'https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&display=swap'},
+  nanumbrush:{stack:'"Nanum Brush Script","Gungsuh",cursive,serif', link:'https://fonts.googleapis.com/css2?family=Nanum+Brush+Script&display=swap'},
+  gowundodum:{stack:'"Gowun Dodum",sans-serif', link:'https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap'},
+  nanumgothic:{stack:'"Nanum Gothic",sans-serif', link:'https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap'},
+  notosans:{stack:'"Noto Sans KR",sans-serif', link:'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap'},
+};
+let fontKey = localStorage.getItem(LS+'_font') || 'gungsuh';
+function loadFontLink(f){
+  if(!f.link) return;
+  if([...document.querySelectorAll('link[data-webfont]')].some(l=>l.getAttribute('href')===f.link)) return;
+  const l=document.createElement('link'); l.rel='stylesheet'; l.href=f.link; l.setAttribute('data-webfont','1');
+  document.head.appendChild(l);
+}
+function applyFontFamily(key){
+  const f=FONTS[key]||FONTS.gungsuh; fontKey=key;
+  loadFontLink(f);
+  document.documentElement.style.setProperty('--font', f.stack);
+  localStorage.setItem(LS+'_font', key);
+}
+applyFontFamily(fontKey);
+$('fontSel').value=fontKey;
+$('fontSel').onchange=()=>applyFontFamily($('fontSel').value);
 document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('cmdRow').classList.add('hidden'); sendMessage(c.dataset.cmd); });
 
 /* 하단 도구 버튼 */
