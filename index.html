@@ -374,9 +374,59 @@
   </div>
 </div>
 
-<!-- ===== 상황 추가 팝업 ===== -->
-<div class="overlay" id="sitOverlay">
+<!-- ===== 시작 상세 설정 팝업 ===== -->
+<div class="overlay" id="setupOverlay">
   <div class="modal">
+    <div style="display:flex; align-items:center">
+      <h2>🎬 시작 설정</h2>
+      <button class="modal-x" id="setupClose">✕</button>
+    </div>
+    <p class="desc">시나리오와 캐릭터·주변 인물을 정하면 그 설정으로 게임이 시작됩니다. 비워두면 알아서 정해집니다.</p>
+
+    <div class="field">
+      <label>시나리오</label>
+      <div class="seg" id="setupScen">
+        <button data-scen="권력의 길" class="on">권력의 길</button>
+        <button data-scen="현대 대한민국 대통령">대통령</button>
+        <button data-scen="근대 조선 하드">근대 조선</button>
+      </div>
+      <input type="text" id="setupScenFree" placeholder="또는 직접: 시대 / 국가 / 모드" style="margin-top:8px">
+    </div>
+
+    <div class="field">
+      <label>나 (지도자/주인공)</label>
+      <div class="row">
+        <input type="text" id="suName" placeholder="이름 (예: 강준혁)">
+        <select id="suSex" style="max-width:110px"><option value="">성별</option><option>남</option><option>여</option></select>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="suAge" placeholder="나이 (예: 42)" style="max-width:130px">
+        <input type="text" id="suArea" placeholder="지역구/출신·배경 (예: 서울 마포을)">
+      </div>
+      <input type="text" id="suParty" placeholder="소속 정당·계파 (선택)" style="margin-top:8px">
+      <input type="text" id="suPersona" placeholder="나의 성향·페르소나 (예: 청렴·강단, 개혁가)" style="margin-top:8px">
+    </div>
+
+    <div class="field">
+      <label>핵심 보좌관 / 측근</label>
+      <div class="row">
+        <input type="text" id="suAideName" placeholder="이름 (예: 이민정)">
+        <select id="suAideSex" style="max-width:110px"><option value="">성별</option><option>남</option><option>여</option></select>
+      </div>
+      <input type="text" id="suAidePersona" placeholder="역할·페르소나 (예: 까탈스럽지만 일 잘하는 비서실장)" style="margin-top:8px">
+    </div>
+
+    <div class="field">
+      <label>추가 설정 (자유)</label>
+      <input type="text" id="suExtra" placeholder="가족·라이벌·배경 사연 등 자유롭게">
+    </div>
+
+    <button class="save-btn" id="setupGo">이 설정으로 시작</button>
+  </div>
+</div>
+
+<!-- ===== 상황 추가 팝업 ===== -->
+<div class="overlay" id="sitOverlay">  <div class="modal">
     <div style="display:flex; align-items:center">
       <h2>✳ 상황 추가</h2>
       <button class="modal-x" id="sitClose">✕</button>
@@ -468,7 +518,10 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 내용 성격에 맞게 표/현황목록/대화/서술을 섞어 가변 출력한다(매 턴 같은 틀 반복 금지). 제목 줄 맨 앞에 현재 플레이 국가 국기 이모지(예: 🇰🇷).
 
 [고증·일관성]
-시대 고증 엄수(연대에 없는 기술·제도 금지). 점진적 전개(한 턴에 평시→전면전 같은 비약 금지, 큰 사건은 2~4턴). 초자연 금지(개그모드 제외). 스탯·설정은 직전 상태에서 누적하고 과거 사실을 잊지 않는다. 플레이어가 과거 사실을 지적하면 그것을 정답으로 정정한다. 이름·페르소나 변경(예: \`3 보좌관: 이민정, 페르소나: …\`) 입력 시 별도 확인 없이 그 선택을 처리하며 즉시 반영해 일관 유지. 동시에 전면 전개하는 대형 사안은 최대 2개(메인1+서브1). 미결 사안은 결론 날 때까지 끌고 가 종료 처리하고 새 주제로 갈아타지 않는다.
+시대 고증 엄수(연대에 없는 기술·제도 금지). 초자연 금지(개그모드 제외). 스탯·설정은 직전 상태에서 누적하고 과거 사실을 잊지 않는다. 플레이어가 과거 사실을 지적하면 그것을 정답으로 정정한다. 이름·페르소나 변경(예: \`3 보좌관: 이민정, 페르소나: …\`) 입력 시 별도 확인 없이 그 선택을 처리하며 즉시 반영해 일관 유지. 동시에 전면 전개하는 대형 사안은 최대 2개(메인1+서브1). 미결 사안은 결론 날 때까지 끌고 가 종료 처리하고 새 주제로 갈아타지 않는다.
+
+[전개 속도 — 매우 중요, 천천히·현실적으로]
+한 턴(=3개월/1분기)에 일어나는 변화는 현실에서 실제로 가능한 범위로만 제한한다. 며칠~몇 주 단위의 구체적 사건·절차·인물 반응·실무 과정을 충실히 묘사하고, 한 턴에 여러 단계를 건너뛰지 않는다(비약 금지). 큰 목표(법안 통과, 당직·장관 임명, 선거 승리, 전쟁, 권력 상승)는 절대 한두 턴에 이뤄지지 않으며 보통 5~12턴 이상에 걸쳐 여러 단계(준비→협상/세력화→난관→부분 진전→결판)를 거친다. 특히 권력의 길에서 초선 의원이 단숨에 '대권 주자 1위'가 되는 식의 급상승은 금지 — 상임위·당직·인지도·계파 신뢰를 한 단계씩 쌓아야 한다. 스탯 변동도 한 턴에 과하지 않게(개별 보통 ±2~8, 아주 큰 사건이라도 ±15 한도) 점진적으로 준다. 작은 성취·실패·일상 정치/국정 디테일을 충분히 넣어 호흡을 늦춘다.
 
 [국정 과제(퀘스트)]
 매 시기 상황에 맞는 과제 1~3개를 내부적으로 관리(목표·기한·성공 보상·실패 페널티). 전체 목록은 플레이어가 '국정과제'/'과제'를 입력했을 때만 아래 형식으로 표시한다:
@@ -741,6 +794,8 @@ function addMessage(role, text, streaming){
   return {wrap, mdEl};
 }
 function scrollDown(){ logEl.scrollTop=logEl.scrollHeight; }
+// 메시지만 제거(#choices·#welcome 등 구조 요소는 보존)
+function clearLog(){ logEl.querySelectorAll('.msg, .gm-footer').forEach(e=>e.remove()); const sb=$('suggestBox'); if(sb) sb.remove(); renderChoices([]); }
 // 사용자가 위로 올려 읽는 중이면 자동 스크롤하지 않음(끊김·튐 방지)
 function maybeScroll(){
   if(logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 140) logEl.scrollTop=logEl.scrollHeight;
@@ -1083,7 +1138,38 @@ function parseSituations(text){
 }
 $('ctaStart').onclick=()=>{
   if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); setCfgStatus('먼저 제공사·모델·API 키를 설정하세요.','err'); return; }
-  hideWelcome(); if(!history.length) sendMessage('시작');
+  openSetup();
+};
+
+/* ---------- 시작 상세 설정 팝업 ---------- */
+let setupScen='권력의 길';
+document.querySelectorAll('#setupScen button').forEach(b=>b.onclick=()=>{
+  setupScen=b.dataset.scen;
+  document.querySelectorAll('#setupScen button').forEach(x=>x.classList.toggle('on',x===b));
+});
+function openSetup(){ $('setupOverlay').classList.add('on'); }
+$('setupClose').onclick=()=>$('setupOverlay').classList.remove('on');
+$('setupOverlay').addEventListener('click',e=>{ if(e.target===$('setupOverlay')) $('setupOverlay').classList.remove('on'); });
+$('setupGo').onclick=()=>{
+  const g=id=>$(id).value.trim();
+  const scen=g('setupScenFree')||setupScen;
+  const lines=['시작. 아래 설정을 그대로 반영해 바로 게임을 시작해줘(되묻지 말 것).'];
+  lines.push('- 시나리오: '+scen);
+  const me=[]; if(g('suName'))me.push('이름 '+g('suName')); if(g('suSex'))me.push('성별 '+g('suSex'));
+  if(g('suAge'))me.push('나이 '+g('suAge')); if(g('suArea'))me.push('지역구/배경 '+g('suArea'));
+  if(g('suParty'))me.push('소속 '+g('suParty')); if(g('suPersona'))me.push('성향 '+g('suPersona'));
+  if(me.length) lines.push('- 나(주인공): '+me.join(', '));
+  const aide=[]; if(g('suAideName'))aide.push('이름 '+g('suAideName')); if(g('suAideSex'))aide.push('성별 '+g('suAideSex'));
+  if(g('suAidePersona'))aide.push('페르소나 '+g('suAidePersona'));
+  if(aide.length) lines.push('- 핵심 보좌관/측근: '+aide.join(', '));
+  if(g('suExtra')) lines.push('- 추가 설정: '+g('suExtra'));
+  lines.push('이 설정으로 첫 상황 브리핑과 선택지를 출력해줘. 전개는 천천히·현실적으로.');
+  $('setupOverlay').classList.remove('on');
+  // 새 게임으로 시작(기존 진행 초기화)
+  history=[]; stats={}; summary=''; summaryUpto=0; saveHistory(); saveStats(); persistSummary();
+  clearLog(); $('hud').classList.remove('on');
+  hideWelcome();
+  sendMessage(lines.join('\n'), '게임 시작 · '+scen);
 };
 $('ctaContinue').onclick=hideWelcome;
 $('ctaCfg').onclick=openCfg;
@@ -1158,8 +1244,8 @@ $('btnNew').onclick=()=>{
   if(!confirm('현재 진행을 지우고 새 게임을 시작할까요? (저장 스냅샷은 별도로 보관됩니다)')) return;
   history=[]; stats={}; saveHistory(); saveStats();
   summary=''; summaryUpto=0; persistSummary();
-  logEl.innerHTML=''; renderChoices([]); $('hud').classList.remove('on');
-  sendMessage('시작');
+  clearLog(); $('hud').classList.remove('on');
+  openSetup();
 };
 
 /* ---------- Snapshot ---------- */
