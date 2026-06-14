@@ -249,7 +249,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.33</span></div>
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.34</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -1417,18 +1417,34 @@ document.querySelectorAll('#provSeg button').forEach(b=>b.onclick=()=>{ selectPr
 function setCfgStatus(msg,cls){ const e=$('cfgStatus'); e.textContent=msg; e.className='status-line '+(cls||''); }
 function ensureOption(v){ const sel=$('modelSel'); if(![...sel.options].some(o=>o.value===v)){ const o=document.createElement('option'); o.value=v;o.textContent=v; sel.appendChild(o);} }
 
+// 불러오기 실패 시(키 권한·CORS 등) 바로 고를 수 있는 대표 모델
+const FALLBACK_MODELS={
+  openrouter:['google/gemini-3-pro','google/gemini-3-flash','anthropic/claude-sonnet-4.5','deepseek/deepseek-chat'],
+  gemini:['gemini-3-pro','gemini-3-flash','gemini-2.5-pro','gemini-2.5-flash'],
+  anthropic:['claude-sonnet-4-5','claude-3-7-sonnet-latest','claude-3-5-haiku-latest']
+};
+function fillModelOptions(list, picked){
+  const sel=$('modelSel'); sel.innerHTML='';
+  list.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+  if(picked&&list.includes(picked)) sel.value=picked;
+}
 $('btnModels').onclick=async()=>{
   const key=$('apiKey').value.trim();
   if(!key){ setCfgStatus('먼저 API 키를 입력하세요.','err'); return; }
   setCfgStatus('모델 목록을 불러오는 중…','load');
   try{
     const list=await fetchModels(selProv,key);
-    if(!list.length){ setCfgStatus('모델을 찾지 못했습니다. 직접 입력란을 사용하세요.','err'); return; }
-    const sel=$('modelSel'); sel.innerHTML='';
-    list.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
-    if(cfg.model&&list.includes(cfg.model)) sel.value=cfg.model;
+    if(!list.length){ fillModelOptions(FALLBACK_MODELS[selProv]||[], cfg.model); setCfgStatus('목록이 비어 대표 모델을 넣었습니다. 직접 입력도 가능.','err'); return; }
+    fillModelOptions(list, cfg.model);
     setCfgStatus(`${list.length}개 모델 로드됨.`,'ok');
-  }catch(e){ setCfgStatus('불러오기 실패: '+e.message+' — 모델 ID를 직접 입력하세요.','err'); }
+  }catch(e){
+    // 키 권한/제공사 불일치(401 등) — 대표 모델로 폴백 + 안내
+    fillModelOptions(FALLBACK_MODELS[selProv]||[], cfg.model);
+    const m=String(e.message);
+    let hint='';
+    if(m.includes('401')||m.includes('403')) hint=' — 이 제공사용 키가 맞는지 확인하세요. (OpenRouter 키로는 Gemini·Claude 직접 호출이 안 됩니다. 그 경우 제공사를 OpenRouter로 두고 모델만 google/…·anthropic/… 으로 고르세요.)';
+    setCfgStatus('자동 불러오기 실패('+m+'). 아래 대표 모델에서 고르거나 직접 입력하세요.'+hint,'err');
+  }
 };
 
 async function fetchModels(prov,key){
