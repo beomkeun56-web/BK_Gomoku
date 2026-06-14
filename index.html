@@ -496,7 +496,7 @@ function renderGm(mdEl, text, streaming){
 /* 타자기 렌더러: 네트워크가 토큰을 뭉텅이로 줘도, 일정한 속도로 부드럽게 표시.
    speedKey: 'slow' | 'normal' | 'fast' (설정에서 조절) */
 // cap = 한 틱당 최대 글자 수, tick = 틱 간격(ms).
-const TYPE_SPEED={ slow:{tick:32, cap:2}, normal:{tick:24, cap:5}, fast:{tick:16, cap:13} };
+const TYPE_SPEED={ slow:{tick:48, cap:1}, normal:{tick:30, cap:2}, fast:{tick:18, cap:8} };
 // 스트리밍 중 표시용: 마크다운 기호만 가볍게 제거(블록 구조는 최종 렌더에서 복원)
 function cleanChunk(s){ return s.replace(/[`*#|>]/g,''); }
 // 새로 생성되는 글자만 페이드인 span으로 덧붙임(전체 재렌더 X → 애니메이션 안 끊김)
