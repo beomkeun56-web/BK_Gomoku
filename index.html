@@ -100,8 +100,8 @@
   .cursor{display:inline-block; width:8px; height:1.05em; background:var(--gold); vertical-align:-2px; animation:blink 1s steps(1) infinite; border-radius:1px}
   @keyframes blink{50%{opacity:0}}
   /* 생성되는 글자가 부드럽게 떠오르는 효과 */
-  .fadein{display:inline; animation:charIn .5s ease both}
-  @keyframes charIn{from{opacity:0; filter:blur(4px)} to{opacity:1; filter:blur(0)}}
+  .fadein{display:inline; animation:charIn .32s ease both}
+  @keyframes charIn{from{opacity:.35; filter:blur(1px)} to{opacity:1; filter:blur(0)}}
   .typing-flow{line-height:1.8; white-space:pre-wrap; word-break:break-word}
 
   /* ===== Choices (회색 말풍선 + 연필) — 본문과 함께 스크롤 ===== */
