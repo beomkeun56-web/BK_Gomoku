@@ -394,6 +394,15 @@
     </div>
 
     <div class="field">
+      <label>드라마 톤 (권력의 길 등)</label>
+      <div class="seg" id="setupTone">
+        <button data-tone="진지한 정치 스릴러(하우스 오브 카드 톤)">하우스 오브 카드</button>
+        <button data-tone="막장 드라마(자극·반전·치정·배신)">막장</button>
+        <button data-tone="진지+막장 혼합" class="on">혼합</button>
+      </div>
+    </div>
+
+    <div class="field">
       <label>나 (지도자/주인공)</label>
       <div class="row">
         <input type="text" id="suName" placeholder="이름 (예: 강준혁)">
@@ -1142,10 +1151,14 @@ $('ctaStart').onclick=()=>{
 };
 
 /* ---------- 시작 상세 설정 팝업 ---------- */
-let setupScen='권력의 길';
+let setupScen='권력의 길', setupTone='진지+막장 혼합';
 document.querySelectorAll('#setupScen button').forEach(b=>b.onclick=()=>{
   setupScen=b.dataset.scen;
   document.querySelectorAll('#setupScen button').forEach(x=>x.classList.toggle('on',x===b));
+});
+document.querySelectorAll('#setupTone button').forEach(b=>b.onclick=()=>{
+  setupTone=b.dataset.tone;
+  document.querySelectorAll('#setupTone button').forEach(x=>x.classList.toggle('on',x===b));
 });
 function openSetup(){ $('setupOverlay').classList.add('on'); }
 $('setupClose').onclick=()=>$('setupOverlay').classList.remove('on');
@@ -1155,6 +1168,7 @@ $('setupGo').onclick=()=>{
   const scen=g('setupScenFree')||setupScen;
   const lines=['시작. 아래 설정을 그대로 반영해 바로 게임을 시작해줘(되묻지 말 것).'];
   lines.push('- 시나리오: '+scen);
+  lines.push('- 드라마 톤: '+setupTone+' (이 톤으로 시나리오 내내 유지, 톤은 되묻지 말 것)');
   const me=[]; if(g('suName'))me.push('이름 '+g('suName')); if(g('suSex'))me.push('성별 '+g('suSex'));
   if(g('suAge'))me.push('나이 '+g('suAge')); if(g('suArea'))me.push('지역구/배경 '+g('suArea'));
   if(g('suParty'))me.push('소속 '+g('suParty')); if(g('suPersona'))me.push('성향 '+g('suPersona'));
