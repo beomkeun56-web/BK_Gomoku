@@ -490,7 +490,8 @@ function renderGm(mdEl, text, streaming){
 
 /* 타자기 렌더러: 네트워크가 토큰을 뭉텅이로 줘도, 일정한 속도로 부드럽게 표시.
    speedKey: 'slow' | 'normal' | 'fast' (설정에서 조절) */
-const TYPE_SPEED={ slow:{tick:34, cap:5, fin:14}, normal:{tick:30, cap:9, fin:26}, fast:{tick:24, cap:16, fin:60} };
+// cap = 한 틱당 최대 글자 수, tick = 틱 간격(ms). 응답이 끝나도 같은 속도로 일정하게 타이핑.
+const TYPE_SPEED={ slow:{tick:33, cap:3}, normal:{tick:28, cap:8}, fast:{tick:22, cap:20} };
 function streamTyper(mdEl, initial){
   const sp=TYPE_SPEED[localStorage.getItem(LS+'_speed')||'normal']||TYPE_SPEED.normal;
   let target=initial||'', shown=target.length, done=false, timer=null;
@@ -498,8 +499,8 @@ function streamTyper(mdEl, initial){
   const tick=()=>{
     if(shown<target.length){
       const backlog=target.length-shown;
-      const step = done ? Math.min(sp.fin, Math.max(12, Math.ceil(backlog/8)))
-                        : Math.min(sp.cap, Math.max(2, Math.ceil(backlog/12)));
+      // 항상 설정 속도(cap)로 일정하게 — done이어도 빠르게 몰아내지 않음
+      const step = Math.min(sp.cap, Math.max(1, Math.ceil(backlog/16)));
       shown=Math.min(target.length, shown+step);
       paint();
     } else if(done){ clearInterval(timer); timer=null; }
