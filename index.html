@@ -576,15 +576,17 @@ function splitChoices(text){
   const tail=text.slice(idx+m[0].length);
   const choices=[];
   const re=/^\s*(\d+)\.\s*(.+)$/gm;
-  let mm;
+  let mm, last=0;
   while((mm=re.exec(tail))){
-    let raw=mm[2].trim();
-    // strip bold, split title — desc
-    raw=raw.replace(/\*\*/g,'');
+    const n=parseInt(mm[1]);
+    if(n<=last) break;          // 번호가 리셋/감소하면(중복 블록·새 목록) 첫 묶음에서 중단
+    let raw=mm[2].trim().replace(/\*\*/g,'');
     let title=raw, desc='';
     const dash=raw.split(/\s+—\s+|\s+-\s+/);
     if(dash.length>1){ title=dash[0].trim(); desc=dash.slice(1).join(' — ').trim(); }
-    choices.push({n:mm[1], title, desc});
+    choices.push({n:String(n), title, desc});
+    last=n;
+    if(choices.length>=3) break; // 최대 3개(중복 출력 방지)
   }
   // Only treat as choices if we found 2-3 numbered items
   if(choices.length<2) return {body:text, choices:[]};
