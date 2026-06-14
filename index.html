@@ -245,11 +245,13 @@
 <!-- 국기 등 컬러 이모지가 모든 기기에서 표시되도록(Windows 등 국기 글꼴 없는 환경 대응) -->
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap">
+<!-- Google Drive 동기화(선택): 구글 로그인 스크립트 -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.36</span></div>
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.37</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -388,6 +390,16 @@
       <button class="mini-btn" id="snapImport" style="white-space:nowrap">가져오기(불러오기)</button>
     </div>
     <div class="status-line" id="snapStatus"></div>
+
+    <hr style="border:0; border-top:1px solid var(--line); margin:16px 0">
+    <label style="display:block; font-size:.8rem; font-weight:700; color:var(--mut); margin-bottom:7px">☁ 구글 드라이브 동기화 (선택)</label>
+    <input type="text" id="gClientId" placeholder="Google OAuth 클라이언트 ID (…apps.googleusercontent.com)">
+    <div class="row" style="margin-top:8px">
+      <button class="mini-btn" id="driveSaveBtn" style="flex:1">드라이브에 저장</button>
+      <button class="mini-btn" id="driveLoadBtn" style="flex:1">드라이브에서 불러오기</button>
+    </div>
+    <div class="status-line" id="driveStatus"></div>
+    <div class="hint">한 번만 설정: Google Cloud Console에서 OAuth 클라이언트 ID(웹) 생성 → 승인된 JS 원본에 <code>https://beomkeun56-web.github.io</code> 추가 → 위에 ID 붙여넣기. 이후 두 기기에서 같은 구글 계정으로 저장/불러오기하면 이어집니다.</div>
   </div>
 </div>
 
@@ -1414,6 +1426,57 @@ $('snapImport').onclick=()=>{
     setTimeout(()=>location.reload(), 500);
   }catch(e){ $('snapStatus').textContent='가져오기 실패: 코드가 올바른지 확인하세요.'; $('snapStatus').className='status-line err'; }
 };
+
+/* ---------- 구글 드라이브 동기화 (drive.file 범위, 브라우저 OAuth) ---------- */
+let gClientId=localStorage.getItem(LS+'_gcid')||'';
+let gToken='', gFileId=localStorage.getItem(LS+'_gfid')||'';
+if($('gClientId')) $('gClientId').value=gClientId;
+$('gClientId')?.addEventListener('change',()=>{ gClientId=$('gClientId').value.trim(); localStorage.setItem(LS+'_gcid',gClientId); });
+function driveStatus(msg,cls){ const e=$('driveStatus'); if(e){ e.textContent=msg; e.className='status-line '+(cls||''); } }
+function withDriveToken(cb){
+  gClientId=$('gClientId').value.trim(); localStorage.setItem(LS+'_gcid',gClientId);
+  if(!gClientId){ driveStatus('OAuth 클라이언트 ID를 입력하세요.','err'); return; }
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)){ driveStatus('구글 로그인 스크립트 로딩 중… 잠시 후 다시 시도하세요.','err'); return; }
+  try{
+    const tc=google.accounts.oauth2.initTokenClient({
+      client_id:gClientId, scope:'https://www.googleapis.com/auth/drive.file',
+      callback:(resp)=>{ if(resp&&resp.access_token){ gToken=resp.access_token; cb(); } else { driveStatus('인증 실패: '+(resp&&resp.error||'토큰 없음'),'err'); } }
+    });
+    tc.requestAccessToken({prompt: gToken?'':'consent'});
+  }catch(e){ driveStatus('인증 오류: '+e.message,'err'); }
+}
+async function driveFindFile(){
+  const q=encodeURIComponent("name='gukga_save.json' and trashed=false");
+  const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=drive&fields=files(id)&pageSize=5',{headers:{Authorization:'Bearer '+gToken}});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json(); return (j.files&&j.files[0])?j.files[0].id:'';
+}
+async function driveSave(){
+  const body=JSON.stringify({app:'gukga', code:makeSaveCode(), savedAt:new Date().toISOString()});
+  let id=gFileId|| await driveFindFile();
+  if(id){
+    const r=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',{method:'PATCH',headers:{Authorization:'Bearer '+gToken,'Content-Type':'application/json'},body});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+  }else{
+    const form=new FormData();
+    form.append('metadata', new Blob([JSON.stringify({name:'gukga_save.json',mimeType:'application/json'})],{type:'application/json'}));
+    form.append('file', new Blob([body],{type:'application/json'}));
+    const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:'Bearer '+gToken},body:form});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    id=(await r.json()).id;
+  }
+  gFileId=id; localStorage.setItem(LS+'_gfid',id);
+}
+async function driveLoad(){
+  let id=gFileId|| await driveFindFile();
+  if(!id) throw new Error('드라이브에 저장된 게임이 없습니다.');
+  const r=await fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media',{headers:{Authorization:'Bearer '+gToken}});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json(); if(!j.code) throw new Error('저장 형식 오류');
+  applySaveCode(j.code); gFileId=id; localStorage.setItem(LS+'_gfid',id);
+}
+$('driveSaveBtn').onclick=()=>withDriveToken(()=>{ driveStatus('저장 중…','load'); driveSave().then(()=>driveStatus('드라이브 저장 완료.','ok')).catch(e=>driveStatus('저장 실패: '+e.message,'err')); });
+$('driveLoadBtn').onclick=()=>withDriveToken(()=>{ driveStatus('불러오는 중…','load'); driveLoad().then(()=>{ driveStatus('불러옴. 화면 갱신…','ok'); setTimeout(()=>location.reload(),700); }).catch(e=>driveStatus('불러오기 실패: '+e.message,'err')); });
 
 /* ---------- Settings modal ---------- */
 const cfgOverlay=$('cfgOverlay');
