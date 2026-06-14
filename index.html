@@ -302,6 +302,16 @@
       <div class="hint">웹폰트는 선택 즉시 불러와 모든 기기에서 동일하게 보입니다. 궁서체·바탕은 기기에 설치된 글꼴을 사용합니다.</div>
     </div>
 
+    <div class="field">
+      <label>글자 표시 속도 (스트리밍)</label>
+      <div class="seg" id="speedSeg">
+        <button data-speed="slow">느리게</button>
+        <button data-speed="normal">보통</button>
+        <button data-speed="fast">빠르게</button>
+      </div>
+      <div class="hint">받은 글자를 일정한 속도로 부드럽게 흘려 끊김을 줄입니다. ‘느리게’일수록 더 매끄럽습니다.</div>
+    </div>
+
     <button class="save-btn" id="cfgSave">저장하고 닫기</button>
   </div>
 </div>
@@ -476,6 +486,29 @@ function renderGm(mdEl, text, streaming){
   mdEl.innerHTML = mdToHtml(text) + (streaming ? '<span class="cursor"></span>' : '');
   // ✦ 로 시작하는 섹션 제목 위에 구분선 추가
   mdEl.querySelectorAll('h2').forEach(h=>{ if((h.textContent||'').indexOf('✦')>=0) h.classList.add('sec'); });
+}
+
+/* 타자기 렌더러: 네트워크가 토큰을 뭉텅이로 줘도, 일정한 속도로 부드럽게 표시.
+   speedKey: 'slow' | 'normal' | 'fast' (설정에서 조절) */
+const TYPE_SPEED={ slow:{tick:34, cap:5, fin:14}, normal:{tick:30, cap:9, fin:26}, fast:{tick:24, cap:16, fin:60} };
+function streamTyper(mdEl, initial){
+  const sp=TYPE_SPEED[localStorage.getItem(LS+'_speed')||'normal']||TYPE_SPEED.normal;
+  let target=initial||'', shown=target.length, done=false, timer=null;
+  const paint=()=>{ const {body}=splitChoices(target.slice(0,shown)); renderGm(mdEl, body, !(done&&shown>=target.length)); maybeScroll(); };
+  const tick=()=>{
+    if(shown<target.length){
+      const backlog=target.length-shown;
+      const step = done ? Math.min(sp.fin, Math.max(12, Math.ceil(backlog/8)))
+                        : Math.min(sp.cap, Math.max(2, Math.ceil(backlog/12)));
+      shown=Math.min(target.length, shown+step);
+      paint();
+    } else if(done){ clearInterval(timer); timer=null; }
+  };
+  const ensure=()=>{ if(!timer) timer=setInterval(tick, sp.tick); };
+  return {
+    push(t){ target+=t; ensure(); },
+    finish(){ done=true; ensure(); return new Promise(r=>{ const w=setInterval(()=>{ if(shown>=target.length){ clearInterval(w); r(); } },16); }); }
+  };
 }
 function mdToHtml(s){
   if(window.marked) return marked.parse(s);
@@ -700,16 +733,15 @@ async function runAssistant(){
   busy=true; sendBtn.disabled=true;
   renderChoices([]); removeFooters();
   const {mdEl}=addMessage('assistant','',true);
-  let acc='', rtimer=null, lastR=0;
-  const scheduleRender=()=>{ if(rtimer) return;
-    const wait=Math.max(16, 70-(performance.now()-lastR));
-    rtimer=setTimeout(()=>{ rtimer=null; lastR=performance.now();
-      const {body}=splitChoices(acc); renderGm(mdEl, body, true); maybeScroll(); }, wait); };
+  const typer=streamTyper(mdEl,'');
+  let acc='';
   try{
-    await streamLLM((tok)=>{ acc+=tok; scheduleRender(); });
+    await streamLLM((tok)=>{ acc+=tok; typer.push(tok); });
   }catch(e){
-    acc += (acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
+    const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
+    acc+=em; typer.push(em);
   }
+  await typer.finish();
   const {body, choices}=splitChoices(acc);
   renderGm(mdEl, body, false);
   history.push({role:'assistant', content:acc}); saveHistory();
@@ -735,15 +767,13 @@ async function continueGen(){
   busy=true; sendBtn.disabled=true; renderChoices([]); removeFooters();
   const gm=[...logEl.querySelectorAll('.msg.gm')].pop();
   const mdEl=gm.querySelector('.md');
-  let acc=history[history.length-1].content, rtimer=null, lastR=0;
-  const scheduleRender=()=>{ if(rtimer) return;
-    const wait=Math.max(16, 70-(performance.now()-lastR));
-    rtimer=setTimeout(()=>{ rtimer=null; lastR=performance.now();
-      const {body}=splitChoices(acc); renderGm(mdEl, body, true); maybeScroll(); }, wait); };
+  let acc=history[history.length-1].content;
+  const typer=streamTyper(mdEl, acc);
   history.push({role:'user', content:'직전 응답이 중간에 끊겼다. 처음부터 다시 쓰지 말고, 끊긴 부분 바로 다음부터 자연스럽게 이어서 계속 작성하라. (선택지로 끝맺을 것)'});
   try{
-    await streamLLM((tok)=>{ acc+=tok; scheduleRender(); });
-  }catch(e){ acc+='\n\n⚠️ '+e.message; }
+    await streamLLM((tok)=>{ acc+=tok; typer.push(tok); });
+  }catch(e){ const em='\n\n⚠️ '+e.message; acc+=em; typer.push(em); }
+  await typer.finish();
   history.pop();
   history[history.length-1].content=acc;
   const {body, choices}=splitChoices(acc);
@@ -806,6 +836,14 @@ function applyFontFamily(key){
 applyFontFamily(fontKey);
 $('fontSel').value=fontKey;
 $('fontSel').onchange=()=>applyFontFamily($('fontSel').value);
+
+/* ---------- 글자 표시 속도 ---------- */
+function selectSpeed(s){
+  localStorage.setItem(LS+'_speed', s);
+  document.querySelectorAll('#speedSeg button').forEach(b=>b.classList.toggle('on', b.dataset.speed===s));
+}
+document.querySelectorAll('#speedSeg button').forEach(b=>b.onclick=()=>selectSpeed(b.dataset.speed));
+selectSpeed(localStorage.getItem(LS+'_speed')||'normal');
 document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('cmdRow').classList.add('hidden'); sendMessage(c.dataset.cmd); });
 
 /* 하단 도구 버튼 */
