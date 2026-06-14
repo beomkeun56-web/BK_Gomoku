@@ -249,7 +249,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver" title="build __SHA__ · __DATE__">__BUILD__</span></div>
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.30</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -361,6 +361,13 @@
       <label>글자 표시 속도 — <span id="speedVal" style="color:var(--gold)">보통</span></label>
       <input type="range" id="speedRange" class="speed-range" min="1" max="5" step="1" value="3">
       <div class="speed-ticks"><span>매우 느림</span><span>느림</span><span>보통</span><span>빠름</span><span>매우 빠름</span></div>
+    </div>
+
+    <div class="field">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+        <input type="checkbox" id="sumToggle" style="width:auto"> 대화 축약(요약) 사용
+      </label>
+      <div class="hint">끄면(기본) 전체 대화를 그대로 보내 맥락이 풍부해집니다(토큰↑). 켜면 오래된 대화를 요약해 토큰을 아낍니다.</div>
     </div>
 
     <button class="save-btn" id="cfgSave">저장하고 닫기</button>
@@ -571,7 +578,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 - 선택의 기로에서는 '선택지 / 기회 / 리스크'를 비교하는 작은 표를 1개 넣어 정리하면 좋다.
 - ## ✦ 뉴스: 1~2줄.
 - 선택지 3개.
-문장 자체는 간결하게(중복·과한 수식어·불필요한 회상·장황한 묘사 금지). 즉 '짜임새(여러 장면·표·뉴스)는 유지하되, 각 문장은 짧고 깔끔하게'. 전체 분량은 본문 기준 대략 3~6개 짧은 단락 + 표/뉴스 정도가 적당하다. 너무 짧게 한 토막만 내거나, 반대로 끝없이 늘어놓는 양극단을 피한다.
+문장 자체는 깔끔하게(중복·과한 수식어 금지)하되, 장면·인물 심리·대사·디테일은 충분히 풍부하게 채운다. 즉 '짜임새(여러 장면·표·뉴스)와 풍부한 묘사는 유지하되 군더더기 없이'. 너무 짧게 한 토막만 달랑 내지 말고, 보내준 클로드 예시 수준의 짜임새·깊이(여러 장면·인물·표)로 쓴다. 다만 같은 내용 반복·의미 없는 늘이기는 금지.
 
 [국정 과제(퀘스트)]
 매 시기 상황에 맞는 과제 1~3개를 내부적으로 관리(목표·기한·성공 보상·실패 페널티). 전체 목록은 플레이어가 '국정과제'/'과제'를 입력했을 때만 아래 형식으로 표시한다:
@@ -634,7 +641,9 @@ let busy=false;
 let summary = localStorage.getItem(LS+'_sum') || '';
 let summaryUpto = parseInt(localStorage.getItem(LS+'_sumupto'))||0;
 function persistSummary(){ localStorage.setItem(LS+'_sum', summary); localStorage.setItem(LS+'_sumupto', String(summaryUpto)); }
-const SUMMARY_TRIGGER=24, WINDOW_KEEP=10; // 미요약 메시지가 24개↑면 최근 10개만 남기고 요약
+// 대화 축약(요약) 사용 여부 — 끄면 전체 대화를 그대로 전송(맥락 유지, 토큰↑)
+let summarizeOn = (localStorage.getItem(LS+'_sumon')==='1'); // 기본 OFF
+const SUMMARY_TRIGGER=24, WINDOW_KEEP=10;
 
 function loadCfg(){ try{return JSON.parse(localStorage.getItem(LS+'_cfg'))||{}}catch(e){return {}} }
 function saveCfg(){ localStorage.setItem(LS+'_cfg', JSON.stringify(cfg)); }
@@ -865,6 +874,7 @@ function resolveCfg(){
 
 // API로 보낼 메시지 = (요약 있으면 요약 쌍) + 미요약 최근 메시지
 function buildApiMessages(){
+  if(!summarizeOn) return history.slice();   // 축약 OFF: 전체 대화 그대로
   const recent=history.slice(summaryUpto);
   const out=[];
   if(summary){
@@ -905,7 +915,7 @@ async function streamOpenAI(model,key,onToken,msgs){
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
       'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
-    body:JSON.stringify({model, stream:true, max_tokens:4000, temperature:0.9,
+    body:JSON.stringify({model, stream:true, max_tokens:6000, temperature:0.9,
       messages:[orSystemMsg(model),...msgs]})
   });
   await readSSE(res,(data)=>{
@@ -922,7 +932,7 @@ async function streamAnthropic(model,key,onToken,msgs){
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,
       'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model, max_tokens:4000, system:anthropicSystem(), stream:true,
+    body:JSON.stringify({model, max_tokens:6000, system:anthropicSystem(), stream:true,
       messages:msgs.map(m=>({role:m.role, content:m.content}))})
   });
   await readSSE(res,(data)=>{
@@ -940,7 +950,7 @@ async function streamGemini(model,key,onToken,msgs){
     body:JSON.stringify({
       system_instruction:{parts:[{text:SYSTEM_PROMPT}]},
       contents,
-      generationConfig:{maxOutputTokens:4000, temperature:0.9}
+      generationConfig:{maxOutputTokens:6000, temperature:0.9}
     })
   });
   await readSSE(res,(data)=>{
@@ -979,6 +989,7 @@ async function callOnce(messages, sys){
 
 // 오래된 대화 자동 요약(슬라이딩 윈도우) — 토큰 급증 방지
 async function maybeSummarize(){
+  if(!summarizeOn) return;   // 축약 OFF면 전체 대화 그대로 전송
   if(history.length - summaryUpto <= SUMMARY_TRIGGER) return;
   let cut=history.length - WINDOW_KEEP; cut-=(cut%2);   // 짝수 경계(역할 정렬 유지)
   if(cut<=summaryUpto) return;
@@ -1129,6 +1140,12 @@ $('fontSel').onchange=()=>applyFontFamily($('fontSel').value);
   const sr=$('speedRange'), lab=$('speedVal');
   const k=getSpeedKey(); sr.value=k; lab.textContent=SPEED_LABEL[k];
   sr.oninput=()=>{ localStorage.setItem(LS+'_speed', sr.value); lab.textContent=SPEED_LABEL[sr.value]; };
+})();
+/* 대화 축약(요약) 토글 */
+(function(){
+  const t=$('sumToggle'); if(!t) return;
+  t.checked=summarizeOn;
+  t.onchange=()=>{ summarizeOn=t.checked; localStorage.setItem(LS+'_sumon', t.checked?'1':'0'); };
 })();
 document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
   $('cmdRow').classList.add('hidden');
@@ -1429,8 +1446,6 @@ function restore(){
 }
 restore();
 if(!cfg.provider||!cfg.key){ /* leave welcome */ }
-// 빌드 버전: 워크플로가 __BUILD__를 치환. 미치환(로컬) 시 dev 표기.
-if($('ver') && $('ver').textContent.indexOf('__'+'BUILD__')>=0) $('ver').textContent='dev';
 </script>
 </body>
 </html>
