@@ -14,6 +14,7 @@
     --font:"Gungsuh","GungsuhChe","궁서","GungSeo","바탕","Batang","Noto Serif KR",serif;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  button,input,select,textarea{font-family:inherit} /* 모든 메뉴·버튼·입력도 설정 폰트 사용 */
   html,body{height:100%}
   body{
     margin:0; background:#000;
@@ -525,7 +526,7 @@ function streamTyper(mdEl, initial){
       committedEl.appendChild(wrap); committed=b;
     }
     activeEl.innerHTML=mdToHtml(target.slice(committed,shown)); decorateSec(activeEl);
-    maybeScroll();
+    // 생성 중에는 자동 스크롤하지 않음 — 사용자가 읽으면서 직접 내려감
   };
   const tick=()=>{
     if(shown<target.length){
@@ -536,7 +537,9 @@ function streamTyper(mdEl, initial){
   };
   const ensure=()=>{ if(!timer) timer=setInterval(tick, sp.tick); };
   return {
-    push(t){ target+=t; ensure(); },
+    // 타이핑 목표를 통째로 갱신(본문만 전달 — 선택지는 제외). 줄어들면 안전 클램프.
+    setTarget(str){ target=str||''; if(shown>target.length) shown=target.length;
+      if(committed>target.length){ committed=0; committedEl.innerHTML=''; } ensure(); },
     finish(){ done=true; ensure(); return new Promise(r=>{ const w=setInterval(()=>{ if(shown>=target.length){ clearInterval(w); r(); } },16); }); }
   };
 }
@@ -553,6 +556,8 @@ function mdToHtml(s){
    The GM emits a "✦ 어떻게 ...?" header followed by "1. **title** — desc".
    We split that block off the message body and render dedicated buttons. */
 const CHOICE_HEAD=/^#{1,6}\s*\**\s*✦?\s*어떻게\s*(하시겠습니까|응답하시겠습니까|시작하시겠습니까)\??\s*\**\s*$/m;
+// 스트리밍 중 선택지 헤더 조기 감지(부분 입력도 매칭) — 본문 타이핑을 여기서 멈춤
+const HEAD_DETECT=/(^|\n)\s*#{0,6}\s*\**\s*✦?\s*어떻게\s*(하시겠|응답하시겠|시작하시겠)/;
 function splitChoices(text){
   const m=text.match(CHOICE_HEAD);
   if(!m) return {body:text, choices:[]};
@@ -765,11 +770,13 @@ async function runAssistant(){
   const {mdEl}=addMessage('assistant','',true);
   const typer=streamTyper(mdEl,'');
   let acc='';
+  const feed=()=>{ const m=acc.match(HEAD_DETECT); typer.setTarget(m?acc.slice(0,m.index):acc);
+    const {choices}=splitChoices(acc); if(choices.length>=2) renderChoices(choices); };
   try{
-    await streamLLM((tok)=>{ acc+=tok; typer.push(tok); });
+    await streamLLM((tok)=>{ acc+=tok; feed(); });
   }catch(e){
     const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
-    acc+=em; typer.push(em);
+    acc+=em; typer.setTarget(acc);
   }
   await typer.finish();
   const {body, choices}=splitChoices(acc);
@@ -777,7 +784,7 @@ async function runAssistant(){
   history.push({role:'assistant', content:acc}); saveHistory();
   parseStats(acc); renderChoices(choices);
   addGmFooter(mdEl.closest('.msg'));
-  busy=false; sendBtn.disabled=false; maybeScroll();
+  busy=false; sendBtn.disabled=false;
 }
 
 function removeFooters(){ logEl.querySelectorAll('.gm-footer').forEach(f=>f.remove()); }
@@ -799,17 +806,19 @@ async function continueGen(){
   const mdEl=gm.querySelector('.md');
   let acc=history[history.length-1].content;
   const typer=streamTyper(mdEl, acc);
+  const feed=()=>{ const m=acc.match(HEAD_DETECT); typer.setTarget(m?acc.slice(0,m.index):acc);
+    const {choices}=splitChoices(acc); if(choices.length>=2) renderChoices(choices); };
   history.push({role:'user', content:'직전 응답이 중간에 끊겼다. 처음부터 다시 쓰지 말고, 끊긴 부분 바로 다음부터 자연스럽게 이어서 계속 작성하라. (선택지로 끝맺을 것)'});
   try{
-    await streamLLM((tok)=>{ acc+=tok; typer.push(tok); });
-  }catch(e){ const em='\n\n⚠️ '+e.message; acc+=em; typer.push(em); }
+    await streamLLM((tok)=>{ acc+=tok; feed(); });
+  }catch(e){ const em='\n\n⚠️ '+e.message; acc+=em; typer.setTarget(acc); }
   await typer.finish();
   history.pop();
   history[history.length-1].content=acc;
   const {body, choices}=splitChoices(acc);
   renderGm(mdEl, body, false);
   saveHistory(); parseStats(acc); renderChoices(choices);
-  addGmFooter(gm); busy=false; sendBtn.disabled=false; maybeScroll();
+  addGmFooter(gm); busy=false; sendBtn.disabled=false;
 }
 
 async function regen(){
