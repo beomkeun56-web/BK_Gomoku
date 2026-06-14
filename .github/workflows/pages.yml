@@ -23,6 +23,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Inject build version (run number + commit hash)
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y.%m.%d)
+          sed -i "s/__BUILD__/v1.1.${GITHUB_RUN_NUMBER} · ${SHA} · ${DATE}/g" index.html
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
