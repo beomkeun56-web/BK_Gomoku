@@ -187,6 +187,11 @@
   .mini-btn:hover{color:#fff; border-color:var(--accent)}
   .hint{font-size:.74rem; color:var(--dim); margin-top:6px; line-height:1.5}
   .hint a{color:var(--blue); text-decoration:none}
+  .speed-range{width:100%; accent-color:var(--gold); height:30px; cursor:pointer; background:transparent}
+  .speed-ticks{display:flex; justify-content:space-between; color:var(--dim); font-size:.66rem; margin-top:-2px}
+  .speed-ticks span{flex:1; text-align:center}
+  .speed-ticks span:first-child{text-align:left}
+  .speed-ticks span:last-child{text-align:right}
   .save-btn{width:100%; background:linear-gradient(135deg,var(--accent),#4a5bd6); color:#fff; border:none;
     border-radius:12px; padding:14px; font-weight:800; font-size:1rem; cursor:pointer; margin-top:6px}
   .save-btn:active{transform:scale(.98)}
@@ -309,13 +314,9 @@
     </div>
 
     <div class="field">
-      <label>글자 표시 속도 (스트리밍)</label>
-      <div class="seg" id="speedSeg">
-        <button data-speed="slow">느리게</button>
-        <button data-speed="normal">보통</button>
-        <button data-speed="fast">빠르게</button>
-      </div>
-      <div class="hint">받은 글자를 일정한 속도로 부드럽게 흘려 끊김을 줄입니다. ‘느리게’일수록 더 매끄럽습니다.</div>
+      <label>글자 표시 속도 — <span id="speedVal" style="color:var(--gold)">보통</span></label>
+      <input type="range" id="speedRange" class="speed-range" min="1" max="5" step="1" value="3">
+      <div class="speed-ticks"><span>매우 느림</span><span>느림</span><span>보통</span><span>빠름</span><span>매우 빠름</span></div>
     </div>
 
     <button class="save-btn" id="cfgSave">저장하고 닫기</button>
@@ -496,13 +497,20 @@ function renderGm(mdEl, text, streaming){
 
 /* 타자기 렌더러: 네트워크가 토큰을 뭉텅이로 줘도, 일정한 속도로 부드럽게 표시.
    speedKey: 'slow' | 'normal' | 'fast' (설정에서 조절) */
-// cap = 한 틱당 최대 글자 수, tick = 틱 간격(ms).
-const TYPE_SPEED={ slow:{tick:48, cap:1}, normal:{tick:30, cap:2}, fast:{tick:18, cap:8} };
+// 글자 표시 속도 5단계 (cap=틱당 최대 글자, tick=틱 간격ms). 1=매우 느림 … 5=매우 빠름
+const TYPE_SPEED={ '1':{tick:42,cap:1}, '2':{tick:32,cap:2}, '3':{tick:26,cap:3}, '4':{tick:20,cap:5}, '5':{tick:14,cap:10} };
+const SPEED_LABEL={ '1':'매우 느림','2':'느림','3':'보통','4':'빠름','5':'매우 빠름' };
+function getSpeedKey(){
+  let v=localStorage.getItem(LS+'_speed');
+  const migrate={slow:'2', normal:'3', fast:'4'}; // 구버전 값 호환
+  if(v in migrate) v=migrate[v];
+  return TYPE_SPEED[v] ? v : '3';
+}
 function decorateSec(el){ el.querySelectorAll('h2').forEach(h=>{ if((h.textContent||'').indexOf('✦')>=0) h.classList.add('sec'); }); }
 // 출력되면서 서식이 점진적으로 결정: 완성된 블록(빈 줄 기준)은 확정해 쌓고,
 // 지금 타이핑 중인 블록만 실시간으로 마크다운 적용(가벼움 + 표/인용/제목이 만들어지며 출력).
 function streamTyper(mdEl, initial){
-  const sp=TYPE_SPEED[localStorage.getItem(LS+'_speed')||'normal']||TYPE_SPEED.normal;
+  const sp=TYPE_SPEED[getSpeedKey()];
   let target=initial||'', shown=target.length, committed=0, done=false, timer=null;
   mdEl.innerHTML='';
   const committedEl=document.createElement('div'); committedEl.className='md-committed';
@@ -859,13 +867,12 @@ applyFontFamily(fontKey);
 $('fontSel').value=fontKey;
 $('fontSel').onchange=()=>applyFontFamily($('fontSel').value);
 
-/* ---------- 글자 표시 속도 ---------- */
-function selectSpeed(s){
-  localStorage.setItem(LS+'_speed', s);
-  document.querySelectorAll('#speedSeg button').forEach(b=>b.classList.toggle('on', b.dataset.speed===s));
-}
-document.querySelectorAll('#speedSeg button').forEach(b=>b.onclick=()=>selectSpeed(b.dataset.speed));
-selectSpeed(localStorage.getItem(LS+'_speed')||'normal');
+/* ---------- 글자 표시 속도 (5단계 슬라이더) ---------- */
+(function(){
+  const sr=$('speedRange'), lab=$('speedVal');
+  const k=getSpeedKey(); sr.value=k; lab.textContent=SPEED_LABEL[k];
+  sr.oninput=()=>{ localStorage.setItem(LS+'_speed', sr.value); lab.textContent=SPEED_LABEL[sr.value]; };
+})();
 document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('cmdRow').classList.add('hidden'); sendMessage(c.dataset.cmd); });
 
 /* 하단 도구 버튼 */
