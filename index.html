@@ -30,9 +30,11 @@
     border-bottom:1px solid var(--line); background:#000;
     flex:0 0 auto;
   }
+  .topbar.hidden{display:none}
   .brand{font-weight:800; letter-spacing:.5px; font-size:1.02rem; display:flex; align-items:center; gap:8px}
   .brand .crown{color:var(--gold); filter:drop-shadow(0 0 6px rgba(232,192,106,.5))}
   .brand small{color:var(--dim); font-weight:600; font-size:.7rem; letter-spacing:1px}
+  .brand .ver{color:var(--gold); font-weight:700; font-size:.74rem; border:1px solid #3a3b42; border-radius:10px; padding:1px 7px}
   .top-actions{margin-left:auto; display:flex; gap:6px}
   .icon-btn{
     background:var(--panel2); border:1px solid var(--line); color:var(--mut);
@@ -50,6 +52,8 @@
   .hud-meta{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px}
   .hud-meta .date{font-weight:800; color:var(--gold); font-size:.92rem; letter-spacing:.5px}
   .hud-meta .sub{color:var(--dim); font-size:.76rem}
+  .hud-x{margin-left:auto; background:transparent; border:1px solid var(--line); color:var(--mut); border-radius:8px; padding:2px 8px; font-size:.78rem; cursor:pointer}
+  .hud-x:hover{color:#fff; border-color:var(--accent)}
   .stat-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
   .stat{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px 8px 9px}
   .stat .nm{font-size:.72rem; color:var(--mut); display:flex; justify-content:space-between; align-items:center}
@@ -213,8 +217,8 @@
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand"><span class="crown">♛</span> 국가의 시대 <small>AGE OF NATIONS</small></div>
+<div class="topbar hidden" id="topbar">
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver">v1.0</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -228,6 +232,7 @@
   <div class="hud-meta">
     <span class="date" id="hudDate">—</span>
     <span class="sub" id="hudSub"></span>
+    <button id="hudClose" class="hud-x" title="닫기">✕</button>
   </div>
   <div class="stat-grid" id="statGrid"></div>
 </div>
@@ -256,6 +261,7 @@
   </div>
   <textarea id="inp" rows="1" placeholder="메시지 보내기"></textarea>
   <div class="toolrow">
+    <button class="pill" id="btnMenu" title="메뉴">☰</button>
     <button class="pill" id="btnAddSit">✳ 상황추가</button>
     <button class="pill" id="btnSuggest">⇄ 추천답변</button>
     <button class="pill" id="btnSlash">/</button>
@@ -378,7 +384,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 엔딩(발생 시 그 턴에 결말, 선택지 생략): 민심 0→정권 붕괴 / 경제 0→국가 부도 / 군사 0이며 전쟁 중→패망 / 명백한 승리(통일·패권·안정)→영광의 엔딩. 엔딩 후 "새 게임을 시작하시겠습니까?"라고 묻는다.
 
 [상태창 표시 규칙]
-전체 상태창은 ① 첫 턴, ② 플레이어가 '상태' 입력 시에만 아래 형식 그대로 전부 출력한다:
+전체 상태창은 플레이어가 '상태'를 입력했을 때만 아래 형식으로 출력한다. 첫 턴을 포함한 그 외 모든 턴에는 상태창도, 스탯 변동 한 줄 알림도 절대 출력하지 않는다(스탯은 내부적으로만 누적·반영하고 화면에는 표시하지 않는다).
 ## **✦ 상태창 · {YYYY/MM/DD} · {N}분기 · 턴 {n}**
 
 | 국력 | 경제 | 군사 | 외교 | 민심 |
@@ -392,7 +398,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 **관계** · 영토 {} · 인구 {} · 동맹 {} · 적대 {}
 
 값은 변동 없으면 숫자만(67), 있으면 괄호로(77(-5)). 위기 스탯(20 미만)은 ⚠. 신호 이모지(🔴🔵🔺🔻)·색상 점 금지.
-그 외 턴: 전체 상태창 대신, 변동된 스탯만 한 줄 알림으로 출력 — 예: \`외교 61 ▼10 위험 · 원인: 동맹에 사전 통보 없이 미사일 발사\` / \`경제 58 ▲4 · 원인: 추경 효과\`. 상승 ▲, 하락 ▼. 변동 없으면 생략.
+'상태'를 입력하지 않은 평소 턴에는 스탯 수치·변동 알림을 일절 출력하지 않는다(본문 어디에도).
 
 [게임 시작 — 첫 메시지]
 사용자가 '시작'이라고 하면 아래를 출력한다:
@@ -401,7 +407,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 2. **권력의 길** — 일개 국회의원에서 시작해 대통령에 도전한다(정치 드라마).
 3. **근대 조선 · 하드** — 격변기의 조선을 이끈다.
 4. **직접 설정** — 한 줄로: 시대 / 국가 / 모드 [/ 통치성향 / 지도자]
-사용자가 고르면 되묻지 말고 즉시 시대·고증에 맞는 초기 상태창(첫 턴 1회 전체 표시)과 첫 상황 브리핑, 첫 턴 선택지를 출력한다. 초기 수치는 국가·시대·모드에 맞게 현실적으로 배분한다.
+사용자가 고르면 되묻지 말고 즉시 첫 상황 브리핑과 첫 턴 선택지를 출력한다. 초기 스탯·국정 과제는 내부적으로 설정하되 화면에는 표시하지 않는다(첫 턴에도 상태창·국정 과제를 자동 출력하지 않음 — 사용자가 '상태'/'국정과제'를 입력할 때만 보여준다). 초기 수치는 국가·시대·모드에 맞게 현실적으로 배분한다. 첫 브리핑 끝에 "상태/국정과제 명령으로 현황을 볼 수 있습니다"라고 한 번만 짧게 안내한다.
 
 [난이도] 보통(균형) / 하드(제약 큼) / 초하드(생존 도전, 복합 위기) / 게릴라(현실 비대칭, 병맛 금지) / 개그(초현실 코미디, 이 모드만 고증 면제).
 
@@ -413,18 +419,17 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 > {한 문장 결과 요약}
 ② 상황 전개: 장면이 바뀌면 ## 헤딩 소제목을 단다(굵은 문장으로 대체 금지). 인물 발언은 > 인용, 데이터는 표.
 ③ 뉴스(중요한 턴만, 최대 2줄): ## **✦ 뉴스** - [국내] … · [해외] …
-④ 변동 알림: 스탯 변동 있는 턴만 한 줄씩(위 형식). 없으면 생략.
-⑤ 선택지: 위 핵심 출력 규칙대로 3개.
+④ 선택지: 위 핵심 출력 규칙대로 3개. (스탯·국정 과제 변동 알림은 평소 턴에 출력하지 않는다 — '상태'/'국정과제' 입력 시에만)
 내용 성격에 맞게 표/현황목록/대화/서술을 섞어 가변 출력한다(매 턴 같은 틀 반복 금지). 제목 줄 맨 앞에 현재 플레이 국가 국기 이모지(예: 🇰🇷).
 
 [고증·일관성]
 시대 고증 엄수(연대에 없는 기술·제도 금지). 점진적 전개(한 턴에 평시→전면전 같은 비약 금지, 큰 사건은 2~4턴). 초자연 금지(개그모드 제외). 스탯·설정은 직전 상태에서 누적하고 과거 사실을 잊지 않는다. 플레이어가 과거 사실을 지적하면 그것을 정답으로 정정한다. 이름·페르소나 변경(예: \`3 보좌관: 이민정, 페르소나: …\`) 입력 시 별도 확인 없이 그 선택을 처리하며 즉시 반영해 일관 유지. 동시에 전면 전개하는 대형 사안은 최대 2개(메인1+서브1). 미결 사안은 결론 날 때까지 끌고 가 종료 처리하고 새 주제로 갈아타지 않는다.
 
 [국정 과제(퀘스트)]
-매 시기 상황에 맞는 과제 1~3개 부여(목표·기한·성공 보상·실패 페널티). 전체 목록은 첫 턴과 '국정과제'/'과제' 입력 시에만 표시:
+매 시기 상황에 맞는 과제 1~3개를 내부적으로 관리(목표·기한·성공 보상·실패 페널티). 전체 목록은 플레이어가 '국정과제'/'과제'를 입력했을 때만 아래 형식으로 표시한다:
 ## **✦ 국정 과제**
 - **{과제명}** · 목표 {조건} · 기한 {N분기} · 성공 시 {지표↑} / 실패 시 {지표↓} · 진행 {상태}
-변동(달성·실패·신규) 있는 턴엔 한 줄 알림 — 예: \`과제 달성: 추경 통과 → 민심 ▲6\`. 장기/단기 과제를 섞는다.
+첫 턴을 포함한 그 외 턴에는 국정 과제 목록도, 과제 변동(달성·실패·신규) 알림도 출력하지 않는다(내부적으로만 관리). 장기/단기 과제를 섞는다.
 
 [상호작용 모드] 회담·면담·협상은 대화 모드로 전환(상대 발언 > 인용 + 1·2·3 응답 + 직접 발언). 위기관리·선거·인사·예산·전시작전 등 특수 모드는 상황에 맞게 발동.
 
@@ -636,12 +641,13 @@ function parseStats(text){
   if(dm) stats._date=dm[1];
   const tm=text.match(/(\d)\s*분기/); if(tm) stats._q=tm[1];
   const turnm=text.match(/턴\s*(\d+)/); if(turnm) stats._turn=turnm[1];
-  if(changed||dm){ saveStats(); renderHud(); }
+  if(changed||dm){ saveStats(); buildHud(); }  // 내용만 갱신(자동 표시 X)
 }
 function clamp(n){return Math.max(0,Math.min(100,n));}
-function renderHud(){
+function showHud(){ buildHud(); $('hud').classList.add('on'); }
+function hideHud(){ $('hud').classList.remove('on'); }
+function buildHud(){
   if(!STAT_KEYS.some(k=>typeof stats[k]==='number')) return;
-  $('hud').classList.add('on');
   $('hudDate').textContent = stats._date || '—';
   let sub=[]; if(stats._q)sub.push(stats._q+'분기'); if(stats._turn)sub.push('턴 '+stats._turn);
   $('hudSub').textContent = sub.join(' · ');
@@ -882,9 +888,15 @@ $('fontSel').onchange=()=>applyFontFamily($('fontSel').value);
   const k=getSpeedKey(); sr.value=k; lab.textContent=SPEED_LABEL[k];
   sr.oninput=()=>{ localStorage.setItem(LS+'_speed', sr.value); lab.textContent=SPEED_LABEL[sr.value]; };
 })();
-document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('cmdRow').classList.add('hidden'); sendMessage(c.dataset.cmd); });
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+  $('cmdRow').classList.add('hidden');
+  if(c.dataset.cmd==='상태') showHud();   // 상태 누를 때만 스탯 HUD 표시
+  sendMessage(c.dataset.cmd);
+});
 
 /* 하단 도구 버튼 */
+$('btnMenu').onclick=()=>$('topbar').classList.toggle('hidden');   // 상단 메뉴바 토글
+$('hudClose').onclick=hideHud;
 $('btnSlash').onclick=()=>$('cmdRow').classList.toggle('hidden');
 $('btnSuggest').onclick=()=>{
   const last=[...history].reverse().find(m=>m.role==='assistant');
@@ -1002,7 +1014,7 @@ function restore(){
       const {choices}=splitChoices(lastAssistant); renderChoices(choices);
       addGmFooter([...logEl.querySelectorAll('.msg.gm')].pop());
     }
-    renderHud();
+    buildHud();   // 데이터만 준비(자동 표시는 안 함)
     scrollDown();
   }
 }
