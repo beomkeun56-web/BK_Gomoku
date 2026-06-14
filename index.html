@@ -249,7 +249,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.34</span></div>
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.36</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -378,12 +378,16 @@
 <div class="overlay" id="snapOverlay">
   <div class="modal">
     <div style="display:flex; align-items:center">
-      <h2>⬇ 진행 스냅샷</h2>
+      <h2>↔ 기기 간 이어하기</h2>
       <button class="modal-x" id="snapClose">✕</button>
     </div>
-    <p class="desc">아래 내용을 복사해 보관하세요. 새 채팅/브라우저에서 <b>이어하기</b> 후 붙여넣으면 그대로 재개됩니다. (이 브라우저에는 대화가 자동 저장됩니다.)</p>
-    <textarea id="snapText" style="width:100%; height:240px; background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:12px; font-family:monospace; font-size:.8rem"></textarea>
-    <button class="save-btn" id="snapCopy">복사하기</button>
+    <p class="desc">아래 <b>이어하기 코드</b>를 복사해 다른 기기(PC↔모바일)에 붙여넣고 <b>가져오기</b>를 누르면 진행 그대로 이어집니다. 카톡으로 나에게 보내기 등으로 옮기면 편합니다. (API 키는 보안상 포함되지 않으니 새 기기에서 키만 다시 입력)</p>
+    <textarea id="snapText" placeholder="여기에 코드가 표시됩니다 / 또는 다른 기기 코드를 붙여넣으세요" style="width:100%; height:200px; background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:12px; font-family:monospace; font-size:.78rem; word-break:break-all"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="save-btn" id="snapCopy" style="margin-top:0">복사하기</button>
+      <button class="mini-btn" id="snapImport" style="white-space:nowrap">가져오기(불러오기)</button>
+    </div>
+    <div class="status-line" id="snapStatus"></div>
   </div>
 </div>
 
@@ -564,13 +568,13 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 ① 제목+요약:
 # **{국기} {국가} — {핵심 사건}**
 > {한 문장 결과 요약}
-② 상황 전개: 한 턴은 한 장면만(소제목 ##은 0~1개). 인물 발언은 > 인용, 데이터는 표. (여러 장면·여러 날짜를 한 턴에 나열하지 말 것 — 위 [구성·분량] 규칙 준수)
+② 상황 전개: 보통 2개 정도의 짧은 장면(step)으로(소제목 ##은 0~2개). 인물 발언은 > 인용, 데이터는 표. (여러 날짜·사건을 길게 나열하지 말 것 — 위 [구성·분량] 규칙 준수)
 ③ 뉴스(중요한 턴만, 최대 2줄): ## **✦ 뉴스** - [국내] … · [해외] …
 ④ 선택지: 위 핵심 출력 규칙대로(1인칭 대사 3개).
 내용 성격에 맞게 표/현황목록/대화/서술을 섞어 가변 출력한다(매 턴 같은 틀 반복 금지). 제목 줄 맨 앞에 현재 플레이 국가 국기 이모지(예: 🇰🇷).
 
 [묘사·문체 — 영화처럼 생생하고 몰입감 있게]
-밋밋한 요약체는 금지. 한 장면을 영화·드라마의 한 신처럼 그린다 — 공간의 디테일(조명·소리·냄새·온도), 인물의 표정·눈빛·손짓·말투·침묵, 그 순간의 긴장감과 속내(독백·방백 허용)를 구체적으로 묘사한다. 대사는 살아있게(끊김·말끝·비아냥·압박). 정치 드라마답게 상황에 맞는 거친 말투·욕설(젠장·빌어먹을·미친·개판이군·엿같네 수준)을 자연스럽게 섞되 과하지 않게 — 막장/혼합 톤은 더 거칠고 감정적으로, 진지 톤은 절제. 한 장면(=한 결정)에 집중하되 그 장면만큼은 깊고 풍부하게(보통 3~6개 단락 + 필요시 표/대사), 군더더기·반복·여러 사건 나열은 금지. 노골적·선정적 성묘사는 제외(안전선 유지).
+밋밋한 요약체는 피하되, 장황하게 늘이지도 않는다. 인물의 표정·눈빛·말투·긴장감을 살아있는 대사 중심으로 간결하게 그린다(속내 독백·방백은 짧게 가끔). 정치 드라마답게 상황에 맞는 거친 말투·욕설(젠장·빌어먹을·미친 수준)을 자연스럽게 섞되 과하지 않게 — 막장/혼합 톤은 좀 더 거칠게, 진지 톤은 절제. 묘사를 위한 묘사·중복·과한 수식어는 빼고 핵심만. 노골적·선정적 성묘사는 제외(안전선 유지).
 
 [고증·일관성]
 시대 고증 엄수(연대에 없는 기술·제도 금지). 초자연 금지(개그모드 제외). 스탯·설정은 직전 상태에서 누적하고 과거 사실을 잊지 않는다. 플레이어가 과거 사실을 지적하면 그것을 정답으로 정정한다. 이름·페르소나 변경(예: \`3 보좌관: 이민정, 페르소나: …\`) 입력 시 별도 확인 없이 그 선택을 처리하며 즉시 반영해 일관 유지. 동시에 전면 전개하는 대형 사안은 최대 2개(메인1+서브1). 미결 사안은 결론 날 때까지 끌고 가 종료 처리하고 새 주제로 갈아타지 않는다.
@@ -578,15 +582,10 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 [전개 속도 — 매우 중요, 천천히·현실적으로]
 한 턴(=3개월/1분기)에 일어나는 변화는 현실에서 실제로 가능한 범위로만 제한한다. 며칠~몇 주 단위의 구체적 사건·절차·인물 반응·실무 과정을 충실히 묘사하고, 한 턴에 여러 단계를 건너뛰지 않는다(비약 금지). 큰 목표(법안 통과, 당직·장관 임명, 선거 승리, 전쟁, 권력 상승)는 절대 한두 턴에 이뤄지지 않으며 보통 5~12턴 이상에 걸쳐 여러 단계(준비→협상/세력화→난관→부분 진전→결판)를 거친다. 특히 권력의 길에서 초선 의원이 단숨에 '대권 주자 1위'가 되는 식의 급상승은 금지 — 상임위·당직·인지도·계파 신뢰를 한 단계씩 쌓아야 한다. 스탯 변동도 한 턴에 과하지 않게(개별 보통 ±2~8, 아주 큰 사건이라도 ±15 한도) 점진적으로 준다. 작은 성취·실패·일상 정치/국정 디테일을 충분히 넣어 호흡을 늦춘다.
 
-[구성·분량 — 한 턴 = 한 장면 / 한 결정 (가장 중요)]
-한 응답은 '지금 이 순간'의 단 하나의 장면·국면만 다룬다. 여러 날짜·여러 사건을 한 응답에 몰아넣어 나열하지 않는다 — 예: 한 턴에 6월·7월·8월 세 장면을 묶거나, "3개월 동안 이런저런 일이 있었고 이제 선택하라"는 식의 요약 나열은 절대 금지. 시간은 직전 장면에서 자연스럽게 이어지는 작은 단계(보통 며칠~몇 주)만 흐르고, 그 결과로 마주한 '하나의 결정 지점'에서 멈춘다.
-한 턴 권장 구성:
-- # 제목 + > 한 줄 요약
-- ## ✦ 상황 전개: 지금의 그 장면 '하나'를 깊이 있게. 배경·분위기 묘사 + 핵심 인물 대사 1~3개(> 인용) + 지금 내릴 결정의 무게. (장면 소제목 ##은 0~1개. 여러 개로 쪼개 여러 사건을 나열하지 말 것)
-- 선택의 기로면 '지금 그 결정'에 대한 비교 표(선택지/기회/리스크) 1개.
-- ## ✦ 뉴스: 1~2줄(생략 가능).
-- 그 결정에 대한 선택지 3개.
-즉 깊이는 한 장면 안에서 풍부하게, 폭은 한 결정으로 좁게. 클로드 앱처럼 '한 번에 한 걸음씩' 순차적으로 끌고 간다. 다음 장면·다음 사건은 플레이어가 이번 선택을 한 뒤, 그 결과로서 다음 턴에 보여준다. 문장은 깔끔하게(중복·과한 수식어 금지)하되 그 한 장면의 묘사·심리·대사는 충분히 풍부하게.
+[구성·분량 — 상황 전개는 2 step 정도]
+한 턴의 상황 전개는 보통 2개 정도의 짧은 장면(step)으로 구성한다 — 예: ① 사건/상황 + 인물 대화, ② 그 반응·이력·맥락(또는 이어지는 한 장면). 인물 대사(> 인용)와 배경·맥락을 자연스럽게 담되, 한 턴에 여러 날짜·여러 사건을 길게 나열하지는 않는다("3개월간 …이 있었다" 식 요약 나열 금지). 시간은 직전에서 자연스럽게 이어지는 작은 단계(며칠~몇 주)만 흐르고, 그 끝에 하나의 결정 지점에서 멈춘다.
+권장 구성: # 제목 + > 한 줄 요약 → ## ✦ 상황 전개(장면 1~2개, ## 소제목 0~2개) → (필요시 선택지 비교 표 1개) → ## ✦ 뉴스 1~2줄(생략 가능) → 선택지 3개.
+간결하면서도 몰입되게 쓴다 — 장황한 군더더기·중복·과한 수식어는 빼고, 핵심 대화·긴장감·결정의 무게를 살린다. 다음 사건은 이번 선택의 결과로 다음 턴에 이어 보여준다.
 
 [국정 과제(퀘스트)]
 매 시기 상황에 맞는 과제 1~3개를 내부적으로 관리(목표·기한·성공 보상·실패 페널티). 전체 목록은 플레이어가 '국정과제'/'과제'를 입력했을 때만 아래 형식으로 표시한다:
@@ -1385,11 +1384,35 @@ $('btnNew').onclick=()=>{
   openSetup();
 };
 
-/* ---------- Snapshot ---------- */
+/* ---------- 기기 간 이어하기 (전체 진행 내보내기/가져오기) ---------- */
+function makeSaveCode(){
+  const data={ v:1, history, stats, summary, summaryUpto,
+    provider:cfg.provider, model:cfg.model, modelManual:cfg.modelManual };
+  // 유니코드 안전 base64
+  return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+}
+function applySaveCode(code){
+  const json=decodeURIComponent(escape(atob(code.trim())));
+  const d=JSON.parse(json);
+  if(!d || !Array.isArray(d.history)) throw new Error('형식 오류');
+  history=d.history; stats=d.stats||{}; summary=d.summary||''; summaryUpto=d.summaryUpto||0;
+  saveHistory(); saveStats(); persistSummary();
+  if(d.provider){ cfg.provider=d.provider; cfg.model=d.model||''; cfg.modelManual=d.modelManual||''; saveCfg(); }
+}
 $('btnSave').onclick=()=>{
-  // Ask the GM to produce the official save snapshot, but also offer raw export
   if(busy){ alert('응답 생성 중에는 잠시 후 시도하세요.'); return; }
-  sendMessage('저장');
+  try{ $('snapText').value=makeSaveCode(); }catch(e){ $('snapText').value=''; }
+  $('snapStatus').textContent=''; $('snapStatus').className='status-line';
+  $('snapOverlay').classList.add('on');
+};
+$('snapImport').onclick=()=>{
+  const code=$('snapText').value.trim();
+  if(!code){ $('snapStatus').textContent='코드를 붙여넣으세요.'; $('snapStatus').className='status-line err'; return; }
+  try{
+    applySaveCode(code);
+    $('snapStatus').textContent='불러왔습니다. 화면을 갱신합니다…'; $('snapStatus').className='status-line ok';
+    setTimeout(()=>location.reload(), 500);
+  }catch(e){ $('snapStatus').textContent='가져오기 실패: 코드가 올바른지 확인하세요.'; $('snapStatus').className='status-line err'; }
 };
 
 /* ---------- Settings modal ---------- */
@@ -1480,6 +1503,7 @@ $('cfgSave').onclick=()=>{
 
 /* ---------- Snapshot export modal helper (raw) ---------- */
 $('snapClose').onclick=()=>$('snapOverlay').classList.remove('on');
+$('snapOverlay').addEventListener('click',e=>{ if(e.target===$('snapOverlay')) $('snapOverlay').classList.remove('on'); });
 $('snapCopy').onclick=()=>{ const t=$('snapText'); t.select(); document.execCommand('copy'); $('snapCopy').textContent='복사됨!'; setTimeout(()=>$('snapCopy').textContent='복사하기',1200); };
 
 /* ---------- Restore previous session ---------- */
