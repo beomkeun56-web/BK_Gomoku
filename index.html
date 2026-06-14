@@ -2,444 +2,768 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BK 오목 : Human-like Balance</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>국가의 시대 — 텍스트 국가운영 시뮬레이션</title>
 <style>
-  /* 1. 레이아웃 */
-  body {
-    background-color: #050505; color: #fff; margin: 0; padding: 10px 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    touch-action: manipulation; box-sizing: border-box;
+  :root{
+    --bg:#070708; --panel:#121317; --panel2:#1a1c22; --line:#2a2d36;
+    --txt:#e9ebf0; --mut:#9aa0ad; --dim:#6b7180;
+    --gold:#e8c06a; --blue:#5aa2ff; --red:#ff6b6b; --green:#5fd29a;
+    --accent:#7b8cff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 800px at 70% -10%, #15171e 0%, var(--bg) 60%) fixed;
+    color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+    display:flex; flex-direction:column; height:100dvh; overflow:hidden;
   }
 
-  header { 
-    width: 92vw; max-width: 450px; margin-bottom: 15px; 
-    display: flex; flex-direction: column; align-items: center; padding-top: 20px;
+  /* ===== Top bar ===== */
+  .topbar{
+    display:flex; align-items:center; gap:10px; padding:10px 14px;
+    border-bottom:1px solid var(--line); background:rgba(10,11,14,.8); backdrop-filter:blur(8px);
+    flex:0 0 auto;
   }
-  
-  h1 { 
-    margin: 0 0 10px 0; font-size: 2.2rem; color: #888; 
-    letter-spacing: 4px; text-transform: uppercase; font-weight: 200; 
+  .brand{font-weight:800; letter-spacing:.5px; font-size:1.02rem; display:flex; align-items:center; gap:8px}
+  .brand .crown{color:var(--gold); filter:drop-shadow(0 0 6px rgba(232,192,106,.5))}
+  .brand small{color:var(--dim); font-weight:600; font-size:.7rem; letter-spacing:1px}
+  .top-actions{margin-left:auto; display:flex; gap:6px}
+  .icon-btn{
+    background:var(--panel2); border:1px solid var(--line); color:var(--mut);
+    border-radius:10px; padding:8px 11px; font-size:.82rem; font-weight:700; cursor:pointer; transition:.15s;
   }
-  
-  #status { 
-    font-weight: 800; font-size: 1.6rem; color: #fff;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4); margin-bottom: 5px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+  .icon-btn:hover{color:#fff; border-color:#3a3f4c}
+  .icon-btn:active{transform:translateY(1px)}
+
+  /* ===== HUD (stat visualization) ===== */
+  #hud{
+    flex:0 0 auto; border-bottom:1px solid var(--line); background:linear-gradient(180deg, rgba(20,22,28,.7), rgba(10,11,14,.2));
+    padding:10px 14px; display:none;
   }
-  .turn-indicator { font-size: 1rem; color: #aaa; font-weight: normal; }
-  .opponent-rank {
-    font-size: 0.9rem; color: #FFD700; font-weight: normal; opacity: 0.9;
-    margin-left: 5px; padding-left: 10px; border-left: 1px solid #444;
+  #hud.on{display:block}
+  .hud-meta{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px}
+  .hud-meta .date{font-weight:800; color:var(--gold); font-size:.92rem; letter-spacing:.5px}
+  .hud-meta .sub{color:var(--dim); font-size:.76rem}
+  .stat-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px 8px 9px}
+  .stat .nm{font-size:.72rem; color:var(--mut); display:flex; justify-content:space-between; align-items:center}
+  .stat .nm b{color:#fff; font-size:.92rem; font-weight:800}
+  .stat .nm .dl{font-size:.66rem; font-weight:800}
+  .dl.up{color:var(--green)} .dl.dn{color:var(--red)}
+  .bar{height:6px; border-radius:6px; background:#23262e; margin-top:6px; overflow:hidden}
+  .bar > i{display:block; height:100%; border-radius:6px; transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  .stat.warn{border-color:#5a2a2a}
+  .stat.warn .nm b{color:var(--red)}
+  @media (max-width:520px){
+    .stat .nm{font-size:.64rem} .stat{padding:6px 6px 8px} .stat-grid{gap:5px}
   }
 
-  .hidden { display: none !important; }
+  /* ===== Chat log ===== */
+  #log{flex:1 1 auto; overflow-y:auto; padding:16px 14px 6px; scroll-behavior:smooth}
+  #log::-webkit-scrollbar{width:8px} #log::-webkit-scrollbar-thumb{background:#2a2d36; border-radius:8px}
+  .msg{max-width:820px; margin:0 auto 16px}
+  .role{font-size:.7rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; color:var(--dim)}
+  .bubble{border:1px solid var(--line); border-radius:14px; padding:14px 16px; background:var(--panel)}
+  .msg.user .bubble{background:linear-gradient(180deg,#1d2740,#161d2f); border-color:#2c3a5c}
+  .msg.user .role{color:var(--blue)}
+  .msg.gm .role{color:var(--gold)}
 
-  /* 2. 메뉴 화면 */
-  #menu { 
-    background: #1c1c1e; padding: 30px 20px; border-radius: 24px; 
-    border: 1px solid #333; margin-top: 5vh;
-    box-shadow: 0 20px 50px rgba(255,255,255,0.05); 
-    text-align: center; width: 90%; max-width: 380px; 
-  }
-  .option-group { margin-bottom: 25px; }
-  .option-title { font-weight: 600; margin-bottom: 12px; display: block; color: #aaa; font-size: 0.95rem; }
-  
-  .color-group { display: flex; justify-content: center; gap: 10px; }
-  
-  /* 6등급 그리드 레이아웃 */
-  .level-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-  }
+  /* markdown styling */
+  .md h1{font-size:1.5rem; margin:.2em 0 .5em; line-height:1.25; border-bottom:1px solid var(--line); padding-bottom:.3em}
+  .md h2{font-size:1.16rem; margin:1em 0 .45em; color:#fff}
+  .md h3{font-size:1.0rem; margin:.9em 0 .4em; color:var(--gold)}
+  .md p{margin:.5em 0; line-height:1.7}
+  .md ul,.md ol{margin:.5em 0; padding-left:1.3em; line-height:1.7}
+  .md li{margin:.2em 0}
+  .md strong{color:#fff}
+  .md em{color:var(--gold); font-style:normal}
+  .md blockquote{margin:.6em 0; padding:.5em .9em; border-left:3px solid var(--accent);
+    background:rgba(123,140,255,.08); border-radius:0 8px 8px 0; color:#dfe3ee}
+  .md code{background:#0d0f14; border:1px solid var(--line); border-radius:6px; padding:1px 5px; font-size:.86em}
+  .md pre{background:#0b0d12; border:1px solid var(--line); border-radius:10px; padding:12px; overflow:auto}
+  .md pre code{border:0; background:none; padding:0}
+  .md table{border-collapse:collapse; width:100%; margin:.7em 0; font-size:.9rem; display:block; overflow-x:auto}
+  .md th,.md td{border:1px solid var(--line); padding:7px 10px; text-align:center}
+  .md th{background:#1d2029; color:#fff}
+  .md tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+  .md hr{border:0; border-top:1px solid var(--line); margin:1em 0}
+  .cursor{display:inline-block; width:8px; height:1.05em; background:var(--gold); vertical-align:-2px; animation:blink 1s steps(1) infinite; border-radius:1px}
+  @keyframes blink{50%{opacity:0}}
 
-  .choice-btn { 
-    padding: 12px 0; border: 1px solid #444; 
-    background: #2c2c2e; color: #888;
-    cursor: pointer; border-radius: 10px; 
-    font-size: 0.9rem; font-weight: 600; transition: all 0.2s; 
+  /* ===== Choices popup ===== */
+  #choices{max-width:820px; margin:0 auto; padding:0 14px}
+  #choices.empty{display:none}
+  .choices-head{font-size:.78rem; font-weight:800; color:var(--gold); letter-spacing:.5px; margin:2px 4px 8px}
+  .choice{
+    display:flex; gap:10px; align-items:flex-start; width:100%; text-align:left;
+    background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:12px; padding:12px 13px; margin-bottom:8px; cursor:pointer; transition:.15s;
   }
-  .choice-btn.selected { 
-    border-color: #fff; background: #fff; color: #000; 
-    box-shadow: 0 0 10px rgba(255,255,255,0.3);
-  }
-  
-  #start-btn { 
-    width: 100%; padding: 18px; 
-    background: linear-gradient(135deg, #0A84FF, #0055AA); color: white; 
-    border: none; border-radius: 16px; 
-    font-size: 1.2rem; font-weight: 700; cursor: pointer; 
-    box-shadow: 0 5px 20px rgba(10, 132, 255, 0.4); margin-top: 10px;
-    touch-action: manipulation;
-  }
-  #start-btn:active { transform: scale(0.96); }
+  .choice:hover{border-color:var(--gold); background:#20222a; transform:translateY(-1px)}
+  .choice:active{transform:translateY(0)}
+  .choice .num{flex:0 0 auto; width:24px; height:24px; border-radius:7px; background:var(--gold); color:#1a1206;
+    font-weight:900; display:flex; align-items:center; justify-content:center; font-size:.85rem}
+  .choice .tx b{display:block; font-size:.95rem}
+  .choice .tx span{display:block; color:var(--mut); font-size:.83rem; margin-top:2px; line-height:1.5}
 
-  /* 3. 게임판 */
-  #game-wrapper {
-    position: relative; width: 92vw; height: 92vw;
-    max-width: 450px; max-height: 450px;
-    background-color: #dcb35c; border: 4px solid #5d4037; border-radius: 6px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5); margin-bottom: 15px; 
+  /* ===== Input ===== */
+  .inputbar{flex:0 0 auto; border-top:1px solid var(--line); background:rgba(10,11,14,.85); backdrop-filter:blur(8px); padding:10px 14px}
+  .inputwrap{max-width:820px; margin:0 auto; display:flex; gap:8px; align-items:flex-end}
+  #inp{
+    flex:1; resize:none; background:var(--panel); border:1px solid var(--line); color:var(--txt);
+    border-radius:12px; padding:11px 13px; font-size:.95rem; line-height:1.4; max-height:140px; font-family:inherit;
   }
-  .line { position: absolute; background-color: #000; pointer-events: none; opacity: 0.7; }
-  .h-line { height: 1px; left: 4%; right: 4%; }
-  .v-line { width: 1px; top: 4%; bottom: 4%; }
-  .dot { position: absolute; width: 5px; height: 5px; background: #000; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
-  .click-area { position: absolute; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; }
+  #inp:focus{outline:none; border-color:var(--accent)}
+  #send{
+    flex:0 0 auto; background:linear-gradient(135deg,var(--accent),#4a5bd6); color:#fff; border:none;
+    border-radius:12px; padding:11px 18px; font-weight:800; cursor:pointer; font-size:.95rem; transition:.15s;
+  }
+  #send:disabled{opacity:.45; cursor:default}
+  #send:active:not(:disabled){transform:scale(.96)}
+  .quickbar{max-width:820px; margin:8px auto 0; display:flex; gap:6px; flex-wrap:wrap}
+  .chip{background:var(--panel); border:1px solid var(--line); color:var(--mut); border-radius:20px;
+    padding:5px 12px; font-size:.78rem; cursor:pointer; font-weight:600; transition:.15s}
+  .chip:hover{color:#fff; border-color:var(--accent)}
 
-  /* 돌 디자인 */
-  .stone { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; box-shadow: 2px 3px 5px rgba(0,0,0,0.4); }
-  .stone.black { background: radial-gradient(circle at 35% 35%, #666 0%, #000 85%); }
-  .stone.white { background: radial-gradient(circle at 35% 35%, #fff 0%, #ddd 60%, #999 100%); }
-  .last-move::after { content: ''; position: absolute; top: 50%; left: 50%; width: 20%; height: 20%; border-radius: 50%; transform: translate(-50%, -50%); background-color: #ff3b30; box-shadow: 0 0 6px #ff0000; }
+  /* ===== Modal (settings) ===== */
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.66); backdrop-filter:blur(3px); display:none;
+    align-items:center; justify-content:center; z-index:50; padding:16px}
+  .overlay.on{display:flex}
+  .modal{width:100%; max-width:480px; max-height:90dvh; overflow-y:auto; background:var(--panel);
+    border:1px solid var(--line); border-radius:18px; padding:22px}
+  .modal h2{margin:0 0 4px; font-size:1.2rem; display:flex; align-items:center; gap:8px}
+  .modal .desc{color:var(--mut); font-size:.84rem; margin:0 0 18px; line-height:1.6}
+  .field{margin-bottom:16px}
+  .field > label{display:block; font-size:.8rem; font-weight:700; color:var(--mut); margin-bottom:7px}
+  .seg{display:flex; gap:6px}
+  .seg button{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--mut);
+    border-radius:10px; padding:10px 6px; font-weight:700; font-size:.85rem; cursor:pointer; transition:.15s}
+  .seg button.on{background:var(--gold); color:#1a1206; border-color:var(--gold)}
+  input[type=text],input[type=password],select{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:10px; padding:10px 12px; font-size:.9rem; font-family:inherit;
+  }
+  input:focus,select:focus{outline:none; border-color:var(--accent)}
+  .row{display:flex; gap:8px}
+  .row > *{min-width:0}
+  .mini-btn{background:var(--panel2); border:1px solid var(--line); color:var(--mut); border-radius:10px;
+    padding:10px 12px; font-weight:700; font-size:.82rem; cursor:pointer; white-space:nowrap}
+  .mini-btn:hover{color:#fff; border-color:var(--accent)}
+  .hint{font-size:.74rem; color:var(--dim); margin-top:6px; line-height:1.5}
+  .hint a{color:var(--blue); text-decoration:none}
+  .save-btn{width:100%; background:linear-gradient(135deg,var(--accent),#4a5bd6); color:#fff; border:none;
+    border-radius:12px; padding:14px; font-weight:800; font-size:1rem; cursor:pointer; margin-top:6px}
+  .save-btn:active{transform:scale(.98)}
+  .modal-x{position:relative; margin-left:auto; background:none; border:none; color:var(--dim); font-size:1.3rem; cursor:pointer}
+  .status-line{font-size:.78rem; margin-top:8px; min-height:1.1em}
+  .status-line.err{color:var(--red)} .status-line.ok{color:var(--green)} .status-line.load{color:var(--gold)}
 
-  /* 훈수 마커 */
-  .hint-marker {
-    position: absolute; border: 3px dotted #000; 
-    border-radius: 50%; transform: translate(-50%, -50%); z-index: 15;
-    pointer-events: none; box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    animation: pulse 1.5s infinite;
-  }
-  @keyframes pulse {
-    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
-    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
-  }
-
-  /* 하단 버튼 */
-  .control-bar {
-    width: 92vw; max-width: 450px;
-    display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px;
-  }
-  .game-btn {
-    flex: 1; padding: 18px 0; border-radius: 16px;
-    font-size: 1.1rem; font-weight: 700;
-    cursor: pointer; transition: all 0.15s;
-    display: flex; justify-content: center; align-items: center; gap: 6px;
-  }
-  #hint-btn { background: #333; border: 1px solid #FFD700; color: #FFD700; }
-  #hint-btn:active { background: #FFD700; color: #000; transform: translateY(2px); }
-  #undo-btn { background: #2c2c2e; border: 1px solid #666; color: #eee; }
-  #undo-btn:active { background: #eee; color: #000; transform: translateY(2px); }
-  #exit-btn {
-    width: 92vw; max-width: 450px; padding: 14px 0;
-    background: transparent; border: 1px solid #444; color: #888;
-    border-radius: 12px; font-size: 0.95rem; cursor: pointer; font-weight: 600;
-  }
-  #exit-btn:active { background: #333; color: #fff; }
-
+  /* welcome state */
+  .welcome{max-width:560px; margin:6vh auto 0; text-align:center; padding:0 12px}
+  .welcome .big{font-size:1.7rem; font-weight:900; letter-spacing:1px; margin-bottom:6px}
+  .welcome .big .crown{color:var(--gold)}
+  .welcome p{color:var(--mut); line-height:1.7; font-size:.92rem}
+  .welcome .cta{margin-top:18px; background:linear-gradient(135deg,var(--gold),#caa14a); color:#1a1206;
+    border:none; border-radius:14px; padding:14px 26px; font-weight:900; font-size:1rem; cursor:pointer}
+  .feat{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px}
+  .feat span{font-size:.74rem; color:var(--dim); border:1px solid var(--line); border-radius:20px; padding:5px 11px}
 </style>
 </head>
 <body>
 
-<div id="menu">
-  <h2 style="color:white; margin-bottom:30px;">BK 오목</h2>
-  
-  <div class="option-group">
-    <span class="option-title">내 돌 선택 (자유 오목)</span>
-    <div class="color-group">
-      <button class="choice-btn selected" style="flex:1;" onclick="setOpt('color','black',this)">흑(●)</button>
-      <button class="choice-btn" style="flex:1;" onclick="setOpt('color','white',this)">백(○)</button>
-    </div>
+<div class="topbar">
+  <div class="brand"><span class="crown">♛</span> 국가의 시대 <small>AGE OF NATIONS</small></div>
+  <div class="top-actions">
+    <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
+    <button class="icon-btn" id="btnNew" title="새 게임">새 게임</button>
+    <button class="icon-btn" id="btnCfg" title="API 설정">⚙ 설정</button>
   </div>
-
-  <div class="option-group">
-    <span class="option-title">상대 등급 (6급=입문 / 1급=최강)</span>
-    <div class="level-grid">
-      <button class="choice-btn" onclick="setOpt('level',1,this)">1등급</button>
-      <button class="choice-btn" onclick="setOpt('level',2,this)">2등급</button>
-      <button class="choice-btn" onclick="setOpt('level',3,this)">3등급</button>
-      <button class="choice-btn" onclick="setOpt('level',4,this)">4등급</button>
-      <button class="choice-btn" onclick="setOpt('level',5,this)">5등급</button>
-      <button class="choice-btn selected" onclick="setOpt('level',6,this)">6등급</button>
-    </div>
-  </div>
-  
-  <button id="start-btn" onclick="startGame()" ontouchstart="startGame()">대국 시작</button>
 </div>
 
-<div id="game" class="hidden">
-  <header>
-    <h1>BK GOMOKU</h1>
-    <div id="status"></div>
-  </header>
-
-  <div id="game-wrapper"></div>
-
-  <div class="control-bar">
-    <button id="hint-btn" class="game-btn" onclick="showHint()">✨ 훈수 보기</button>
-    <button id="undo-btn" class="game-btn" onclick="undoMove()">↩ 무르기</button>
+<div id="hud">
+  <div class="hud-meta">
+    <span class="date" id="hudDate">—</span>
+    <span class="sub" id="hudSub"></span>
   </div>
-  <button id="exit-btn" onclick="goBackToMenu()">메뉴로 나가기</button>
+  <div class="stat-grid" id="statGrid"></div>
 </div>
 
+<div id="log">
+  <div class="welcome" id="welcome">
+    <div class="big"><span class="crown">♛</span> 국가의 시대</div>
+    <p>당신은 한 나라의 지도자입니다. 매 분기 내려지는 결정이 국력·경제·군사·외교·민심을 바꾸고, 역사의 흐름을 가릅니다. AI 게임 마스터가 당신의 선택에 따라 세계를 움직입니다.</p>
+    <div class="feat">
+      <span>OpenRouter · Gemini · Claude</span><span>실시간 스탯 시각화</span><span>팝업 선택지</span><span>저장 / 이어하기</span>
+    </div>
+    <button class="cta" id="ctaStart">게임 시작하기</button>
+    <p style="margin-top:14px; font-size:.8rem">시작하려면 먼저 ⚙ 설정에서 제공사·모델·API 키를 입력하세요.</p>
+  </div>
+</div>
+
+<div id="choices" class="empty"></div>
+
+<div class="inputbar">
+  <div class="inputwrap">
+    <textarea id="inp" rows="1" placeholder="번호(1·2·3)를 입력하거나, 직접 행동을 적으세요…"></textarea>
+    <button id="send">전송</button>
+  </div>
+  <div class="quickbar">
+    <button class="chip" data-cmd="상태">상태</button>
+    <button class="chip" data-cmd="국정과제">국정과제</button>
+    <button class="chip" data-cmd="저장">저장</button>
+    <button class="chip" data-cmd="삽화">삽화</button>
+    <button class="chip" data-cmd="이어하기">이어하기</button>
+  </div>
+</div>
+
+<!-- ===== Settings modal ===== -->
+<div class="overlay" id="cfgOverlay">
+  <div class="modal">
+    <div style="display:flex; align-items:center">
+      <h2>⚙ API 설정</h2>
+      <button class="modal-x" id="cfgClose">✕</button>
+    </div>
+    <p class="desc">게임은 당신이 고른 LLM이 게임 마스터(GM) 역할로 진행합니다. 제공사를 고르고, 모델과 API 키를 입력하세요. 키는 이 브라우저(localStorage)에만 저장되며 서버로 전송되지 않습니다.</p>
+
+    <div class="field">
+      <label>제공사 (Provider)</label>
+      <div class="seg" id="provSeg">
+        <button data-prov="openrouter">OpenRouter</button>
+        <button data-prov="gemini">Gemini</button>
+        <button data-prov="anthropic">Claude</button>
+      </div>
+      <div class="hint" id="provHint"></div>
+    </div>
+
+    <div class="field">
+      <label>API 키</label>
+      <input type="password" id="apiKey" placeholder="sk-... / AIza... 등" autocomplete="off">
+      <div class="hint" id="keyHint"></div>
+    </div>
+
+    <div class="field">
+      <label>모델</label>
+      <div class="row">
+        <select id="modelSel" style="flex:1"><option value="">— 키 입력 후 [모델 불러오기] —</option></select>
+        <button class="mini-btn" id="btnModels">모델 불러오기</button>
+      </div>
+      <input type="text" id="modelManual" placeholder="또는 모델 ID 직접 입력 (예: google/gemini-2.5-pro)" style="margin-top:8px">
+      <div class="status-line" id="cfgStatus"></div>
+    </div>
+
+    <button class="save-btn" id="cfgSave">저장하고 닫기</button>
+  </div>
+</div>
+
+<!-- ===== Snapshot modal ===== -->
+<div class="overlay" id="snapOverlay">
+  <div class="modal">
+    <div style="display:flex; align-items:center">
+      <h2>⬇ 진행 스냅샷</h2>
+      <button class="modal-x" id="snapClose">✕</button>
+    </div>
+    <p class="desc">아래 내용을 복사해 보관하세요. 새 채팅/브라우저에서 <b>이어하기</b> 후 붙여넣으면 그대로 재개됩니다. (이 브라우저에는 대화가 자동 저장됩니다.)</p>
+    <textarea id="snapText" style="width:100%; height:240px; background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:12px; font-family:monospace; font-size:.8rem"></textarea>
+    <button class="save-btn" id="snapCopy">복사하기</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
 <script>
-  const SIZE = 15;
-  const PADDING = 4.0; 
-  const ACTIVE_WIDTH = 100 - (PADDING * 2);
-  const STEP = ACTIVE_WIDTH / (SIZE - 1);
-  const STONE_SIZE = STEP * 0.85; 
+/* ============================================================
+   국가의 시대 — 텍스트 국가운영 시뮬레이션 (single-file web app)
+   - Providers: OpenRouter / Google Gemini / Anthropic Claude
+   - Streaming chat, markdown render, popup choices, stat HUD
+   ============================================================ */
 
-  let boardData = [], myColor = 'black', aiColor = 'white', level = 6, currPlayer = 'black', gameOver = false;
-  let moveHistory = []; 
-  let aiTimer = null;   
-  let audioCtx = null;
+/* ---------- GM SYSTEM PROMPT (게임 규칙 v45) ---------- */
+const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 시대'의 게임 마스터(GM)다. 이 대화의 모든 것은 게임 진행이다. 아래 규칙을 절대 어기지 않는다. 모든 출력은 한국어로 한다.
 
-  function initAudio() {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    } catch(e) {}
+[핵심 출력 규칙 — 선택지]
+매 턴 끝에 3개 선택지를 아래 형식으로 무조건 출력한다(첫 턴·일반 턴·이어하기 직후·상태/질문 응답 뒤 등 예외 없이):
+## **✦ 어떻게 하시겠습니까?**
+1. **{짧은 제목}** — {한 줄 설명}
+2. **{짧은 제목}** — {한 줄 설명}
+3. **{짧은 제목}** — {한 줄 설명}
+- 선택지는 정확히 3개, 서로 다른 방향. 사용자는 숫자나 직접 행동을 입력한다. 선택지 없이 응답을 끝내지 않는다(게임 종료 턴 제외). 응답을 끝내기 직전 "3개 선택지를 띄웠는가?"를 확인하고 빠졌으면 추가한다.
+
+[핵심 원칙]
+- 현실적·지정학적으로 설득력 있게 전개한다. 선택의 대가는 반드시 스탯에 반영한다.
+- 등장인물의 발언은 큰따옴표로 감싸고 인용 블록(>)으로 쓴다.
+- 실존 정치인의 가공 발언은 만들지 않는다. 필요 시 직책·국가로 표현(예: "미국 국무장관").
+- 지역은 실제 지명(마포·여의도·부산·세종 등), 인물·계파 이름은 자연스러운 한국식 이름으로 짓는다. 기업은 일반 배경 맥락에서 실존 기업명(삼성전자·SK하이닉스·현대차 등)을 쓰되, 비리·스캔들의 당사자는 가공 기업명(성진그룹·대운건설 등)으로 만든다. 실존 공인·기업에 가공의 비리·범죄·발언을 직접 씌우지 않는다.
+- 레일로딩 금지: 플레이어의 선택·직접 입력대로 전개가 실제로 갈라진다. 정해진 결말로 몰지 않는다.
+- 서술 금지어: 본문에 "플레이어" 같은 표현 대신 국가·직책·지도자 이름으로 서술한다.
+- 플레이어가 행동이 아니라 질문(정보·배경·수치 설명)을 하면, 상황에 맞는 인물이 대사(> 인용)로 답한다. 이때는 턴·날짜가 넘어가지 않고 스탯도 변하지 않는다.
+
+[현실적 의사결정·집행]
+지시는 즉시 마법처럼 완료되지 않는다. ① 지시 접수 → ② 참모·부처의 반응(찬반·우려) → ③ 현실적 절차·제약(법·예산·시간·지휘체계·국제 반응) → ④ 결과(완전 성공만이 아니라 부분 성공·지연·실패도 가능).
+- 비가역·중대 결정(수도 타격·전쟁 개시·핵 사용·쿠데타 등)은 절대 즉시 완료하지 않는다. 지휘체계·전시작전통제권·동맹의 제동을 반영하고 '강행/수정/보류' 재결정 지점을 띄운다. 일상 사안은 한 턴 안에, 중대 사안은 2~4턴에 걸쳐 전개한다.
+- 국정 운영의 현실: 주요 결정은 부처 입안→국무회의 심의→대통령 재가. 국회 동의가 필요한 사안(예산·조약·파병·계엄)은 그 절차를 거치며 여소야대면 부결·지연될 수 있다. 절차가 막히면 그 자체가 이번 분기의 사건이 된다.
+
+[시간·턴]
+1년=4분기. 정책 1회 결정마다 1분기(3개월) 경과. 날짜는 YYYY/MM/DD, 시작은 선택 연도 1월 1일. 매 턴 날짜는 직전 +3개월(1분기): 01/01→04/01→07/01→10/01→이듬해 01/01. 같은 날짜 반복·분기 건너뛰기 금지. 분기마다 경제·재정·여론 지표를 점진 갱신하고 GDP 총액도 실제로 변동시킨다.
+
+[스탯 시스템]
+5대 스탯: 국력·경제·군사·외교·민심 (각 0~100 정수). 매 턴 각 스탯에 -15~+15 변동을 주고 0~100으로 클램프한다. 극단 상황에서도 1턴 변동은 반드시 -15~+15 안. 스탯 20 미만이면 값 옆에 ⚠.
+엔딩(발생 시 그 턴에 결말, 선택지 생략): 민심 0→정권 붕괴 / 경제 0→국가 부도 / 군사 0이며 전쟁 중→패망 / 명백한 승리(통일·패권·안정)→영광의 엔딩. 엔딩 후 "새 게임을 시작하시겠습니까?"라고 묻는다.
+
+[상태창 표시 규칙]
+전체 상태창은 ① 첫 턴, ② 플레이어가 '상태' 입력 시에만 아래 형식 그대로 전부 출력한다:
+## **✦ 상태창 · {YYYY/MM/DD} · {N}분기 · 턴 {n}**
+
+| 국력 | 경제 | 군사 | 외교 | 민심 |
+|:--:|:--:|:--:|:--:|:--:|
+| 67 | 49 | 77(-5) | 68(+6) | 53(-8) |
+
+**정치** · {정부형태·이념} / 집권 {당명} · 의회 {의석}
+**경제** · 국고 {} (수입 {}/지출 {}) · GDP {}({성장률}%) · 1인당 {}
+**군사** · 육군 {} · 해군 {} · 공군 {}
+**여론** · 국내 {} · 적대 {} · 동맹 {}
+**관계** · 영토 {} · 인구 {} · 동맹 {} · 적대 {}
+
+값은 변동 없으면 숫자만(67), 있으면 괄호로(77(-5)). 위기 스탯(20 미만)은 ⚠. 신호 이모지(🔴🔵🔺🔻)·색상 점 금지.
+그 외 턴: 전체 상태창 대신, 변동된 스탯만 한 줄 알림으로 출력 — 예: \`외교 61 ▼10 위험 · 원인: 동맹에 사전 통보 없이 미사일 발사\` / \`경제 58 ▲4 · 원인: 추경 효과\`. 상승 ▲, 하락 ▼. 변동 없으면 생략.
+
+[게임 시작 — 첫 메시지]
+사용자가 '시작'이라고 하면 아래를 출력한다:
+## **✦ 게임 시작 — 어떻게 시작하시겠습니까?**
+1. **현대 대한민국 · 보통** — 대통령으로 바로 국정을 운영한다.
+2. **권력의 길** — 일개 국회의원에서 시작해 대통령에 도전한다(정치 드라마).
+3. **근대 조선 · 하드** — 격변기의 조선을 이끈다.
+4. **직접 설정** — 한 줄로: 시대 / 국가 / 모드 [/ 통치성향 / 지도자]
+사용자가 고르면 되묻지 말고 즉시 시대·고증에 맞는 초기 상태창(첫 턴 1회 전체 표시)과 첫 상황 브리핑, 첫 턴 선택지를 출력한다. 초기 수치는 국가·시대·모드에 맞게 현실적으로 배분한다.
+
+[난이도] 보통(균형) / 하드(제약 큼) / 초하드(생존 도전, 복합 위기) / 게릴라(현실 비대칭, 병맛 금지) / 개그(초현실 코미디, 이 모드만 고증 면제).
+
+[권력의 길 시나리오] 개인 정치 스탯 5개(지지기반·자금·인맥·평판·세력)로 시작. 초선 의원→상임위/당직→장관/원내대표→당대표/대선후보→대선→대통령. 정치 거래·스캔들·파벌 암투·배신·폭로·검찰 수사를 활용하되, 강한 드라마 이벤트는 드물게(약 5~6턴에 한 번) 터뜨리고 평소엔 현실적 진행. 어두운 수단엔 수사·폭로·구속 리스크. 대선 승리 시 정치 스탯→국가 5대 스탯으로 전환되고 과거 이력이 국정에 이월된다. 선정적 성묘사 금지(암시·감정선·정치적 파장 중심). 고를 때 톤을 먼저 묻는다(진지 스릴러/막장/혼합).
+
+[매 턴 출력 형식]
+① 제목+요약:
+# **{국기} {국가} — {핵심 사건}**
+> {한 문장 결과 요약}
+② 상황 전개: 장면이 바뀌면 ## 헤딩 소제목을 단다(굵은 문장으로 대체 금지). 인물 발언은 > 인용, 데이터는 표.
+③ 뉴스(중요한 턴만, 최대 2줄): ## **✦ 뉴스** - [국내] … · [해외] …
+④ 변동 알림: 스탯 변동 있는 턴만 한 줄씩(위 형식). 없으면 생략.
+⑤ 선택지: 위 핵심 출력 규칙대로 3개.
+내용 성격에 맞게 표/현황목록/대화/서술을 섞어 가변 출력한다(매 턴 같은 틀 반복 금지). 제목 줄 맨 앞에 현재 플레이 국가 국기 이모지(예: 🇰🇷).
+
+[고증·일관성]
+시대 고증 엄수(연대에 없는 기술·제도 금지). 점진적 전개(한 턴에 평시→전면전 같은 비약 금지, 큰 사건은 2~4턴). 초자연 금지(개그모드 제외). 스탯·설정은 직전 상태에서 누적하고 과거 사실을 잊지 않는다. 플레이어가 과거 사실을 지적하면 그것을 정답으로 정정한다. 이름·페르소나 변경(예: \`3 보좌관: 이민정, 페르소나: …\`) 입력 시 별도 확인 없이 그 선택을 처리하며 즉시 반영해 일관 유지. 동시에 전면 전개하는 대형 사안은 최대 2개(메인1+서브1). 미결 사안은 결론 날 때까지 끌고 가 종료 처리하고 새 주제로 갈아타지 않는다.
+
+[국정 과제(퀘스트)]
+매 시기 상황에 맞는 과제 1~3개 부여(목표·기한·성공 보상·실패 페널티). 전체 목록은 첫 턴과 '국정과제'/'과제' 입력 시에만 표시:
+## **✦ 국정 과제**
+- **{과제명}** · 목표 {조건} · 기한 {N분기} · 성공 시 {지표↑} / 실패 시 {지표↓} · 진행 {상태}
+변동(달성·실패·신규) 있는 턴엔 한 줄 알림 — 예: \`과제 달성: 추경 통과 → 민심 ▲6\`. 장기/단기 과제를 섞는다.
+
+[상호작용 모드] 회담·면담·협상은 대화 모드로 전환(상대 발언 > 인용 + 1·2·3 응답 + 직접 발언). 위기관리·선거·인사·예산·전시작전 등 특수 모드는 상황에 맞게 발동.
+
+[저장/이어하기]
+'저장' 입력 시 아래 스냅샷을 코드블록으로 출력:
+\`\`\`
+[국가의 시대 SAVE]
+시대/국가/모드/성향 | {YYYY/MM/DD} · {N}분기 · 턴 {n}
+스탯 국력{}·경제{}·군사{}·외교{}·민심{}
+정치 원수{}/수반{}/정부형태{}/집권당{}/의회{}
+경제 국고(수입{}/지출{}/비축{}) · GDP총{}(성장{}%)/1인당{}
+군사 육{}·해{}·공{}
+여론 국내{}/적대{}/동맹{}
+관계 영토{}/인구{}/동맹{}/적대{}
+인물 지도자{}/보좌관·측근{}/페르소나{}
+진행과제 1){} 2){} 3){}
+최근사건 1){} 2){} 3){}
+\`\`\`
+'이어하기'+스냅샷이면 그 상태에서 재개하고, 재개 첫 응답에도 현재 상황 브리핑과 3개 선택지를 출력한다. 10턴마다(10·20·30…) 응답 끝에 위 스냅샷을 자동으로 함께 출력한다.
+
+[명령어] 시작 / 저장 / 이어하기+스냅샷 / 상태 / 국정과제(과제) / 새 게임 / 삽화 / 이름변경 / 회담·예산·선거·인사.
+
+[렌더링] HTML·카드·대시보드 금지, 순수 마크다운 텍스트+표로만. 코드/위젯 내부 텍스트를 본문에 노출하지 않는다. 좋고 나쁨을 색·신호 이모지로 표시하지 않고 스탯 변동은 +/- 숫자로만.
+
+응답을 끝내기 직전 반드시: (1) 날짜를 직전 +3개월으로 진행했는가 (2) 스탯 변동을 -15~+15 안으로 지켰는가 (3) 비가역·중대 결정에 제동을 적용했는가 (4) 끝에 3개 선택지를 띄웠는가 — 를 확인한다.`;
+
+/* ---------- Provider config ---------- */
+const PROVIDERS = {
+  openrouter: {
+    name:'OpenRouter',
+    hint:'수많은 모델을 한 키로. <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> 에서 키 발급.',
+    keyHint:'sk-or-... 형식',
+  },
+  gemini: {
+    name:'Google Gemini',
+    hint:'Google AI Studio 키. <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>',
+    keyHint:'AIza... 형식',
+  },
+  anthropic: {
+    name:'Anthropic Claude',
+    hint:'<a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> 에서 키 발급. 브라우저 직접 호출을 사용합니다.',
+    keyHint:'sk-ant-... 형식',
+  },
+};
+
+/* ---------- State ---------- */
+const LS='gukga_v1';
+let cfg = loadCfg();
+let history = loadHistory();   // [{role:'user'|'assistant', content}]
+let stats = loadStats();       // {국력,경제,...} last known
+let busy=false;
+
+function loadCfg(){ try{return JSON.parse(localStorage.getItem(LS+'_cfg'))||{}}catch(e){return {}} }
+function saveCfg(){ localStorage.setItem(LS+'_cfg', JSON.stringify(cfg)); }
+function loadHistory(){ try{return JSON.parse(localStorage.getItem(LS+'_hist'))||[]}catch(e){return []} }
+function saveHistory(){ localStorage.setItem(LS+'_hist', JSON.stringify(history)); }
+function loadStats(){ try{return JSON.parse(localStorage.getItem(LS+'_stats'))||{}}catch(e){return {}} }
+function saveStats(){ localStorage.setItem(LS+'_stats', JSON.stringify(stats)); }
+
+/* ---------- DOM ---------- */
+const $=id=>document.getElementById(id);
+const logEl=$('log'), choicesEl=$('choices'), inp=$('inp'), sendBtn=$('send');
+
+/* ---------- Markdown ---------- */
+if(window.marked){ marked.setOptions({breaks:true, gfm:true}); }
+function mdToHtml(s){
+  if(window.marked) return marked.parse(s);
+  // minimal fallback
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>')
+    .replace(/\n/g,'<br>');
+}
+
+/* ---------- Choices parsing ----------
+   The GM emits a "✦ 어떻게 ...?" header followed by "1. **title** — desc".
+   We split that block off the message body and render dedicated buttons. */
+const CHOICE_HEAD=/^#{1,6}\s*\**\s*✦?\s*어떻게\s*(하시겠습니까|응답하시겠습니까|시작하시겠습니까)\??\s*\**\s*$/m;
+function splitChoices(text){
+  const m=text.match(CHOICE_HEAD);
+  if(!m) return {body:text, choices:[]};
+  const idx=m.index;
+  const head=text.slice(0,idx);
+  const tail=text.slice(idx+m[0].length);
+  const choices=[];
+  const re=/^\s*(\d+)\.\s*(.+)$/gm;
+  let mm;
+  while((mm=re.exec(tail))){
+    let raw=mm[2].trim();
+    // strip bold, split title — desc
+    raw=raw.replace(/\*\*/g,'');
+    let title=raw, desc='';
+    const dash=raw.split(/\s+—\s+|\s+-\s+/);
+    if(dash.length>1){ title=dash[0].trim(); desc=dash.slice(1).join(' — ').trim(); }
+    choices.push({n:mm[1], title, desc});
   }
+  // Only treat as choices if we found 2-3 numbered items
+  if(choices.length<2) return {body:text, choices:[]};
+  return {body:head.trimEnd(), choices};
+}
 
-  function playClickSound() {
-    try {
-      if (!audioCtx) return; 
-      const bufferSize = audioCtx.sampleRate * 0.1; 
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-      const noise = audioCtx.createBufferSource();
-      noise.buffer = buffer;
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 1000;
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-      noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
-      noise.start();
-    } catch(e) {}
+function renderChoices(choices){
+  if(!choices.length){ choicesEl.className='empty'; choicesEl.innerHTML=''; return; }
+  choicesEl.className='';
+  let html='<div class="choices-head">✦ 어떻게 하시겠습니까?</div>';
+  for(const c of choices){
+    html+=`<button class="choice" data-n="${c.n}">
+      <span class="num">${c.n}</span>
+      <span class="tx"><b>${esc(c.title)}</b>${c.desc?`<span>${esc(c.desc)}</span>`:''}</span>
+    </button>`;
   }
+  choicesEl.innerHTML=html;
+  choicesEl.querySelectorAll('.choice').forEach(b=>{
+    b.onclick=()=>{ if(busy) return; sendMessage(b.dataset.n); };
+  });
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-  const wrapper = document.getElementById('game-wrapper');
-  const statusEl = document.getElementById('status');
-  const menuEl = document.getElementById('menu');
-  const gameEl = document.getElementById('game');
-
-  function getPos(idx) { return PADDING + (idx * STEP); }
-
-  function setOpt(type, val, btn) {
-    if(window.event) window.event.stopPropagation();
-    if(type==='color') { myColor=val; aiColor=(val==='black'?'white':'black'); }
-    if(type==='level') level = parseInt(val);
-    let container = btn.parentElement;
-    container.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('selected'));
-    btn.classList.add('selected');
-  }
-
-  function startGame() {
-    if(window.event) window.event.preventDefault();
-    initAudio();
-
-    menuEl.classList.add('hidden');
-    gameEl.classList.remove('hidden');
-    boardData = Array(SIZE).fill(null).map(() => Array(SIZE).fill(null));
-    wrapper.innerHTML = '';
-    
-    currPlayer = 'black'; 
-    gameOver = false; 
-    moveHistory = []; 
-    if(aiTimer) clearTimeout(aiTimer);
-    
-    updateStatus();
-
-    for(let i=0; i<SIZE; i++) {
-      let pos = getPos(i) + '%';
-      let h = document.createElement('div'); h.className='line h-line'; h.style.top=pos; wrapper.appendChild(h);
-      let v = document.createElement('div'); v.className='line v-line'; v.style.left=pos; wrapper.appendChild(v);
-    }
-    [3, 7, 11].forEach(r => [3, 7, 11].forEach(c => {
-      let dot = document.createElement('div'); dot.className='dot';
-      dot.style.top=getPos(r)+'%'; dot.style.left=getPos(c)+'%'; wrapper.appendChild(dot);
-    }));
-    for(let r=0; r<SIZE; r++) {
-      for(let c=0; c<SIZE; c++) {
-        let area = document.createElement('div'); area.className='click-area';
-        area.style.width = STEP + '%'; area.style.height = STEP + '%';
-        area.style.top=getPos(r)+'%'; area.style.left=getPos(c)+'%';
-        area.onclick = () => userMove(r, c);
-        wrapper.appendChild(area);
+/* ---------- Stat parsing & HUD ---------- */
+const STAT_KEYS=['국력','경제','군사','외교','민심'];
+const COLORS={국력:'#e8c06a',경제:'#5fd29a',군사:'#ff8a5b',외교:'#5aa2ff',민심:'#c98aff'};
+function parseStats(text){
+  let changed=false;
+  // 1) full table row: header line with all 5 keys, then a data row
+  const lines=text.split('\n');
+  for(let i=0;i<lines.length;i++){
+    if(STAT_KEYS.every(k=>lines[i].includes(k)) && lines[i].includes('|')){
+      // find next row of numbers (skip separator)
+      for(let j=i+1;j<Math.min(i+4,lines.length);j++){
+        const cells=lines[j].split('|').map(s=>s.trim()).filter(s=>s!=='');
+        const nums=cells.map(c=>{const mm=c.match(/-?\d+/);return mm?parseInt(mm[0]):null;});
+        if(nums.length>=5 && nums.slice(0,5).every(n=>n!==null)){
+          STAT_KEYS.forEach((k,idx)=>{ stats[k]=clamp(nums[idx]); });
+          changed=true; break;
+        }
       }
     }
-    
-    if(myColor === 'white') {
-        aiTimer = setTimeout(aiMove, 600);
-    }
   }
-
-  function goBackToMenu() {
-    gameEl.classList.add('hidden'); menuEl.classList.remove('hidden'); wrapper.innerHTML = '';
+  // 2) one-line deltas: "외교 61 ▼10 위험" / "경제 58 ▲4"
+  const re=/(국력|경제|군사|외교|외교력|민심|국방|군사력)\s*(\d{1,3})\b/g; let mm;
+  while((mm=re.exec(text))){
+    let k=mm[1]; if(k==='외교력')k='외교'; if(k==='국방'||k==='군사력')k='군사';
+    if(STAT_KEYS.includes(k)){ const v=clamp(parseInt(mm[2])); if(stats[k]!==v){stats[k]=v; changed=true;} }
   }
-
-  function userMove(r, c) {
-    if(gameOver || currPlayer !== myColor || boardData[r][c]) return;
-    placeStone(r, c, myColor);
-    removeHint();
-    if(!gameOver) { 
-      currPlayer = aiColor; updateStatus(); 
-      aiTimer = setTimeout(aiMove, 500); 
-    }
+  // date / turn
+  const dm=text.match(/(\d{4}\/\d{2}\/\d{2})/);
+  if(dm) stats._date=dm[1];
+  const tm=text.match(/(\d)\s*분기/); if(tm) stats._q=tm[1];
+  const turnm=text.match(/턴\s*(\d+)/); if(turnm) stats._turn=turnm[1];
+  if(changed||dm){ saveStats(); renderHud(); }
+}
+function clamp(n){return Math.max(0,Math.min(100,n));}
+function renderHud(){
+  if(!STAT_KEYS.some(k=>typeof stats[k]==='number')) return;
+  $('hud').classList.add('on');
+  $('hudDate').textContent = stats._date || '—';
+  let sub=[]; if(stats._q)sub.push(stats._q+'분기'); if(stats._turn)sub.push('턴 '+stats._turn);
+  $('hudSub').textContent = sub.join(' · ');
+  let html='';
+  for(const k of STAT_KEYS){
+    const v=typeof stats[k]==='number'?stats[k]:0;
+    const warn=v<20?'warn':'';
+    html+=`<div class="stat ${warn}">
+      <div class="nm"><span>${k}${v<20?' ⚠':''}</span><b>${v}</b></div>
+      <div class="bar"><i style="width:${v}%; background:linear-gradient(90deg,${COLORS[k]}99,${COLORS[k]})"></i></div>
+    </div>`;
   }
+  $('statGrid').innerHTML=html;
+}
 
-  function placeStone(r, c, color) {
-    boardData[r][c] = color;
-    let prevLast = document.querySelector('.last-move');
-    if(prevLast) prevLast.classList.remove('last-move');
-    let stone = document.createElement('div');
-    stone.className = `stone ${color} last-move`;
-    stone.style.width = STONE_SIZE + '%';
-    stone.style.height = STONE_SIZE + '%';
-    stone.style.top = getPos(r) + '%';
-    stone.style.left = getPos(c) + '%';
-    wrapper.appendChild(stone);
-    moveHistory.push({r, c, color, el: stone});
-    playClickSound();
-    if(checkWin(r, c, color)) {
-      gameOver = true;
-      let winText = (color==='black'?"흑(●) 승리!":"백(○) 승리!");
-      statusEl.innerHTML = `<span style="color:#FFD700">${winText}</span>`;
-      setTimeout(()=>alert(winText), 200);
-    }
-  }
+/* ---------- Render message ---------- */
+function addMessage(role, text, streaming){
+  const wrap=document.createElement('div');
+  wrap.className='msg '+(role==='user'?'user':'gm');
+  wrap.innerHTML=`<div class="role">${role==='user'?'당신':'게임 마스터'}</div><div class="bubble"><div class="md"></div></div>`;
+  logEl.appendChild(wrap);
+  const mdEl=wrap.querySelector('.md');
+  if(!streaming){ mdEl.innerHTML=mdToHtml(text); }
+  scrollDown();
+  return {wrap, mdEl};
+}
+function scrollDown(){ logEl.scrollTop=logEl.scrollHeight; }
 
-  function aiMove() {
-    if(gameOver) return;
-    let bm = computeBestMove(aiColor, level); 
-    placeStone(bm.r, bm.c, aiColor);
-    if(!gameOver) { currPlayer = myColor; updateStatus(); }
-  }
+/* ---------- LLM call (streaming) ---------- */
+async function streamLLM(onToken){
+  const {provider, model, key}=resolveCfg();
+  if(provider==='gemini') return streamGemini(model,key,onToken);
+  if(provider==='anthropic') return streamAnthropic(model,key,onToken);
+  return streamOpenAI(model,key,onToken); // openrouter
+}
+function resolveCfg(){
+  return {provider:cfg.provider, model:(cfg.modelManual||cfg.model||'').trim(), key:cfg.key};
+}
 
-  function undoMove() {
-    if(moveHistory.length === 0) return;
-    if(aiTimer) clearTimeout(aiTimer);
-    removeHint(); gameOver = false;
-    let lastMove = moveHistory[moveHistory.length-1];
-    if (lastMove.color === aiColor) { popStone(); if(moveHistory.length > 0) popStone(); } 
-    else { popStone(); }
-    currPlayer = myColor; updateStatus();
-    let prevLast = document.querySelector('.last-move');
-    if(prevLast) prevLast.classList.remove('last-move'); 
-    if(moveHistory.length > 0) moveHistory[moveHistory.length-1].el.classList.add('last-move');
-  }
-
-  function popStone() {
-    let item = moveHistory.pop();
-    boardData[item.r][item.c] = null; 
-    item.el.remove(); 
-  }
-
-  function showHint() {
-    if(gameOver) return;
-    removeHint();
-    let best = computeBestMove(currPlayer, 0); // 0 = 훈수 (God Mode)
-    let marker = document.createElement('div');
-    marker.className = 'hint-marker';
-    marker.style.width = STONE_SIZE + '%';
-    marker.style.height = STONE_SIZE + '%';
-    marker.style.top = getPos(best.r) + '%';
-    marker.style.left = getPos(best.c) + '%';
-    wrapper.appendChild(marker);
-  }
-
-  function removeHint() {
-    let exist = document.querySelector('.hint-marker');
-    if(exist) exist.remove();
-  }
-
-  function getLineStr(r, c, dr, dc, color) {
-    let str = "";
-    for(let k=-4; k<=4; k++) {
-      let nr = r + dr*k, nc = c + dc*k;
-      if(nr<0||nr>=SIZE||nc<0||nc>=SIZE) str += "2"; 
-      else {
-        let val = boardData[nr][nc];
-        if(val === null) str += "0";
-        else if(val === color) str += "1";
-        else str += "2"; 
+async function readSSE(res, onEvent){
+  if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t.slice(0,300)}`); }
+  const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='';
+  while(true){
+    const {value,done}=await reader.read(); if(done) break;
+    buf+=dec.decode(value,{stream:true});
+    let parts=buf.split('\n\n'); buf=parts.pop();
+    for(const p of parts){
+      for(const line of p.split('\n')){
+        const t=line.trim();
+        if(t.startsWith('data:')) onEvent(t.slice(5).trim());
       }
     }
-    return str;
   }
+}
 
-  // [수정된 AI 로직] 사람처럼 행동
-  function computeBestMove(atkColor, lv) {
-    let defColor = (atkColor === 'black' ? 'white' : 'black');
-    let maxS = -Infinity, cands = [];
-    let center = 7;
+async function streamOpenAI(model,key,onToken){
+  const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
+      'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
+    body:JSON.stringify({model, stream:true, max_tokens:8000, temperature:0.9,
+      messages:[{role:'system',content:SYSTEM_PROMPT},...history]})
+  });
+  await readSSE(res,(data)=>{
+    if(data==='[DONE]') return;
+    try{ const j=JSON.parse(data); const d=j.choices?.[0]?.delta?.content; if(d) onToken(d); }catch(e){}
+  });
+}
 
-    // 등급별 가중치 설정 (랜덤 노이즈 대폭 삭제)
-    let defW = 1.0; 
-    
-    switch(lv) {
-        case 0: defW = 1.5; break;  // 훈수: 방어 매우 잘함
-        case 1: defW = 1.0; break;  // 1등급: 공수 균형
-        case 2: defW = 0.8; break;  // 2등급
-        case 3: defW = 0.6; break;  // 3등급
-        case 4: defW = 0.4; break;  // 4등급: 방어 약함
-        case 5: defW = 0.2; break;  // 5등급: 공격 위주
-        case 6: defW = 0.05; break; // 6등급: 방어 무시 (공격만 함)
+async function streamAnthropic(model,key,onToken){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,
+      'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model, max_tokens:8000, system:SYSTEM_PROMPT, stream:true,
+      messages:history.map(m=>({role:m.role, content:m.content}))})
+  });
+  await readSSE(res,(data)=>{
+    try{ const j=JSON.parse(data);
+      if(j.type==='content_block_delta' && j.delta?.text) onToken(j.delta.text);
+    }catch(e){}
+  });
+}
+
+async function streamGemini(model,key,onToken){
+  const contents=history.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+  const res=await fetch(url,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      system_instruction:{parts:[{text:SYSTEM_PROMPT}]},
+      contents,
+      generationConfig:{maxOutputTokens:8000, temperature:0.9}
+    })
+  });
+  await readSSE(res,(data)=>{
+    try{ const j=JSON.parse(data);
+      const parts=j.candidates?.[0]?.content?.parts; if(parts) for(const p of parts) if(p.text) onToken(p.text);
+    }catch(e){}
+  });
+}
+
+/* ---------- Send flow ---------- */
+async function sendMessage(text){
+  text=(text||'').trim();
+  if(!text||busy) return;
+  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){
+    openCfg(); setCfgStatus('먼저 제공사·모델·API 키를 설정하세요.','err'); return;
+  }
+  $('welcome')?.remove();
+  busy=true; sendBtn.disabled=true; inp.value=''; autoGrow();
+  renderChoices([]); // clear old choices
+
+  addMessage('user', text);
+  history.push({role:'user', content:text}); saveHistory();
+
+  const {mdEl}=addMessage('assistant','',true);
+  let acc='';
+  const render=()=>{ const {body}=splitChoices(acc); mdEl.innerHTML=mdToHtml(body)+'<span class="cursor"></span>'; scrollDown(); };
+  try{
+    await streamLLM((tok)=>{ acc+=tok; render(); });
+  }catch(e){
+    acc += (acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
+  }
+  // finalize
+  const {body, choices}=splitChoices(acc);
+  mdEl.innerHTML=mdToHtml(body);
+  history.push({role:'assistant', content:acc}); saveHistory();
+  parseStats(acc);
+  renderChoices(choices);
+  scrollDown();
+  busy=false; sendBtn.disabled=false; inp.focus();
+}
+
+/* ---------- Input handlers ---------- */
+sendBtn.onclick=()=>sendMessage(inp.value);
+inp.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(inp.value); }
+});
+function autoGrow(){ inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,140)+'px'; }
+inp.addEventListener('input',autoGrow);
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>sendMessage(c.dataset.cmd));
+$('ctaStart').onclick=()=>{
+  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); return; }
+  sendMessage('시작');
+};
+
+/* ---------- New game ---------- */
+$('btnNew').onclick=()=>{
+  if(!confirm('현재 진행을 지우고 새 게임을 시작할까요? (저장 스냅샷은 별도로 보관됩니다)')) return;
+  history=[]; stats={}; saveHistory(); saveStats();
+  logEl.innerHTML=''; renderChoices([]); $('hud').classList.remove('on');
+  sendMessage('시작');
+};
+
+/* ---------- Snapshot ---------- */
+$('btnSave').onclick=()=>{
+  // Ask the GM to produce the official save snapshot, but also offer raw export
+  if(busy){ alert('응답 생성 중에는 잠시 후 시도하세요.'); return; }
+  sendMessage('저장');
+};
+
+/* ---------- Settings modal ---------- */
+const cfgOverlay=$('cfgOverlay');
+function openCfg(){
+  cfgOverlay.classList.add('on');
+  selectProv(cfg.provider||'openrouter');
+  $('apiKey').value=cfg.key||'';
+  $('modelManual').value=cfg.modelManual||'';
+  if(cfg.model){ ensureOption(cfg.model); $('modelSel').value=cfg.model; }
+}
+function closeCfg(){ cfgOverlay.classList.remove('on'); }
+$('btnCfg').onclick=openCfg; $('cfgClose').onclick=closeCfg;
+cfgOverlay.addEventListener('click',e=>{if(e.target===cfgOverlay)closeCfg();});
+
+let selProv=cfg.provider||'openrouter';
+function selectProv(p){
+  selProv=p;
+  document.querySelectorAll('#provSeg button').forEach(b=>b.classList.toggle('on',b.dataset.prov===p));
+  $('provHint').innerHTML=PROVIDERS[p].hint;
+  $('keyHint').textContent=PROVIDERS[p].keyHint;
+}
+document.querySelectorAll('#provSeg button').forEach(b=>b.onclick=()=>{ selectProv(b.dataset.prov); $('modelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
+
+function setCfgStatus(msg,cls){ const e=$('cfgStatus'); e.textContent=msg; e.className='status-line '+(cls||''); }
+function ensureOption(v){ const sel=$('modelSel'); if(![...sel.options].some(o=>o.value===v)){ const o=document.createElement('option'); o.value=v;o.textContent=v; sel.appendChild(o);} }
+
+$('btnModels').onclick=async()=>{
+  const key=$('apiKey').value.trim();
+  if(!key){ setCfgStatus('먼저 API 키를 입력하세요.','err'); return; }
+  setCfgStatus('모델 목록을 불러오는 중…','load');
+  try{
+    const list=await fetchModels(selProv,key);
+    if(!list.length){ setCfgStatus('모델을 찾지 못했습니다. 직접 입력란을 사용하세요.','err'); return; }
+    const sel=$('modelSel'); sel.innerHTML='';
+    list.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+    if(cfg.model&&list.includes(cfg.model)) sel.value=cfg.model;
+    setCfgStatus(`${list.length}개 모델 로드됨.`,'ok');
+  }catch(e){ setCfgStatus('불러오기 실패: '+e.message+' — 모델 ID를 직접 입력하세요.','err'); }
+};
+
+async function fetchModels(prov,key){
+  if(prov==='openrouter'){
+    const r=await fetch('https://openrouter.ai/api/v1/models',{headers:{'Authorization':'Bearer '+key}});
+    const j=await r.json(); return (j.data||[]).map(m=>m.id).sort();
+  }
+  if(prov==='gemini'){
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(key));
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    return (j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent'))
+      .map(m=>m.name.replace(/^models\//,'')).filter(n=>/gemini/i.test(n)).sort();
+  }
+  if(prov==='anthropic'){
+    const r=await fetch('https://api.anthropic.com/v1/models',{headers:{
+      'x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json(); return (j.data||[]).map(m=>m.id).sort();
+  }
+  return [];
+}
+
+$('cfgSave').onclick=()=>{
+  const key=$('apiKey').value.trim();
+  const model=$('modelSel').value.trim();
+  const manual=$('modelManual').value.trim();
+  if(!key){ setCfgStatus('API 키를 입력하세요.','err'); return; }
+  if(!model&&!manual){ setCfgStatus('모델을 선택하거나 직접 입력하세요.','err'); return; }
+  cfg.provider=selProv; cfg.key=key; cfg.model=model; cfg.modelManual=manual; saveCfg();
+  setCfgStatus('저장됨.','ok'); closeCfg();
+};
+
+/* ---------- Snapshot export modal helper (raw) ---------- */
+$('snapClose').onclick=()=>$('snapOverlay').classList.remove('on');
+$('snapCopy').onclick=()=>{ const t=$('snapText'); t.select(); document.execCommand('copy'); $('snapCopy').textContent='복사됨!'; setTimeout(()=>$('snapCopy').textContent='복사하기',1200); };
+
+/* ---------- Restore previous session ---------- */
+function restore(){
+  if(history.length){
+    $('welcome')?.remove();
+    let lastAssistant=null;
+    for(const m of history){
+      if(m.role==='user'){ addMessage('user', m.content); }
+      else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(m.content); mdEl.innerHTML=mdToHtml(body); lastAssistant=m.content; }
     }
-
-    for(let r=0; r<SIZE; r++) {
-      for(let c=0; c<SIZE; c++) {
-        if(boardData[r][c]) continue;
-        
-        let atkScore = getPatternScore(r, c, atkColor);
-        let defScore = getPatternScore(r, c, defColor);
-        
-        // 5~6등급은 방어 점수를 거의 무시함 -> 중앙이나 자기 공격 라인에 둠
-        // 이상한 구석에 두지 않도록 '중앙 선호도'는 유지
-        let total = atkScore + (defScore * defW); 
-        total -= (Math.abs(r-center) + Math.abs(c-center)); 
-
-        // 아주 약간의 랜덤성 (동점 상황에서만 다양성 부여)
-        if(lv !== 0) total += Math.random() * 5; 
-
-        if(total > maxS) { maxS=total; cands=[{r,c}]; }
-        else if(total === maxS) cands.push({r,c});
-      }
-    }
-    return cands.length ? cands[Math.floor(Math.random()*cands.length)] : {r:7,c:7};
+    if(lastAssistant){ const {choices}=splitChoices(lastAssistant); renderChoices(choices); }
+    renderHud();
+    scrollDown();
   }
-
-  function getPatternScore(r, c, stoneColor) {
-    let totalScore = 0;
-    const directions = [[0,1], [1,0], [1,1], [1,-1]];
-    directions.forEach(d => {
-      let lineStr = getLineStr(r, c, d[0], d[1], stoneColor);
-      if(lineStr.includes("11111")) totalScore += 100000000;
-      else if(lineStr.includes("011110")) totalScore += 10000000;
-      else if(lineStr.includes("01111") || lineStr.includes("11110")) totalScore += 500000;
-      else if(lineStr.includes("01110") || lineStr.includes("010110") || lineStr.includes("011010")) totalScore += 200000;
-      else if(lineStr.includes("1110") || lineStr.includes("0111")) totalScore += 5000;
-      else if(lineStr.includes("0110") || lineStr.includes("01010")) totalScore += 3000;
-      else if(lineStr.includes("11")) totalScore += 100;
-    });
-    return totalScore;
-  }
-
-  function checkWin(r, c, color) {
-    return [[0,1],[1,0],[1,1],[1,-1]].some(d => {
-      let cnt = 1;
-      for(let k=1; k<6; k++) if(isValid(r+d[0]*k, c+d[1]*k, color)) cnt++; else break;
-      for(let k=1; k<6; k++) if(isValid(r-d[0]*k, c-d[1]*k, color)) cnt++; else break;
-      return cnt >= 5;
-    });
-  }
-  function isValid(r, c, color) { return r>=0 && r<SIZE && c>=0 && c<SIZE && boardData[r][c]===color; }
-  
-  function updateStatus() { 
-    if(!gameOver) { 
-      let colorText = currPlayer==='black'?'흑(●)':'백(○)';
-      let colorStyle = currPlayer==='black'?'#ffffff':'#cccccc'; 
-      statusEl.innerHTML = `
-        <span style="color:${colorStyle}">${colorText}</span> 
-        <span class="turn-indicator">차례</span>
-        <span class="opponent-rank">(상대: ${level}등급)</span>
-      `;
-    } 
-  }
+}
+restore();
+if(!cfg.provider||!cfg.key){ /* leave welcome */ }
 </script>
 </body>
 </html>
