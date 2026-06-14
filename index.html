@@ -478,9 +478,14 @@ const PROVIDERS = {
 /* ---------- State ---------- */
 const LS='gukga_v1';
 let cfg = loadCfg();
-let history = loadHistory();   // [{role:'user'|'assistant', content}]
+let history = loadHistory();   // [{role:'user'|'assistant', content}] — 전체 기록(표시·복원용)
 let stats = loadStats();       // {국력,경제,...} last known
 let busy=false;
+// 토큰 절감: 오래된 대화 요약(슬라이딩 윈도우)
+let summary = localStorage.getItem(LS+'_sum') || '';
+let summaryUpto = parseInt(localStorage.getItem(LS+'_sumupto'))||0;
+function persistSummary(){ localStorage.setItem(LS+'_sum', summary); localStorage.setItem(LS+'_sumupto', String(summaryUpto)); }
+const SUMMARY_TRIGGER=24, WINDOW_KEEP=10; // 미요약 메시지가 24개↑면 최근 10개만 남기고 요약
 
 function loadCfg(){ try{return JSON.parse(localStorage.getItem(LS+'_cfg'))||{}}catch(e){return {}} }
 function saveCfg(){ localStorage.setItem(LS+'_cfg', JSON.stringify(cfg)); }
@@ -684,13 +689,28 @@ function maybeScroll(){
 /* ---------- LLM call (streaming) ---------- */
 async function streamLLM(onToken){
   const {provider, model, key}=resolveCfg();
-  if(provider==='gemini') return streamGemini(model,key,onToken);
-  if(provider==='anthropic') return streamAnthropic(model,key,onToken);
-  return streamOpenAI(model,key,onToken); // openrouter
+  const msgs=buildApiMessages();
+  if(provider==='gemini') return streamGemini(model,key,onToken,msgs);
+  if(provider==='anthropic') return streamAnthropic(model,key,onToken,msgs);
+  return streamOpenAI(model,key,onToken,msgs); // openrouter
 }
 function resolveCfg(){
   return {provider:cfg.provider, model:(cfg.modelManual||cfg.model||'').trim(), key:cfg.key};
 }
+
+// API로 보낼 메시지 = (요약 있으면 요약 쌍) + 미요약 최근 메시지
+function buildApiMessages(){
+  const recent=history.slice(summaryUpto);
+  const out=[];
+  if(summary){
+    out.push({role:'user', content:'[지금까지 줄거리 요약 — 반드시 기억하고 이어서 진행하라]\n'+summary});
+    out.push({role:'assistant', content:'네, 줄거리를 숙지했습니다. 이어서 진행하겠습니다.'});
+  }
+  return out.concat(recent);
+}
+
+// OpenRouter에서 Anthropic 계열이면 프롬프트 캐싱 적용 가능
+function orModelSupportsCache(model){ return /claude|anthropic/i.test(model); }
 
 async function readSSE(res, onEvent){
   if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t.slice(0,300)}`); }
@@ -708,13 +728,20 @@ async function readSSE(res, onEvent){
   }
 }
 
-async function streamOpenAI(model,key,onToken){
+// OpenRouter system 메시지: 캐싱 지원 모델이면 cache_control 멀티파트로
+function orSystemMsg(model){
+  if(orModelSupportsCache(model))
+    return {role:'system', content:[{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]};
+  return {role:'system', content:SYSTEM_PROMPT};
+}
+
+async function streamOpenAI(model,key,onToken,msgs){
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
       'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
     body:JSON.stringify({model, stream:true, max_tokens:8000, temperature:0.9,
-      messages:[{role:'system',content:SYSTEM_PROMPT},...history]})
+      messages:[orSystemMsg(model),...msgs]})
   });
   await readSSE(res,(data)=>{
     if(data==='[DONE]') return;
@@ -722,13 +749,16 @@ async function streamOpenAI(model,key,onToken){
   });
 }
 
-async function streamAnthropic(model,key,onToken){
+// Anthropic system: cache_control로 프롬프트 캐싱(반복되는 규칙부 토큰 절감)
+function anthropicSystem(){ return [{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]; }
+
+async function streamAnthropic(model,key,onToken,msgs){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,
       'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model, max_tokens:8000, system:SYSTEM_PROMPT, stream:true,
-      messages:history.map(m=>({role:m.role, content:m.content}))})
+    body:JSON.stringify({model, max_tokens:8000, system:anthropicSystem(), stream:true,
+      messages:msgs.map(m=>({role:m.role, content:m.content}))})
   });
   await readSSE(res,(data)=>{
     try{ const j=JSON.parse(data);
@@ -737,8 +767,8 @@ async function streamAnthropic(model,key,onToken){
   });
 }
 
-async function streamGemini(model,key,onToken){
-  const contents=history.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
+async function streamGemini(model,key,onToken,msgs){
+  const contents=msgs.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
   const res=await fetch(url,{
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -753,6 +783,48 @@ async function streamGemini(model,key,onToken){
       const parts=j.candidates?.[0]?.content?.parts; if(parts) for(const p of parts) if(p.text) onToken(p.text);
     }catch(e){}
   });
+}
+
+// 비스트리밍 1회 호출(요약 등 내부용)
+async function callOnce(messages, sys){
+  const {provider, model, key}=resolveCfg();
+  if(provider==='anthropic'){
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model, max_tokens:1200, system:sys, messages})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json(); return (j.content||[]).map(c=>c.text||'').join('');
+  }
+  if(provider==='gemini'){
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system_instruction:{parts:[{text:sys}]},
+        contents:messages.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]})),
+        generationConfig:{maxOutputTokens:1200, temperature:0.4}})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json(); return (j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+  }
+  // openrouter
+  const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
+    body:JSON.stringify({model, max_tokens:1200, temperature:0.4, messages:[{role:'system',content:sys},...messages]})});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json(); return j.choices?.[0]?.message?.content||'';
+}
+
+// 오래된 대화 자동 요약(슬라이딩 윈도우) — 토큰 급증 방지
+async function maybeSummarize(){
+  if(history.length - summaryUpto <= SUMMARY_TRIGGER) return;
+  let cut=history.length - WINDOW_KEEP; cut-=(cut%2);   // 짝수 경계(역할 정렬 유지)
+  if(cut<=summaryUpto) return;
+  const fold=history.slice(summaryUpto, cut);
+  const text=fold.map(m=>(m.role==='user'?'[플레이어] ':'[GM] ')+m.content).join('\n\n');
+  const prompt=(summary?('기존 요약:\n'+summary+'\n\n'):'')+
+    '아래 게임 진행 내용을 위 요약에 통합해, 이후 전개에 필요한 핵심만(국가/인물/스탯 변화·진행 중 사건·관계·약속·복선) 간결한 한국어 불릿으로 정리하라. 군더더기·중복 없이, 사실만:\n\n'+text;
+  try{
+    const out=await callOnce([{role:'user', content:prompt}], '너는 텍스트 게임의 진행 내용을 압축 요약하는 보조자다. 핵심 사실만 간결히 정리한다.');
+    if(out && out.trim().length>10){ summary=out.trim(); summaryUpto=cut; persistSummary(); }
+  }catch(e){ /* 요약 실패 시 이번 턴은 전체 전송(게임 진행엔 지장 없음) */ }
 }
 
 /* ---------- Send flow ---------- */
@@ -773,6 +845,7 @@ async function sendMessage(text, displayText){
 async function runAssistant(){
   busy=true; sendBtn.disabled=true;
   renderChoices([]); removeFooters();
+  await maybeSummarize();   // 오래된 대화 요약(토큰 절감)
   const {mdEl}=addMessage('assistant','',true);
   const typer=streamTyper(mdEl,'');
   let acc='';
@@ -916,6 +989,7 @@ $('ctaStart').onclick=()=>{
 $('btnNew').onclick=()=>{
   if(!confirm('현재 진행을 지우고 새 게임을 시작할까요? (저장 스냅샷은 별도로 보관됩니다)')) return;
   history=[]; stats={}; saveHistory(); saveStats();
+  summary=''; summaryUpto=0; persistSummary();
   logEl.innerHTML=''; renderChoices([]); $('hud').classList.remove('on');
   sendMessage('시작');
 };
