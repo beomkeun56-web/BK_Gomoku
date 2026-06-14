@@ -249,7 +249,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.31</span></div>
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.32</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -489,12 +489,12 @@
 const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 시대'의 게임 마스터(GM)다. 이 대화의 모든 것은 게임 진행이다. 아래 규칙을 절대 어기지 않는다. 모든 출력은 한국어로 한다.
 
 [핵심 출력 규칙 — 선택지]
-매 턴 끝에 3개 선택지를 아래 형식으로 무조건 출력한다(첫 턴·일반 턴·이어하기 직후·상태/질문 응답 뒤 등 예외 없이):
+매 턴 끝에 선택지 3개를 반드시 아래 형식(헤더 + 번호)으로 출력한다(첫 턴·일반 턴·이어하기 직후·상태/질문 응답 뒤 등 예외 없이). 각 선택지는 주인공(플레이어)의 1인칭 대사 한 줄 — 실제 입에서 나올 법한 발화체로, 큰따옴표로 감싸고 대략 15~35자:
 ## **✦ 어떻게 하시겠습니까?**
-1. **{짧은 제목}** — {한 줄 설명}
-2. **{짧은 제목}** — {한 줄 설명}
-3. **{짧은 제목}** — {한 줄 설명}
-- 선택지는 정확히 3개, 서로 다른 방향. 사용자는 숫자나 직접 행동을 입력한다. 선택지 없이 응답을 끝내지 않는다(게임 종료 턴 제외). 응답을 끝내기 직전 "3개 선택지를 띄웠는가?"를 확인하고 빠졌으면 추가한다.
+1. "{주인공 1인칭 대사 한 줄}"
+2. "{주인공 1인칭 대사 한 줄}"
+3. "{주인공 1인칭 대사 한 줄}"
+- 선택지는 정확히 3개, 서로 다른 방향(진행 중 사안이 있으면 최소 2개는 그 사안을 진전시키는 대응). 사용자는 숫자(1·2·3)나 직접 행동을 입력한다. 선택지 없이 응답을 끝내지 않는다(게임 종료 턴 제외). 응답을 끝내기 직전 "헤더 + 1인칭 대사 선택지 3개를 넣었는가?"를 확인하고 빠졌으면 추가한다.
 
 [핵심 원칙]
 - 현실적·지정학적으로 설득력 있게 전개한다. 선택의 대가는 반드시 스탯에 반영한다.
@@ -565,8 +565,11 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 > {한 문장 결과 요약}
 ② 상황 전개: 한 턴은 한 장면만(소제목 ##은 0~1개). 인물 발언은 > 인용, 데이터는 표. (여러 장면·여러 날짜를 한 턴에 나열하지 말 것 — 위 [구성·분량] 규칙 준수)
 ③ 뉴스(중요한 턴만, 최대 2줄): ## **✦ 뉴스** - [국내] … · [해외] …
-④ 선택지: 위 핵심 출력 규칙대로 3개. (스탯·국정 과제 변동 알림은 평소 턴에 출력하지 않는다 — '상태'/'국정과제' 입력 시에만)
+④ 선택지: 위 핵심 출력 규칙대로(1인칭 대사 3개).
 내용 성격에 맞게 표/현황목록/대화/서술을 섞어 가변 출력한다(매 턴 같은 틀 반복 금지). 제목 줄 맨 앞에 현재 플레이 국가 국기 이모지(예: 🇰🇷).
+
+[묘사·문체 — 생생하게]
+밋밋한 요약체로 쓰지 말고, 인물의 표정·말투·눈빛·공기·긴장감을 구체적으로 묘사한다. 정치 드라마답게 인물들이 상황에 따라 약간의 거친 말투·욕설(예: 젠장, 빌어먹을, 미친, 개판이군, 엿같네 수준)을 자연스럽게 쓸 수 있다 — 과하지 않게, 인물·상황에 맞게. 막장/혼합 톤에선 더 거칠고 감정적으로, 진지 톤에선 절제한다. 단, 노골적·선정적 성묘사는 제외(안전선 유지). 한 장면 안에서 묘사·심리·대사는 풍부하게 채우되 군더더기·반복은 뺀다.
 
 [고증·일관성]
 시대 고증 엄수(연대에 없는 기술·제도 금지). 초자연 금지(개그모드 제외). 스탯·설정은 직전 상태에서 누적하고 과거 사실을 잊지 않는다. 플레이어가 과거 사실을 지적하면 그것을 정답으로 정정한다. 이름·페르소나 변경(예: \`3 보좌관: 이민정, 페르소나: …\`) 입력 시 별도 확인 없이 그 선택을 처리하며 즉시 반영해 일관 유지. 동시에 전면 전개하는 대형 사안은 최대 2개(메인1+서브1). 미결 사안은 결론 날 때까지 끌고 가 종료 처리하고 새 주제로 갈아타지 않는다.
@@ -733,26 +736,57 @@ const CHOICE_HEAD=/^#{1,6}[^\n]*어떻게[^\n]*겠습니까[^\n]*$/m;
 const HEAD_DETECT=/(^|\n)#{1,6}[^\n]*어떻게[^\n]*겠/;
 function splitChoices(text){
   const m=text.match(CHOICE_HEAD);
-  if(!m) return {body:text, choices:[]};
-  const idx=m.index;
-  const head=text.slice(0,idx);
-  const tail=text.slice(idx+m[0].length);
-  const choices=[];
-  const re=/^\s*(\d+)\.\s*(.+)$/gm;
-  let mm, last=0;
+  if(m){
+    const idx=m.index;
+    const head=text.slice(0,idx);
+    const tail=text.slice(idx+m[0].length);
+    const choices=collectNumbered(tail);
+    if(choices.length>=2) return {body:head.trimEnd(), choices};
+  }
+  // 헤더가 없으면(예: 1인칭 대사만 끝에 번호로) 맨 끝의 번호 묶음을 선택지로
+  const tc=parseTrailingChoices(text);
+  if(tc) return tc;
+  return {body:text, choices:[]};
+}
+// 한 줄("제목 — 설명" 또는 "대사")을 {title,desc}로
+function parseChoiceLine(raw){
+  raw=raw.trim().replace(/\*\*/g,'');
+  const q=raw.match(/^[""'"](.+)[""'"]$/);   // 따옴표로 감싼 1인칭 대사
+  if(q) return {title:q[1].trim(), desc:''};
+  let title=raw, desc='';
+  const dash=raw.split(/\s+—\s+|\s+-\s+/);
+  if(dash.length>1){ title=dash[0].trim(); desc=dash.slice(1).join(' — ').trim(); }
+  return {title, desc};
+}
+// 텍스트에서 1,2,3… 증가하는 번호 줄을 첫 묶음(최대 4)으로 수집
+function collectNumbered(tail){
+  const choices=[]; const re=/^\s*(\d+)[.)]\s*(.+)$/gm; let mm, last=0;
   while((mm=re.exec(tail))){
     const n=parseInt(mm[1]);
-    if(n<=last) break;          // 번호가 리셋/감소하면(중복 블록·새 목록) 첫 묶음에서 중단
-    let raw=mm[2].trim().replace(/\*\*/g,'');
-    let title=raw, desc='';
-    const dash=raw.split(/\s+—\s+|\s+-\s+/);
-    if(dash.length>1){ title=dash[0].trim(); desc=dash.slice(1).join(' — ').trim(); }
-    choices.push({n:String(n), title, desc});
-    last=n;
-    if(choices.length>=4) break; // 최대 4개(시작 메뉴 4개 대응, 중복 블록은 위 break로 차단)
+    if(n<=last) break;
+    const pc=parseChoiceLine(mm[2]);
+    if(pc.title){ choices.push({n:String(n), title:pc.title, desc:pc.desc}); last=n; }
+    if(choices.length>=4) break;
   }
-  if(choices.length<2) return {body:text, choices:[]};
-  return {body:head.trimEnd(), choices};
+  return choices;
+}
+// 응답 맨 끝의 번호 묶음(헤더 없음)을 선택지로
+function parseTrailingChoices(text){
+  const lines=text.split('\n');
+  let start=lines.length, found=[];
+  for(let j=lines.length-1;j>=0;j--){
+    const s=lines[j].trim();
+    if(s===''){ if(found.length) break; else continue; }
+    if(/^(\d+)[.)]\s*.+$/.test(s)){ found.unshift(s); start=j; }
+    else break;
+  }
+  if(found.length>=2){
+    const choices=collectNumbered(found.join('\n'));
+    if(choices.length>=2 && choices[0].n==='1'){
+      return {body:lines.slice(0,start).join('\n').trimEnd(), choices};
+    }
+  }
+  return null;
 }
 
 // 평소 턴에 새어나오는 스탯/과제 변동 한 줄 알림을 화면에서 제거(자동 SAVE는 프롬프트에서 차단)
