@@ -277,7 +277,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.85</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.86</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -774,6 +774,15 @@ function loadCfg(){ try{return JSON.parse(localStorage.getItem(LS+'_cfg'))||{}}c
 function saveCfg(){ localStorage.setItem(LS+'_cfg', JSON.stringify(cfg)); }
 function loadHistory(){ try{return JSON.parse(localStorage.getItem(LS+'_hist'))||[]}catch(e){return []} }
 function saveHistory(){ localStorage.setItem(LS+'_hist', JSON.stringify(history)); }
+// 삽화 보관 — 각 항목 {idx:해당 어시스턴트 턴 위치, src:dataURL}
+let illusts = (function(){ try{return JSON.parse(localStorage.getItem(LS+'_illust'))||[]}catch(e){return []} })();
+function saveIllusts(){
+  try{ localStorage.setItem(LS+'_illust', JSON.stringify(illusts)); }
+  catch(e){ // localStorage 용량 초과 → 오래된 삽화부터 버리고 재시도(드라이브 저장본엔 전부 포함)
+    while(illusts.length){ illusts.shift(); try{ localStorage.setItem(LS+'_illust', JSON.stringify(illusts)); return; }catch(_){} } }
+}
+function addIllust(idx, src){ if(idx==null||idx<0) return; illusts.push({idx, src}); saveIllusts(); }
+function lastAssistantIndex(){ for(let i=history.length-1;i>=0;i--) if(history[i].role==='assistant') return i; return -1; }
 function loadStats(){ try{return JSON.parse(localStorage.getItem(LS+'_stats'))||{}}catch(e){return {}} }
 function saveStats(){ localStorage.setItem(LS+'_stats', JSON.stringify(stats)); }
 
@@ -1357,11 +1366,12 @@ async function fetchIllust(story){
   if(out.usd>0){ costTotal+=out.usd; localStorage.setItem(LS+'_cost',String(costTotal)); costBadge(); }
   return out.src;
 }
-// 박스에 이미지 채우기(로딩 표시 → 성공/실패)
-async function renderIllustInto(box, story){
+// 박스에 이미지 채우기(로딩 표시 → 성공/실패). idx 주면 해당 턴에 저장
+async function renderIllustInto(box, story, idx){
   box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   try{ const src=await fetchIllust(story); box.className='illust';
-    box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>'; }
+    box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>';
+    addIllust(idx, src); }
   catch(e){ box.className='illust loading';
     box.textContent = e.message==='NOKEY' ? '⚠️ 삽화 설정에서 제공사·API 키를 입력하세요.' : '⚠️ 삽화 실패: '+e.message;
     if(e.message==='NOKEY'){ openCfg(); } }
@@ -1374,7 +1384,7 @@ async function genIllustNow(){
   busy=true; sendBtn.disabled=true;
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   logEl.appendChild(box); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
-  await renderIllustInto(box, story);
+  await renderIllustInto(box, story, lastAssistantIndex());
   scrollDown(); busy=false; sendBtn.disabled=false;
 }
 // 다음 턴 예약: 다음 GM 응답 시작 후 제목 아래 자동 생성
@@ -1388,12 +1398,12 @@ function reserveNextIllust(){
   logEl.appendChild(pendingNote); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
 }
 // 메시지의 제목(첫 헤딩) 아래에 삽화 삽입
-async function insertIllustUnderTitle(mdEl, story){
+async function insertIllustUnderTitle(mdEl, story, idx){
   if(pendingNote){ pendingNote.remove(); pendingNote=null; }
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   const h=mdEl.querySelector('h1,h2,h3');
   if(h && h.parentNode===mdEl) h.after(box); else mdEl.prepend(box);
-  await renderIllustInto(box, story);
+  await renderIllustInto(box, story, idx==null?lastAssistantIndex():idx);
 }
 // 삽화 버튼 → 시점 선택 팝업
 function openIllustPopup(){
@@ -1588,7 +1598,7 @@ $('setupGo').onclick=()=>{
   lines.push('이 설정으로 첫 상황 브리핑과 선택지를 출력해줘. 전개는 천천히·현실적으로.');
   $('setupOverlay').classList.remove('on');
   // 새 게임으로 시작(기존 진행 초기화)
-  history=[]; stats={}; summary=''; summaryUpto=0; saveHistory(); saveStats(); persistSummary();
+  history=[]; stats={}; summary=''; summaryUpto=0; illusts=[]; saveHistory(); saveStats(); persistSummary(); saveIllusts();
   clearLog(); $('hud').classList.remove('on');
   hideWelcome();
   sendMessage(lines.join('\n'), '게임 시작 · '+scen);
@@ -1680,13 +1690,14 @@ const _btnNew=$('btnNew'); if(_btnNew) _btnNew.onclick=()=>{
   if(!confirm('현재 진행을 지우고 새 게임을 시작할까요? (저장 스냅샷은 별도로 보관됩니다)')) return;
   history=[]; stats={}; saveHistory(); saveStats();
   summary=''; summaryUpto=0; persistSummary();
+  illusts=[]; saveIllusts();
   clearLog(); $('hud').classList.remove('on');
   openSetup();
 };
 
 /* ---------- 기기 간 이어하기 (전체 진행 내보내기/가져오기) ---------- */
 function makeSaveCode(){
-  const data={ v:1, history, stats, summary, summaryUpto,
+  const data={ v:1, history, stats, summary, summaryUpto, illusts,
     provider:cfg.provider, model:cfg.model, modelManual:cfg.modelManual };
   // 유니코드 안전 base64 → 전송 안전한 base64url(+,/,= 제거)로 변환 + 접두어
   const b64=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
@@ -1700,7 +1711,8 @@ function applySaveCode(code){
   const d=JSON.parse(json);
   if(!d || !Array.isArray(d.history)) throw new Error('형식 오류');
   history=d.history; stats=d.stats||{}; summary=d.summary||''; summaryUpto=d.summaryUpto||0;
-  saveHistory(); saveStats(); persistSummary();
+  illusts=Array.isArray(d.illusts)?d.illusts:[];
+  saveHistory(); saveStats(); persistSummary(); saveIllusts();
   if(d.provider){ cfg.provider=d.provider; cfg.model=d.model||''; cfg.modelManual=d.modelManual||''; saveCfg(); }
 }
 function snapMsg(t,cls){ $('snapStatus').textContent=t; $('snapStatus').className='status-line '+(cls||''); }
@@ -1994,10 +2006,17 @@ function restore(){
   if(history.length){
     hideWelcome();
     let lastAssistant=null;
-    for(const m of history){
+    history.forEach((m, i)=>{
       if(m.role==='user'){ addMessage('user', m.content); }
-      else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(m.content); mdEl.innerHTML=mdToHtml(sanitizeBody(body)); lastAssistant=m.content; }
-    }
+      else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(m.content); mdEl.innerHTML=mdToHtml(sanitizeBody(body)); lastAssistant=m.content;
+        // 이 턴에 저장된 삽화를 제목 아래에 복원
+        const imgs=illusts.filter(x=>x.idx===i);
+        if(imgs.length){ const h=mdEl.querySelector('h1,h2,h3'); let after=h&&h.parentNode===mdEl?h:null;
+          imgs.forEach(im=>{ const box=document.createElement('div'); box.className='illust';
+            box.innerHTML='<img alt="삽화" src="'+im.src+'"><div class="cap">AI 생성 삽화</div>';
+            if(after){ after.after(box); after=box; } else mdEl.prepend(box); }); }
+      }
+    });
     if(lastAssistant){
       const {choices}=splitChoices(lastAssistant); renderChoices(choices);
       addGmFooter([...logEl.querySelectorAll('.msg.gm')].pop());
