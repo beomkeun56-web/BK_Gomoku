@@ -277,7 +277,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.84</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.85</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -454,6 +454,21 @@
       </div>
     </div>
     <button class="save-btn" id="fsDone">닫기</button>
+  </div>
+</div>
+
+<!-- ===== Illustration timing modal ===== -->
+<div class="overlay" id="illustOverlay">
+  <div class="modal" style="max-width:430px">
+    <div style="display:flex; align-items:center">
+      <h2>🎨 삽화 생성</h2>
+      <button class="modal-x" id="illustClose">✕</button>
+    </div>
+    <p class="desc">언제 삽화를 만들지 선택하세요.</p>
+    <button class="save-btn" id="illustNow" style="background:#2a2d36; color:#fff; text-align:left">현재 턴 삽화 생성
+      <span style="display:block; font-weight:500; font-size:.78rem; color:var(--dim); margin-top:3px">지금 · 현재+이전 턴 스토리를 파악해 생성</span></button>
+    <button class="save-btn" id="illustNext" style="margin-top:10px; background:#2a2d36; color:#fff; text-align:left">다음 턴 삽화 생성
+      <span style="display:block; font-weight:500; font-size:.78rem; color:var(--dim); margin-top:3px">다음 턴 시작 시 제목 아래에 · 다음 턴 내용으로 생성</span></button>
   </div>
 </div>
 
@@ -1229,6 +1244,7 @@ async function runAssistant(){
     history.push({role:'assistant', content:acc}); saveHistory();
     parseStats(acc); renderChoices(choices);
     addGmFooter(mdEl.closest('.msg'));
+    if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
   } finally {
     busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지
     bumpTurn();        // 누적 턴수 +1
@@ -1308,41 +1324,87 @@ async function geminiImage(model,key,prompt){
   const parts=j.candidates?.[0]?.content?.parts||[];
   const p=parts.find(x=>x.inlineData||x.inline_data); const d=p&&(p.inlineData||p.inline_data);
   if(!d||!d.data) throw new Error('이미지를 받지 못했습니다(키·모델 권한 확인).');
-  return 'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data;
+  let usd=0; const um=j.usageMetadata;
+  if(um){ const pr=/image/i.test(model)?[0.3,30]:(priceFor(model)||[0.3,30]);
+    usd=((um.promptTokenCount||0)*pr[0]+(um.candidatesTokenCount||0)*pr[1])/1e6; }
+  if(!usd) usd=0.039;   // 토큰 정보 없으면 1장 기준 추정
+  return {src:'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data, usd};
 }
 async function orImage(model,key,prompt){
   const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
       'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
-    body:JSON.stringify({model, modalities:['image','text'], messages:[{role:'user', content:prompt}]})
+    body:JSON.stringify({model, modalities:['image','text'], usage:{include:true}, messages:[{role:'user', content:prompt}]})
   });
   if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
   const j=await r.json();
   const imgs=j.choices?.[0]?.message?.images||[];
   const url=imgs[0]?.image_url?.url || imgs[0]?.url;
   if(!url) throw new Error('이미지를 받지 못했습니다(이미지 출력 지원 모델인지 확인).');
-  return url;
+  const usd=(typeof j.usage?.cost==='number')?j.usage.cost:0.039;
+  return {src:url, usd};
 }
-async function genIllustration(){
+function buildIllustPrompt(story){
+  return '다음 장면을 현실적인 한국 배경의 애니메이션(아니메) 화풍 일러스트 한 장으로 그려라. '
+    +'시네마틱한 조명과 분위기, 인물의 표정·복장·상황이 드러나게. '
+    +'그림 안에 글자·자막·말풍선·워터마크는 절대 넣지 마라.\n\n[장면]\n'+plainScene(story);
+}
+// 핵심: 스토리로 이미지 생성 → {src} 반환, 비용은 누적에 합산
+async function fetchIllust(story){
+  const {prov, key, model}=resolveImgCfg();
+  if(!key) throw new Error('NOKEY');
+  const out = prov==='openrouter' ? await orImage(model,key,buildIllustPrompt(story)) : await geminiImage(model,key,buildIllustPrompt(story));
+  if(out.usd>0){ costTotal+=out.usd; localStorage.setItem(LS+'_cost',String(costTotal)); costBadge(); }
+  return out.src;
+}
+// 박스에 이미지 채우기(로딩 표시 → 성공/실패)
+async function renderIllustInto(box, story){
+  box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
+  try{ const src=await fetchIllust(story); box.className='illust';
+    box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>'; }
+  catch(e){ box.className='illust loading';
+    box.textContent = e.message==='NOKEY' ? '⚠️ 삽화 설정에서 제공사·API 키를 입력하세요.' : '⚠️ 삽화 실패: '+e.message;
+    if(e.message==='NOKEY'){ openCfg(); } }
+}
+// 현재 턴: 직전 스토리로 즉시 생성(대화 아래)
+async function genIllustNow(){
   if(busy) return;
-  $('cmdRow').classList.add('hidden');   // 햄버거 메뉴 닫기
   const story=lastStoryText();
   if(!story){ alert('먼저 장면이 전개된 뒤에 삽화를 만들 수 있습니다.'); return; }
-  const {prov, key, model}=resolveImgCfg();
-  if(!key){ openCfg(); setCfgStatus('삽화 설정에서 제공사·API 키를 입력하세요.','err'); return; }
   busy=true; sendBtn.disabled=true;
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   logEl.appendChild(box); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
-  const prompt='다음 장면을 현실적인 한국 배경의 애니메이션(아니메) 화풍 일러스트 한 장으로 그려라. '
-    +'시네마틱한 조명과 분위기, 인물의 표정·복장·상황이 드러나게. '
-    +'그림 안에 글자·자막·말풍선·워터마크는 절대 넣지 마라.\n\n[장면]\n'+plainScene(story);
-  try{
-    const src = prov==='openrouter' ? await orImage(model,key,prompt) : await geminiImage(model,key,prompt);
-    box.className='illust';
-    box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>';
-  }catch(e){ box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+e.message; }
+  await renderIllustInto(box, story);
   scrollDown(); busy=false; sendBtn.disabled=false;
 }
+// 다음 턴 예약: 다음 GM 응답 시작 후 제목 아래 자동 생성
+let pendingIllust=false;
+let pendingNote=null;
+function reserveNextIllust(){
+  pendingIllust=true;
+  if(pendingNote) pendingNote.remove();
+  pendingNote=document.createElement('div'); pendingNote.className='illust loading';
+  pendingNote.textContent='🎨 다음 턴 시작 시 제목 아래에 삽화가 생성됩니다.';
+  logEl.appendChild(pendingNote); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
+}
+// 메시지의 제목(첫 헤딩) 아래에 삽화 삽입
+async function insertIllustUnderTitle(mdEl, story){
+  if(pendingNote){ pendingNote.remove(); pendingNote=null; }
+  const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
+  const h=mdEl.querySelector('h1,h2,h3');
+  if(h && h.parentNode===mdEl) h.after(box); else mdEl.prepend(box);
+  await renderIllustInto(box, story);
+}
+// 삽화 버튼 → 시점 선택 팝업
+function openIllustPopup(){
+  $('cmdRow').classList.add('hidden');
+  $('illustOverlay').classList.add('on');
+}
+const closeIllustPopup=()=>$('illustOverlay').classList.remove('on');
+$('illustClose').onclick=closeIllustPopup;
+$('illustOverlay').addEventListener('click',e=>{ if(e.target===$('illustOverlay')) closeIllustPopup(); });
+$('illustNow').onclick=()=>{ closeIllustPopup(); genIllustNow(); };
+$('illustNext').onclick=()=>{ closeIllustPopup(); reserveNextIllust(); };
 
 /* ---------- Input handlers ---------- */
 sendBtn.onclick=()=>sendMessage(inp.value);
@@ -1431,7 +1493,7 @@ $('btnMenu').onclick=()=>{ const show=$('topbar').classList.contains('hidden');
 $('hudClose').onclick=hideHud;
 $('btnSuggest').onclick=showSuggestTendency;
 $('btnAddSit').onclick=openSituation;
-$('btnIllust').onclick=genIllustration;
+$('btnIllust').onclick=openIllustPopup;
 // 입력 토글: 누르면 상단에 입력창+Enter 표시, 다시 누르면 숨김
 $('btnInput').onclick=()=>{ const r=$('inputRow'); const show=r.classList.contains('hidden');
   r.classList.toggle('hidden', !show); if(show){ autoGrow(); inp.focus(); } };
