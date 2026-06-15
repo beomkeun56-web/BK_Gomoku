@@ -277,7 +277,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.83</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.84</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -363,12 +363,6 @@
     </div>
 
     <div class="field">
-      <label>삽화(이미지) 생성용 Gemini 키 <span style="color:var(--dim)">— 선택</span></label>
-      <input type="password" id="imgKey" placeholder="AIza... (Gemini API 키)" autocomplete="off">
-      <div class="hint">하단 <b>삽화</b> 버튼으로 중요한 장면을 애니 화풍 그림으로 생성합니다(모델: gemini-2.5-flash-image). 비워두면 제공사가 Gemini일 때 위 API 키를 사용합니다. Claude·OpenRouter 사용 중이면 여기에 Gemini 키를 넣어야 삽화가 됩니다.</div>
-    </div>
-
-    <div class="field">
       <label>모델</label>
       <div class="row">
         <select id="modelSel" style="flex:1"><option value="">— 키 입력 후 [모델 불러오기] —</option></select>
@@ -376,6 +370,32 @@
       </div>
       <input type="text" id="modelManual" placeholder="또는 모델 ID 직접 입력 (예: google/gemini-2.5-pro)" style="margin-top:8px">
       <div class="status-line" id="cfgStatus"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--line); margin:6px 0 16px"></div>
+    <p class="desc" style="margin-bottom:14px">🎨 <b>삽화(이미지) 설정</b> — 채팅과 <b>별도</b>로 제공사·키·모델을 지정합니다. (Claude는 이미지 생성을 지원하지 않습니다)</p>
+
+    <div class="field">
+      <label>삽화 제공사</label>
+      <div class="seg" id="imgProvSeg">
+        <button data-iprov="gemini">Gemini</button>
+        <button data-iprov="openrouter">OpenRouter</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>삽화용 API 키 <span style="color:var(--dim)">— 비우면 채팅 키 사용(같은 제공사일 때)</span></label>
+      <input type="password" id="imgKey" placeholder="AIza... / sk-or-..." autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label>삽화 모델</label>
+      <div class="row">
+        <select id="imgModelSel" style="flex:1"><option value="">— 키 입력 후 [모델 불러오기] —</option></select>
+        <button class="mini-btn" id="btnImgModels">모델 불러오기</button>
+      </div>
+      <input type="text" id="imgModel" placeholder="또는 직접 입력 (예: gemini-2.5-flash-image / google/gemini-2.5-flash-image)" style="margin-top:8px">
+      <div class="hint">비우면 제공사 기본값 사용 (Gemini: <b>gemini-2.5-flash-image</b>, OpenRouter: <b>google/gemini-2.5-flash-image</b>). 이미지 출력이 가능한 모델이어야 합니다.</div>
     </div>
 
     <div class="field">
@@ -1261,7 +1281,7 @@ async function regen(){
   await runAssistant();
 }
 
-/* ---------- 삽화(이미지) 생성 — Gemini gemini-2.5-flash-image ---------- */
+/* ---------- 삽화(이미지) 생성 — 채팅과 별도 제공사·키·모델 ---------- */
 function lastStoryText(){
   for(let i=history.length-1;i>=0;i--){ if(history[i].role==='assistant'){ const {body}=splitChoices(history[i].content); return sanitizeBody(body); } }
   return '';
@@ -1270,13 +1290,46 @@ function plainScene(md){
   return (md||'').replace(/```[\s\S]*?```/g,' ').replace(/[#>*_`~|]/g,' ')
     .replace(/\[[^\]]*\]/g,' ').replace(/!\(.*?\)/g,' ').replace(/\s+/g,' ').trim().slice(0,700);
 }
+// 삽화 설정 해석: 제공사·키·모델 (키 비면 같은 제공사일 때 채팅 키 사용)
+function resolveImgCfg(){
+  const prov=cfg.imgProvider||'gemini';
+  const key=(cfg.imgKey||'').trim() || (cfg.provider===prov ? (cfg.key||'') : '');
+  const def = prov==='openrouter' ? 'google/gemini-2.5-flash-image' : 'gemini-2.5-flash-image';
+  const model=(cfg.imgModelManual||'').trim() || (cfg.imgModel||'').trim() || def;
+  return {prov, key, model};
+}
+async function geminiImage(model,key,prompt){
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user', parts:[{text:prompt}]}]})
+  });
+  if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
+  const j=await r.json();
+  const parts=j.candidates?.[0]?.content?.parts||[];
+  const p=parts.find(x=>x.inlineData||x.inline_data); const d=p&&(p.inlineData||p.inline_data);
+  if(!d||!d.data) throw new Error('이미지를 받지 못했습니다(키·모델 권한 확인).');
+  return 'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data;
+}
+async function orImage(model,key,prompt){
+  const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
+      'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
+    body:JSON.stringify({model, modalities:['image','text'], messages:[{role:'user', content:prompt}]})
+  });
+  if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
+  const j=await r.json();
+  const imgs=j.choices?.[0]?.message?.images||[];
+  const url=imgs[0]?.image_url?.url || imgs[0]?.url;
+  if(!url) throw new Error('이미지를 받지 못했습니다(이미지 출력 지원 모델인지 확인).');
+  return url;
+}
 async function genIllustration(){
   if(busy) return;
   $('cmdRow').classList.add('hidden');   // 햄버거 메뉴 닫기
   const story=lastStoryText();
   if(!story){ alert('먼저 장면이 전개된 뒤에 삽화를 만들 수 있습니다.'); return; }
-  const key=(cfg.provider==='gemini' ? (cfg.imgKey||cfg.key) : cfg.imgKey)||'';
-  if(!key){ openCfg(); setCfgStatus('삽화 생성용 Gemini API 키를 입력하세요.','err'); return; }
+  const {prov, key, model}=resolveImgCfg();
+  if(!key){ openCfg(); setCfgStatus('삽화 설정에서 제공사·API 키를 입력하세요.','err'); return; }
   busy=true; sendBtn.disabled=true;
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   logEl.appendChild(box); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
@@ -1284,17 +1337,9 @@ async function genIllustration(){
     +'시네마틱한 조명과 분위기, 인물의 표정·복장·상황이 드러나게. '
     +'그림 안에 글자·자막·말풍선·워터마크는 절대 넣지 마라.\n\n[장면]\n'+plainScene(story);
   try{
-    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key='+encodeURIComponent(key),{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{role:'user', parts:[{text:prompt}]}]})
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
-    const j=await r.json();
-    const parts=j.candidates?.[0]?.content?.parts||[];
-    const p=parts.find(x=>x.inlineData||x.inline_data); const d=p&&(p.inlineData||p.inline_data);
-    if(!d||!d.data) throw new Error('이미지를 받지 못했습니다(키·모델 권한 확인).');
+    const src = prov==='openrouter' ? await orImage(model,key,prompt) : await geminiImage(model,key,prompt);
     box.className='illust';
-    box.innerHTML='<img alt="삽화" src="data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data+'"><div class="cap">AI 생성 삽화</div>';
+    box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>';
   }catch(e){ box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+e.message; }
   scrollDown(); busy=false; sendBtn.disabled=false;
 }
@@ -1764,9 +1809,13 @@ function openCfg(){
   cfgOverlay.classList.add('on');
   selectProv(cfg.provider||'openrouter');
   $('apiKey').value=cfg.key||'';
-  $('imgKey').value=cfg.imgKey||'';
   $('modelManual').value=cfg.modelManual||'';
   if(cfg.model){ ensureOption(cfg.model); $('modelSel').value=cfg.model; }
+  // 삽화 설정
+  selectImgProv(cfg.imgProvider||'gemini');
+  $('imgKey').value=cfg.imgKey||'';
+  $('imgModel').value=cfg.imgModelManual||'';
+  if(cfg.imgModel){ const s=$('imgModelSel'); if(![...s.options].some(o=>o.value===cfg.imgModel)){ const o=document.createElement('option'); o.value=cfg.imgModel; o.textContent=cfg.imgModel; s.appendChild(o);} s.value=cfg.imgModel; }
 }
 function closeCfg(){ cfgOverlay.classList.remove('on'); }
 $('btnCfg').onclick=openCfg; $('cfgClose').onclick=closeCfg;
@@ -1790,8 +1839,8 @@ const FALLBACK_MODELS={
   gemini:['gemini-3-pro','gemini-3-flash','gemini-2.5-pro','gemini-2.5-flash'],
   anthropic:['claude-sonnet-4-5','claude-3-7-sonnet-latest','claude-3-5-haiku-latest']
 };
-function fillModelOptions(list, picked){
-  const sel=$('modelSel'); sel.innerHTML='';
+function fillModelOptions(list, picked, selId){
+  const sel=$(selId||'modelSel'); sel.innerHTML='';
   list.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
   if(picked&&list.includes(picked)) sel.value=picked;
 }
@@ -1811,6 +1860,30 @@ $('btnModels').onclick=async()=>{
     let hint='';
     if(m.includes('401')||m.includes('403')) hint=' — 이 제공사용 키가 맞는지 확인하세요. (OpenRouter 키로는 Gemini·Claude 직접 호출이 안 됩니다. 그 경우 제공사를 OpenRouter로 두고 모델만 google/…·anthropic/… 으로 고르세요.)';
     setCfgStatus('자동 불러오기 실패('+m+'). 아래 대표 모델에서 고르거나 직접 입력하세요.'+hint,'err');
+  }
+};
+
+// 삽화(이미지) 제공사 선택 + 모델 불러오기
+let selImgProv=cfg.imgProvider||'gemini';
+function selectImgProv(p){ selImgProv=p;
+  document.querySelectorAll('#imgProvSeg button').forEach(b=>b.classList.toggle('on',b.dataset.iprov===p)); }
+document.querySelectorAll('#imgProvSeg button').forEach(b=>b.onclick=()=>{
+  selectImgProv(b.dataset.iprov); $('imgModelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
+const IMG_FALLBACK={ gemini:['gemini-2.5-flash-image','gemini-2.0-flash-preview-image-generation'],
+  openrouter:['google/gemini-2.5-flash-image','google/gemini-2.5-flash-image-preview'] };
+$('btnImgModels').onclick=async()=>{
+  const key=$('imgKey').value.trim() || (selImgProv===selProv ? $('apiKey').value.trim() : '');
+  if(!key){ setCfgStatus('먼저 삽화용 API 키(또는 같은 제공사면 채팅 키)를 입력하세요.','err'); return; }
+  setCfgStatus('삽화 모델 목록을 불러오는 중…','load');
+  try{
+    let list=await fetchModels(selImgProv,key);
+    if(selImgProv!=='anthropic'){ const f=list.filter(n=>/image|imagen/i.test(n)); if(f.length) list=f; }
+    if(!list.length) list=IMG_FALLBACK[selImgProv]||[];
+    fillModelOptions(list, cfg.imgModel, 'imgModelSel');
+    setCfgStatus(list.length+'개 삽화 모델 로드됨.','ok');
+  }catch(e){
+    fillModelOptions(IMG_FALLBACK[selImgProv]||[], cfg.imgModel, 'imgModelSel');
+    setCfgStatus('삽화 모델 자동 불러오기 실패('+e.message+'). 대표 모델에서 고르거나 직접 입력하세요.','err');
   }
 };
 
@@ -1842,7 +1915,11 @@ $('cfgSave').onclick=()=>{
   if(!key){ setCfgStatus('API 키를 입력하세요.','err'); return; }
   if(!model&&!manual){ setCfgStatus('모델을 선택하거나 직접 입력하세요.','err'); return; }
   cfg.provider=selProv; cfg.key=key; cfg.model=model; cfg.modelManual=manual;
-  cfg.imgKey=$('imgKey').value.trim(); saveCfg();
+  cfg.imgProvider=selImgProv;
+  cfg.imgKey=$('imgKey').value.trim();
+  cfg.imgModel=$('imgModelSel').value.trim();
+  cfg.imgModelManual=$('imgModel').value.trim();
+  saveCfg();
   setCfgStatus('저장됨.','ok'); closeCfg();
 };
 
