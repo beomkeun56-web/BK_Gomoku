@@ -277,7 +277,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.95</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.96</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -439,8 +439,12 @@
       <input type="password" id="ttsKey" placeholder="sk-... / AIza... / ElevenLabs 키" autocomplete="off">
     </div>
     <div class="field">
-      <label>음성 모델 <span style="color:var(--dim)">— 비우면 기본값</span></label>
-      <input type="text" id="ttsModel" placeholder="OpenAI: gpt-4o-mini-tts / Gemini: gemini-2.5-flash-preview-tts / ElevenLabs: eleven_multilingual_v2">
+      <label>음성 모델</label>
+      <div class="row">
+        <select id="ttsModelSel" style="flex:1"><option value="">— 키 입력 후 [모델 불러오기] —</option></select>
+        <button class="mini-btn" id="btnTtsModels">모델 불러오기</button>
+      </div>
+      <input type="text" id="ttsModel" placeholder="또는 직접 입력 (비우면 기본값)" style="margin-top:8px">
     </div>
     <div class="field">
       <label>목소리</label>
@@ -1609,7 +1613,7 @@ const TTS_DEFM={openai:'gpt-4o-mini-tts', gemini:'gemini-2.5-flash-preview-tts',
 function resolveTts(){
   const prov=cfg.ttsProvider||'openai';
   return { prov, key:(cfg.ttsKey||'').trim(),
-    model:(cfg.ttsModel||'').trim()||TTS_DEFM[prov],
+    model:(cfg.ttsModelManual||'').trim()||(cfg.ttsModel||'').trim()||TTS_DEFM[prov],
     voice:(cfg.ttsVoice||'').trim()||TTS_DEFV[prov] };
 }
 function pcmToWavUrl(b64, rate){
@@ -1682,12 +1686,39 @@ function selectTtsProv(p){ selTtsProv=p;
   document.querySelectorAll('#ttsProvSeg button').forEach(b=>b.classList.toggle('on',b.dataset.tprov===p));
   fillTtsVoices(p);
 }
-document.querySelectorAll('#ttsProvSeg button').forEach(b=>b.onclick=()=>selectTtsProv(b.dataset.tprov));
+document.querySelectorAll('#ttsProvSeg button').forEach(b=>b.onclick=()=>{
+  selectTtsProv(b.dataset.tprov); $('ttsModelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
 $('ttsVoiceSel').onchange=()=>{ $('ttsVoice').value=$('ttsVoiceSel').value; };
+// 음성 모델 불러오기(삽화처럼)
+const TTS_FALLBACK={ openai:['gpt-4o-mini-tts','tts-1','tts-1-hd'],
+  gemini:['gemini-2.5-flash-preview-tts','gemini-2.5-pro-preview-tts'],
+  elevenlabs:['eleven_multilingual_v2','eleven_turbo_v2_5','eleven_flash_v2_5','eleven_v3'] };
+async function fetchTtsModels(prov,key){
+  if(prov==='openai'){ const r=await fetch('https://api.openai.com/v1/models',{headers:{Authorization:'Bearer '+key}});
+    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
+    return (j.data||[]).map(m=>m.id).filter(id=>/tts|audio|speech/i.test(id)).sort(); }
+  if(prov==='gemini'){ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(key));
+    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
+    return (j.models||[]).map(m=>m.name.replace(/^models\//,'')).filter(n=>/tts/i.test(n)).sort(); }
+  if(prov==='elevenlabs'){ const r=await fetch('https://api.elevenlabs.io/v1/models',{headers:{'xi-api-key':key}});
+    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
+    return (Array.isArray(j)?j:[]).filter(m=>m.can_do_text_to_speech!==false).map(m=>m.model_id).filter(Boolean).sort(); }
+  return [];
+}
+$('btnTtsModels').onclick=async()=>{
+  const key=$('ttsKey').value.trim();
+  if(!key){ setCfgStatus('먼저 음성용 API 키를 입력하세요.','err'); return; }
+  setCfgStatus('음성 모델 목록을 불러오는 중…','load');
+  try{ let list=await fetchTtsModels(selTtsProv,key); if(!list.length) list=TTS_FALLBACK[selTtsProv]||[];
+    fillModelOptions(list, cfg.ttsModel, 'ttsModelSel'); setCfgStatus(list.length+'개 음성 모델 로드됨.','ok'); }
+  catch(e){ fillModelOptions(TTS_FALLBACK[selTtsProv]||[], cfg.ttsModel, 'ttsModelSel');
+    setCfgStatus('음성 모델 자동 불러오기 실패('+e.message+'). 대표 모델에서 고르거나 직접 입력하세요.','err'); }
+};
 $('ttsPreview').onclick=async(e)=>{
   // 미리듣기: 현재 입력값을 임시로 cfg에 반영해 샘플 재생
   cfg.ttsProvider=selTtsProv; cfg.ttsKey=$('ttsKey').value.trim();
-  cfg.ttsModel=$('ttsModel').value.trim(); cfg.ttsVoice=($('ttsVoice').value.trim()||$('ttsVoiceSel').value);
+  cfg.ttsModel=$('ttsModelSel').value.trim(); cfg.ttsModelManual=$('ttsModel').value.trim();
+  cfg.ttsVoice=($('ttsVoice').value.trim()||$('ttsVoiceSel').value);
   const btn=e.currentTarget, old='▶ 미리듣기'; btn.textContent='▶ 준비 중…';
   try{
     if(curAudio){ try{curAudio.pause();}catch(_){} curAudio=null; }
@@ -2199,7 +2230,8 @@ function openCfg(){
   // 음성 설정
   selectTtsProv(cfg.ttsProvider||'openai');
   $('ttsKey').value=cfg.ttsKey||'';
-  $('ttsModel').value=cfg.ttsModel||'';
+  $('ttsModel').value=cfg.ttsModelManual||'';
+  if(cfg.ttsModel){ const s=$('ttsModelSel'); if(![...s.options].some(o=>o.value===cfg.ttsModel)){ const o=document.createElement('option'); o.value=cfg.ttsModel; o.textContent=cfg.ttsModel; s.appendChild(o);} s.value=cfg.ttsModel; }
   $('ttsVoice').value=cfg.ttsVoice||'';
 }
 $('imgStyleSel').onchange=()=>{ $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none'; };
@@ -2311,7 +2343,8 @@ $('cfgSave').onclick=()=>{
   cfg.imgConsist=$('imgConsist').checked;
   cfg.ttsProvider=selTtsProv;
   cfg.ttsKey=$('ttsKey').value.trim();
-  cfg.ttsModel=$('ttsModel').value.trim();
+  cfg.ttsModel=$('ttsModelSel').value.trim();
+  cfg.ttsModelManual=$('ttsModel').value.trim();
   cfg.ttsVoice=($('ttsVoice').value.trim()||$('ttsVoiceSel').value);
   saveCfg();
   setCfgStatus('저장됨.','ok'); closeCfg();
