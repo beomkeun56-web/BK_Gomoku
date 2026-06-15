@@ -259,7 +259,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.60</span></div>
+  <div class="brand"><span class="crown">♛</span> <small>AGE OF NATIONS</small> <span class="ver" id="ver">v2.61</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
@@ -1507,7 +1507,7 @@ function withDriveToken(cb){
   try{
     const tc=google.accounts.oauth2.initTokenClient({
       client_id:gClientId, scope:'https://www.googleapis.com/auth/drive.file',
-      callback:(resp)=>{ if(resp&&resp.access_token){ gToken=resp.access_token; cb(); } else { driveStatus('인증 실패: '+(resp&&resp.error||'토큰 없음'),'err'); } }
+      callback:(resp)=>{ if(resp&&resp.access_token){ gToken=resp.access_token; gTokenExp=Date.now()+50*60*1000; cb(); } else { driveStatus('인증 실패: '+(resp&&resp.error||'토큰 없음'),'err'); } }
     });
     tc.requestAccessToken({prompt: gToken?'':'consent'});
   }catch(e){ driveStatus('인증 오류: '+e.message,'err'); }
@@ -1568,8 +1568,10 @@ function getTokenSilent(){
 }
 async function autoDriveSave(){
   if(!driveAuto || !gClientId || driveSaving) return;
+  // 팝업 방지: 캐시된 유효 토큰이 있을 때만 저장. 만료되면 저장 보류(배지로만 안내, 창 안 띄움)
+  if(!gToken || Date.now()>=gTokenExp){ driveBadge('☁ 저장 보류 · 불러오기/저장 1회 눌러 재연결',''); return; }
   driveSaving=true; driveBadge('☁ 저장 중…','load');
-  try{ await getTokenSilent(); await driveSave(); driveBadge('☁ 저장됨 '+nowHM(),'ok'); }
+  try{ await driveSave(); driveBadge('☁ 저장됨 '+nowHM(),'ok'); }
   catch(e){ driveBadge('☁ 저장 실패','err'); }
   driveSaving=false;
 }
