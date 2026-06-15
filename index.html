@@ -277,7 +277,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.96</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.97</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -448,10 +448,13 @@
     </div>
     <div class="field">
       <label>목소리</label>
-      <select id="ttsVoiceSel"></select>
+      <div class="row">
+        <select id="ttsVoiceSel" style="flex:1"></select>
+        <button class="mini-btn" id="btnTtsVoices">목소리 불러오기</button>
+      </div>
       <input type="text" id="ttsVoice" placeholder="또는 직접 입력 (voice id/name)" style="margin-top:8px">
       <div class="row" style="margin-top:8px"><button class="mini-btn" id="ttsPreview" style="flex:1">▶ 미리듣기</button></div>
-      <div class="hint" id="ttsHint">목소리를 고르고 미리듣기로 확인하세요. GM 메시지의 <b>🔊 듣기</b> 버튼으로 재생합니다.</div>
+      <div class="hint" id="ttsHint">제공사를 고르면 목소리가 자동 표시됩니다. ElevenLabs는 [목소리 불러오기]로 내 계정 목소리를 받아오세요.</div>
     </div>
 
     <div class="field">
@@ -1655,6 +1658,14 @@ async function ttsSynth(text){
   if(!d||!d.data) throw new Error('음성을 받지 못했습니다.');
   return pcmToWavUrl(d.data, 24000);
 }
+function ttsErrMsg(e){
+  if(!e) return '알 수 없는 오류';
+  if(e.message==='NOKEY') return '음성 설정에서 제공사·API 키를 입력하세요.';
+  if(/failed to fetch|networkerror|load failed/i.test(e.message)) return '브라우저에서 호출이 차단됐거나 네트워크 오류입니다. 키 종류(해당 제공사 키가 맞는지)·인터넷을 확인하세요.';
+  if(/HTTP 401|HTTP 403/.test(e.message)) return '키 인증 실패(401/403) — 이 제공사용 키가 맞는지 확인하세요. (OpenAI 음성엔 OpenAI 키, ElevenLabs엔 ElevenLabs 키)';
+  if(/HTTP 404/.test(e.message)) return '모델/목소리를 찾을 수 없습니다(404). 모델·목소리 이름을 확인하세요.';
+  return e.message;
+}
 let curAudio=null, curBtn=null;
 async function speak(text, btn){
   // 재생 중이면 정지(같은 버튼 누르면 토글)
@@ -1669,7 +1680,7 @@ async function speak(text, btn){
     await a.play();
     if(btn) btn.textContent='⏸ 정지';
   }catch(e){ if(btn) btn.textContent='🔊 듣기'; curAudio=null; curBtn=null;
-    alert('음성 실패: '+(e.message==='NOKEY'?'음성 설정에서 제공사·API 키를 입력하세요.':e.message));
+    alert('음성 실패: '+ttsErrMsg(e));
     if(e.message==='NOKEY') openCfg(); }
 }
 
@@ -1714,6 +1725,29 @@ $('btnTtsModels').onclick=async()=>{
   catch(e){ fillModelOptions(TTS_FALLBACK[selTtsProv]||[], cfg.ttsModel, 'ttsModelSel');
     setCfgStatus('음성 모델 자동 불러오기 실패('+e.message+'). 대표 모델에서 고르거나 직접 입력하세요.','err'); }
 };
+// 목소리 불러오기 — ElevenLabs는 계정 목소리 API, OpenAI/Gemini는 고정 목록
+async function fetchTtsVoices(prov,key){
+  if(prov==='elevenlabs'){
+    const r=await fetch('https://api.elevenlabs.io/v1/voices',{headers:{'xi-api-key':key}});
+    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
+    return (j.voices||[]).map(v=>v.name+'|'+v.voice_id);
+  }
+  return TTS_VOICES[prov]||[];   // OpenAI/Gemini는 고정 목소리
+}
+function fillTtsVoiceList(list){
+  const sel=$('ttsVoiceSel'); sel.innerHTML='';
+  list.forEach(v=>{ const [label,val]=v.includes('|')?v.split('|'):[v,v];
+    const o=document.createElement('option'); o.value=val; o.textContent=label; sel.appendChild(o); });
+  if(cfg.ttsVoice && [...sel.options].some(o=>o.value===cfg.ttsVoice)) sel.value=cfg.ttsVoice;
+}
+$('btnTtsVoices').onclick=async()=>{
+  const key=$('ttsKey').value.trim();
+  if(selTtsProv==='elevenlabs' && !key){ setCfgStatus('ElevenLabs 키를 먼저 입력하세요.','err'); return; }
+  setCfgStatus('목소리 목록을 불러오는 중…','load');
+  try{ const list=await fetchTtsVoices(selTtsProv,key); fillTtsVoiceList(list); $('ttsVoice').value=$('ttsVoiceSel').value;
+    setCfgStatus(list.length+'개 목소리 로드됨.','ok'); }
+  catch(e){ fillTtsVoiceList(TTS_VOICES[selTtsProv]||[]); setCfgStatus('목소리 불러오기 실패('+e.message+').','err'); }
+};
 $('ttsPreview').onclick=async(e)=>{
   // 미리듣기: 현재 입력값을 임시로 cfg에 반영해 샘플 재생
   cfg.ttsProvider=selTtsProv; cfg.ttsKey=$('ttsKey').value.trim();
@@ -1725,7 +1759,7 @@ $('ttsPreview').onclick=async(e)=>{
     const url=await ttsSynth('안녕하십니까. 국가의 시대, 음성 미리듣기입니다. 이 목소리로 진행하겠습니다.');
     const a=new Audio(url); curAudio=a; a.onended=()=>{ btn.textContent=old; if(curAudio===a)curAudio=null; };
     await a.play(); btn.textContent='⏸ 재생 중';
-  }catch(err){ btn.textContent=old; alert('미리듣기 실패: '+(err.message==='NOKEY'?'키를 입력하세요.':err.message)); }
+  }catch(err){ btn.textContent=old; alert('미리듣기 실패: '+ttsErrMsg(err)); }
 };
 
 /* ---------- Input handlers ---------- */
