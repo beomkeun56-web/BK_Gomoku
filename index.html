@@ -277,7 +277,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.92</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.93</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -867,14 +867,14 @@ function downscaleDataUrl(src, maxDim, quality){
   });
 }
 // 삽화 기록: ① 메모리 ② localStorage ③ IndexedDB 즉시 저장 (드라이브는 '저장' 시 업로드)
-async function recordIllust(idx, src){
+async function recordIllust(idx, src, pos){
   if(idx==null||idx<0) return;
   const small = await downscaleDataUrl(src, 960, 0.82);   // 저장·복원용 경량본
   const id='i'+Date.now()+Math.random().toString(36).slice(2,6);
   illustCache[id]=small;
   const ok=imgLSset(id, small);
   try{ await imgPut(id, small); }catch(e){}
-  illusts.push({idx,id}); saveIllusts();
+  illusts.push({idx,id,pos:pos||'title'}); saveIllusts();
   if(!charAnchor) charAnchor=small;   // 첫 삽화를 인물 일관성 기준으로
   // 토큰이 이미 있으면 즉시 드라이브 업로드 시도(없으면 '저장' 때 업로드)
   if(gClientId){ try{ await getTokenSilent(); const fileId=await driveUploadImage(small); const it=illusts.find(x=>x.id===id); if(it){ it.fileId=fileId; saveIllusts(); } }catch(e){} }
@@ -1521,11 +1521,11 @@ async function fetchIllust(story){
   return out.src;
 }
 // 박스에 이미지 채우기(로딩 표시 → 성공/실패). idx 주면 해당 턴에 저장(드라이브)
-async function renderIllustInto(box, story, idx){
+async function renderIllustInto(box, story, idx, pos){
   box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   try{ const src=await withTimeout(fetchIllust(story), 120000, '삽화 생성'); box.className='illust';
     box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>';
-    await recordIllust(idx, src); }
+    await recordIllust(idx, src, pos); }
   catch(e){ box.className='illust loading';
     box.textContent = e.message==='NOKEY' ? '⚠️ 삽화 설정에서 제공사·API 키를 입력하세요.' : '⚠️ 삽화 실패: '+e.message;
     if(e.message==='NOKEY'){ openCfg(); } }
@@ -1538,7 +1538,7 @@ async function genIllustNow(){
   busy=true; sendBtn.disabled=true;
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   logEl.appendChild(box); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
-  await renderIllustInto(box, story, lastAssistantIndex());
+  await renderIllustInto(box, story, lastAssistantIndex(), 'end');
   scrollDown(); busy=false; sendBtn.disabled=false;
 }
 // 다음 턴 예약: 다음 GM 응답 시작 후 제목 아래 자동 생성
@@ -1557,7 +1557,7 @@ async function insertIllustUnderTitle(mdEl, story, idx){
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   const h=mdEl.querySelector('h1,h2,h3');
   if(h && h.parentNode===mdEl) h.after(box); else mdEl.prepend(box);
-  await renderIllustInto(box, story, idx==null?lastAssistantIndex():idx);
+  await renderIllustInto(box, story, idx==null?lastAssistantIndex():idx, 'title');
 }
 // 삽화 버튼 → 시점 선택 팝업
 function openIllustPopup(){
@@ -1990,6 +1990,12 @@ async function driveLoad(){
   if(!r.ok) throw await driveErr(r);
   const j=await r.json(); if(!j.code) throw new Error('저장 형식 오류');
   await applySaveCode(j.code); gFileId=id; localStorage.setItem(LS+'_gfid',id);
+  // 토큰이 살아있는 지금 드라이브 이미지를 미리 받아 로컬에 캐시(새로고침 후 토큰 없이도 표시)
+  for(const it of illusts){ if(it && it.fileId){ try{ const v=await driveFetchImage(it.fileId);
+    if(!it.id) it.id='i'+Date.now()+Math.random().toString(36).slice(2,6);
+    imgLSset(it.id, v); try{ await imgPut(it.id, v); }catch(_){}
+  }catch(e){} } }
+  saveIllusts();
 }
 $('driveSaveBtn').onclick=()=>withDriveToken(()=>{ driveStatus('저장 중…','load'); driveSave().then(()=>{ enableDriveAuto(); driveStatus('드라이브 저장 완료. 이후 매 턴 자동 저장됩니다.','ok'); }).catch(e=>driveStatus('저장 실패: '+e.message,'err')); });
 $('driveLoadBtn').onclick=()=>withDriveToken(()=>{ driveStatus('불러오는 중…','load'); driveLoad().then(()=>{ enableDriveAuto(); driveStatus('불러옴. 화면 갱신…','ok'); setTimeout(()=>location.reload(),700); }).catch(e=>driveStatus('불러오기 실패: '+e.message,'err')); });
@@ -2183,11 +2189,16 @@ function restore(){
     history.forEach((m, i)=>{
       if(m.role==='user'){ addMessage('user', m.content); }
       else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(m.content); mdEl.innerHTML=mdToHtml(sanitizeBody(body)); lastAssistant=m.content;
-        // 이 턴에 저장된 삽화를 제목 아래에 복원(드라이브 fileId면 비동기로 받아옴)
+        // 이 턴에 저장된 삽화를 생성 위치(pos)에 맞게 복원
         const imgs=illusts.filter(x=>x.idx===i);
-        if(imgs.length){ const h=mdEl.querySelector('h1,h2,h3'); let after=h&&h.parentNode===mdEl?h:null;
+        if(imgs.length){
+          const h=mdEl.querySelector('h1,h2,h3'); let after=h&&h.parentNode===mdEl?h:null;
           imgs.forEach(im=>{ const box=mkIllustBox(im);
-            if(after){ after.after(box); after=box; } else mdEl.prepend(box); }); }
+            if(im.pos==='end'){ mdEl.appendChild(box); }            // 현재 턴: 본문 끝(아래)
+            else if(after){ after.after(box); after=box; }          // 다음 턴: 제목 바로 아래
+            else mdEl.prepend(box);
+          });
+        }
       }
     });
     if(lastAssistant){
