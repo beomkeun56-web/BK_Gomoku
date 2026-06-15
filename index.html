@@ -277,7 +277,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.89</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.90</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -413,6 +413,14 @@
       </select>
       <input type="text" id="imgStyleCustom" placeholder="직접 입력 화풍 (예: 1990년대 한국 영화 필름톤, 35mm 필름)" style="margin-top:8px; display:none">
       <div class="hint">선택한 화풍으로 삽화를 그립니다. 화풍은 비용에 영향이 없습니다.</div>
+    </div>
+
+    <div class="field">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+        <input type="checkbox" id="imgConsist" style="width:auto" checked> 인물 일관성 유지(주인공·보좌관 등)
+      </label>
+      <textarea id="imgChars" rows="3" placeholder="고정 인물 외모 묘사 (예: 주인공=30대 후반 한국 남성, 각진 턱, 짧은 검은머리, 남색 정장 / 여비서=20대 후반, 단발, 베이지 블라우스)" style="margin-top:8px; width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:10px 12px; font-family:inherit; font-size:.9rem; resize:vertical"></textarea>
+      <div class="hint">매 삽화 프롬프트에 위 인물 묘사를 포함하고, 첫 삽화를 참고 이미지로 사용해 같은 인물로 그립니다(Gemini 등 이미지 입력 지원 모델에서 가장 잘 동작).</div>
     </div>
 
     <div class="field">
@@ -791,14 +799,28 @@ function loadCfg(){ try{return JSON.parse(localStorage.getItem(LS+'_cfg'))||{}}c
 function saveCfg(){ localStorage.setItem(LS+'_cfg', JSON.stringify(cfg)); }
 function loadHistory(){ try{return JSON.parse(localStorage.getItem(LS+'_hist'))||[]}catch(e){return []} }
 function saveHistory(){ localStorage.setItem(LS+'_hist', JSON.stringify(history)); }
-// 삽화 보관 — 이미지는 구글 드라이브에 저장하고, 메타(idx,fileId)만 로컬에 작게 보관
-// (드라이브 미연결 시에는 src(dataURL)을 임시 보관 — 이 기기 한정)
+// 삽화 보관 — 메타(idx,id,fileId)만 localStorage에 작게 보관.
+// 실제 이미지는 ① IndexedDB(이 기기, 토큰 불필요·즉시) ② 구글 드라이브(기기 간 동기화) 이중 저장.
 let illusts = (function(){ try{return JSON.parse(localStorage.getItem(LS+'_illust'))||[]}catch(e){return []} })();
+const illustCache={};   // id → dataURL (이번 세션 메모리)
+let charAnchor=null;    // 인물 일관성 기준 이미지(dataURL)
+async function getCharAnchor(){
+  if(charAnchor) return charAnchor;
+  const first=illusts.find(x=>x.src||x.id||x.fileId);
+  if(first){ try{ charAnchor=await resolveIllustSrc(first); }catch(e){} }
+  return charAnchor;
+}
 function saveIllusts(){
   try{ localStorage.setItem(LS+'_illust', JSON.stringify(illusts)); }
   catch(e){ while(illusts.length){ illusts.shift(); try{ localStorage.setItem(LS+'_illust', JSON.stringify(illusts)); return; }catch(_){} } }
 }
 function lastAssistantIndex(){ for(let i=history.length-1;i>=0;i--) if(history[i].role==='assistant') return i; return -1; }
+// IndexedDB(이미지 blob 캐시)
+function imgDB(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open('gukga_img',1);
+  r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('img'); }catch(_){} };
+  r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }); }
+function imgPut(k,v){ return new Promise(async(res,rej)=>{ try{ const db=await imgDB(); const tx=db.transaction('img','readwrite'); tx.objectStore('img').put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }catch(e){ rej(e); } }); }
+function imgGet(k){ return new Promise(async(res,rej)=>{ try{ const db=await imgDB(); const t=db.transaction('img','readonly').objectStore('img').get(k); t.onsuccess=()=>res(t.result); t.onerror=()=>rej(t.error); }catch(e){ rej(e); } }); }
 // 데이터URL → 드라이브 업로드 → fileId
 async function driveUploadImage(dataUrl){
   const blob=await (await fetch(dataUrl)).blob();
@@ -812,16 +834,28 @@ async function driveUploadImage(dataUrl){
 async function driveFetchImage(fileId){
   const r=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',{headers:{Authorization:'Bearer '+gToken}});
   if(!r.ok) throw await driveErr(r);
-  return URL.createObjectURL(await r.blob());
+  const blob=await r.blob();
+  return await blobToDataUrl(blob);
 }
-// 삽화 기록: 드라이브 연결 시 업로드(fileId만 보관), 아니면 src 임시 보관
+function blobToDataUrl(blob){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); }); }
+// 삽화 기록: 로컬(IndexedDB)에 즉시 저장 + (연결 시) 드라이브 업로드
 async function recordIllust(idx, src){
   if(idx==null||idx<0) return;
-  if(gClientId){
-    try{ await getTokenSilent(); const fileId=await driveUploadImage(src); illusts.push({idx, fileId}); saveIllusts(); return; }
-    catch(e){ /* 드라이브 실패 → 아래 폴백 */ }
-  }
-  illusts.push({idx, src}); saveIllusts();
+  const id='i'+Date.now()+Math.random().toString(36).slice(2,6);
+  illustCache[id]=src;
+  try{ await imgPut(id, src); }catch(e){}
+  let fileId=null;
+  if(gClientId){ try{ await getTokenSilent(); fileId=await driveUploadImage(src); }catch(e){} }
+  illusts.push(fileId?{idx,id,fileId}:{idx,id}); saveIllusts();
+  if(!charAnchor) charAnchor=src;   // 첫 삽화를 인물 일관성 기준으로
+}
+// 저장된 삽화 1개 → 표시 src 확보(메모리 → IndexedDB → 드라이브 순)
+async function resolveIllustSrc(im){
+  if(im.src) return im.src;
+  if(im.id && illustCache[im.id]) return illustCache[im.id];
+  if(im.id){ try{ const v=await imgGet(im.id); if(v){ illustCache[im.id]=v; return v; } }catch(e){} }
+  if(im.fileId){ try{ await getTokenSilent(); const v=await driveFetchImage(im.fileId); if(im.id) illustCache[im.id]=v; return v; }catch(e){} }
+  return null;
 }
 function loadStats(){ try{return JSON.parse(localStorage.getItem(LS+'_stats'))||{}}catch(e){return {}} }
 function saveStats(){ localStorage.setItem(LS+'_stats', JSON.stringify(stats)); }
@@ -1363,15 +1397,17 @@ function resolveImgCfg(){
   const model=(cfg.imgModelManual||'').trim() || (cfg.imgModel||'').trim() || def;
   return {prov, key, model};
 }
-async function geminiImage(model,key,prompt){
+async function geminiImage(model,key,prompt,refDataUrl){
+  const parts=[{text:prompt}];
+  if(refDataUrl){ const m=String(refDataUrl).match(/^data:([^;]+);base64,(.+)$/); if(m) parts.push({inlineData:{mimeType:m[1], data:m[2]}}); }
   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{role:'user', parts:[{text:prompt}]}]})
+    body:JSON.stringify({contents:[{role:'user', parts}]})
   });
   if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
   const j=await r.json();
-  const parts=j.candidates?.[0]?.content?.parts||[];
-  const p=parts.find(x=>x.inlineData||x.inline_data); const d=p&&(p.inlineData||p.inline_data);
+  const rparts=j.candidates?.[0]?.content?.parts||[];
+  const p=rparts.find(x=>x.inlineData||x.inline_data); const d=p&&(p.inlineData||p.inline_data);
   if(!d||!d.data) throw new Error('이미지를 받지 못했습니다(키·모델 권한 확인).');
   let usd=0; const um=j.usageMetadata;
   if(um){ const pr=/image/i.test(model)?[0.3,30]:(priceFor(model)||[0.3,30]);
@@ -1379,11 +1415,14 @@ async function geminiImage(model,key,prompt){
   if(!usd) usd=0.039;   // 토큰 정보 없으면 1장 기준 추정
   return {src:'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data, usd};
 }
-async function orImage(model,key,prompt){
+async function orImage(model,key,prompt,refDataUrl){
+  const content = refDataUrl
+    ? [{type:'text', text:prompt}, {type:'image_url', image_url:{url:refDataUrl}}]
+    : prompt;
   const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
       'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
-    body:JSON.stringify({model, modalities:['image','text'], usage:{include:true}, messages:[{role:'user', content:prompt}]})
+    body:JSON.stringify({model, modalities:['image','text'], usage:{include:true}, messages:[{role:'user', content}]})
   });
   if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
   const j=await r.json();
@@ -1421,10 +1460,15 @@ function styleFragment(){
   if(s==='custom') return (cfg.imgStyleCustom||'').trim() || IMG_STYLES.anime;
   return IMG_STYLES[s] || IMG_STYLES.anime;
 }
-function buildIllustPrompt(story){
-  return '장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. '
-    +'시네마틱한 조명과 분위기, 인물의 표정·복장·상황이 드러나게. '
+function buildIllustPrompt(story, hasRef){
+  let p='장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. ';
+  const chars=(cfg.imgChars||'').trim();
+  if(chars) p+='【고정 등장인물 설정 — 매 삽화마다 동일하게 유지】 '+chars+'. ';
+  p+='주인공과 보좌관 등 고정 인물은 매번 같은 얼굴·헤어·체형·복장 톤을 가진 동일 인물로 일관되게 그려라. ';
+  if(hasRef) p+='첨부된 참고 이미지 속 인물들과 같은 외모의 동일 인물로 그려라(배경·구도는 새 장면에 맞게). ';
+  p+='시네마틱한 조명과 분위기, 인물의 표정·상황이 드러나게. '
     +'그림 안에 글자·자막·말풍선·워터마크는 절대 넣지 마라.\n\n[장면]\n'+plainScene(story);
+  return p;
 }
 // 핵심: 스토리로 이미지 생성 → {src} 반환, 비용은 누적에 합산
 function withTimeout(p, ms, label){
@@ -1433,7 +1477,9 @@ function withTimeout(p, ms, label){
 async function fetchIllust(story){
   const {prov, key, model}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
-  const out = prov==='openrouter' ? await orImage(model,key,buildIllustPrompt(story)) : await geminiImage(model,key,buildIllustPrompt(story));
+  const ref = (cfg.imgConsist!==false) ? await getCharAnchor() : null;   // 인물 일관성 기준 이미지
+  const prompt=buildIllustPrompt(story, !!ref);
+  const out = prov==='openrouter' ? await orImage(model,key,prompt,ref) : await geminiImage(model,key,prompt,ref);
   if(out.usd>0){ costTotal+=out.usd; localStorage.setItem(LS+'_cost',String(costTotal)); costBadge(); }
   return out.src;
 }
@@ -1965,6 +2011,8 @@ function openCfg(){
   $('imgStyleSel').value=cfg.imgStyle||'anime';
   $('imgStyleCustom').value=cfg.imgStyleCustom||'';
   $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none';
+  $('imgChars').value=cfg.imgChars||'';
+  $('imgConsist').checked=(cfg.imgConsist!==false);
 }
 $('imgStyleSel').onchange=()=>{ $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none'; };
 function closeCfg(){ cfgOverlay.classList.remove('on'); }
@@ -2071,6 +2119,8 @@ $('cfgSave').onclick=()=>{
   cfg.imgModelManual=$('imgModel').value.trim();
   cfg.imgStyle=$('imgStyleSel').value;
   cfg.imgStyleCustom=$('imgStyleCustom').value.trim();
+  cfg.imgChars=$('imgChars').value.trim();
+  cfg.imgConsist=$('imgConsist').checked;
   saveCfg();
   setCfgStatus('저장됨.','ok'); closeCfg();
 };
@@ -2102,14 +2152,12 @@ function restore(){
     scrollDown();
   }
 }
-// 저장된 삽화 1개 → 박스 엘리먼트(드라이브면 토큰으로 받아와 표시)
+// 저장된 삽화 1개 → 박스 엘리먼트(로컬 IndexedDB 우선, 없으면 드라이브)
 function mkIllustBox(im){
-  const box=document.createElement('div');
-  if(im.src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+im.src+'"><div class="cap">AI 생성 삽화</div>'; return box; }
-  box.className='illust loading'; box.textContent='🎨 삽화 불러오는 중…';
-  (async()=>{ try{ await getTokenSilent(); const url=await driveFetchImage(im.fileId);
-      box.className='illust'; box.innerHTML='<img alt="삽화" src="'+url+'"><div class="cap">AI 생성 삽화</div>'; }
-    catch(e){ box.className='illust loading'; box.textContent='🎨 삽화(드라이브) — 드라이브 연결 후 표시됩니다'; } })();
+  const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 불러오는 중…';
+  (async()=>{ const src=await resolveIllustSrc(im);
+    if(src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>'; }
+    else { box.className='illust loading'; box.textContent='🎨 삽화를 표시할 수 없습니다(드라이브 연결 후 새로고침).'; } })();
   return box;
 }
 // 시작: 복원
