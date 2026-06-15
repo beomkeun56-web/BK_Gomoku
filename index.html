@@ -1573,8 +1573,11 @@ async function autoDriveSave(){
   // 캐시된 유효 토큰이 있을 때만 무음 저장, 만료되면 배지로만 안내(창 안 띄움).
   if(!gToken || Date.now()>=gTokenExp){ driveBadge('☁ 재연결 필요 · Save 1회',''); return; }
   driveSaving=true; driveBadge('☁ 저장 중…','load');
-  try{ await driveSave(); driveBadge('☁ 저장됨 '+nowHM(),'ok'); }
-  catch(e){ driveBadge('☁ 저장 실패','err'); }
+  try{
+    await getTokenSilent();   // 세션 살아있으면 팝업 없이 토큰 자동 갱신
+    await driveSave();
+    driveBadge('☁ 저장됨 '+nowHM(),'ok');
+  }catch(e){ driveBadge('☁ 저장 보류(재연결 필요)',''); }   // 무음 갱신 실패 시에만 보류(창은 안 띄움)
   driveSaving=false;
 }
 function drivePrewarm(){ /* 모바일 팝업 깜빡임 방지를 위해 로드 시 자동 토큰 요청 안 함 */ }
