@@ -28,17 +28,19 @@
   .topbar{
     display:flex; align-items:center; gap:10px; padding:10px 14px;
     border-bottom:1px solid var(--line); background:#000;
-    flex:0 0 auto;
+    flex:0 0 auto; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
   }
+  .topbar::-webkit-scrollbar{display:none}
   .topbar.hidden{display:none}
-  .brand{font-weight:800; letter-spacing:.5px; font-size:1.05rem; color:#fff; display:flex; align-items:center; gap:7px}
+  .brand{font-weight:800; letter-spacing:.5px; font-size:1.05rem; color:#fff; display:flex; align-items:center; gap:7px; white-space:nowrap; flex:0 0 auto}
   .brand .mark{color:#fff}
   .brand small{color:var(--dim); font-weight:600; font-size:.7rem; letter-spacing:1px}
   .brand .ver{color:var(--gold); font-weight:700; font-size:.74rem; border:1px solid #3a3b42; border-radius:10px; padding:1px 7px}
-  .top-actions{margin-left:auto; display:flex; gap:6px}
+  .top-actions{margin-left:auto; display:flex; gap:6px; flex-wrap:nowrap; flex:0 0 auto}
   .icon-btn{
     background:var(--panel2); border:1px solid var(--line); color:var(--mut);
     border-radius:10px; padding:8px 11px; font-size:.82rem; font-weight:700; cursor:pointer; transition:.15s;
+    white-space:nowrap; flex:0 0 auto;
   }
   .icon-btn:hover{color:#fff; border-color:#3a3f4c}
   .icon-btn:active{transform:translateY(1px)}
@@ -261,12 +263,11 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.71</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.72</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="fsDown" title="글씨 작게">가﹣</button>
     <button class="icon-btn" id="fsUp" title="글씨 크게">가﹢</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
-    <button class="icon-btn" id="btnNew" title="새 게임">새 게임</button>
     <button class="icon-btn" id="btnCfg" title="API 설정">⚙ 설정</button>
   </div>
 </div>
@@ -1458,7 +1459,7 @@ function showSuggestLoading(on){
 function appendSuggestNote(msg){ let el=$('suggestBox'); if(!el){ el=document.createElement('div'); el.id='suggestBox'; choicesEl.appendChild(el);} el.innerHTML='<div class="suggest-label">'+esc(msg)+'</div>'; }
 
 /* ---------- New game ---------- */
-$('btnNew').onclick=()=>{
+const _btnNew=$('btnNew'); if(_btnNew) _btnNew.onclick=()=>{
   if(!confirm('현재 진행을 지우고 새 게임을 시작할까요? (저장 스냅샷은 별도로 보관됩니다)')) return;
   history=[]; stats={}; saveHistory(); saveStats();
   summary=''; summaryUpto=0; persistSummary();
