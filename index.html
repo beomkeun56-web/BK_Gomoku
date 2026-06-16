@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.21</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.22</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1592,15 +1592,15 @@ async function orImage(model,key,prompt,refs){
   return {src:url, usd};
 }
 const IMG_STYLES={
-  drama:'실제 한국 TV 드라마의 한 장면을 전문 영화 카메라로 촬영한 듯한 시네마틱 실사 사진. 풀프레임 카메라와 85mm 단렌즈 룩, 얕은 피사계 심도와 부드러운 보케, 자연스러운 실내외 혼합 조명, 영화적 색보정(은은한 티얼&오렌지 톤), 미세한 필름 그레인, 사실적인 피부 질감·모공·머리카락 디테일, 연출되지 않은 듯 자연스러운 순간 포착, 고해상도 포토리얼리즘. 일러스트·CG·애니 느낌이 전혀 없는 진짜 사진 같은 결과',
-  anime:'현실적인 한국 배경의 애니메이션(아니메) 화풍',
-  photo:'실제 카메라로 찍은 듯한 포토리얼리스틱 실사 사진, 자연스러운 피부 질감과 모공, 사실적인 조명과 그림자, 얕은 심도, 일러스트 느낌 없는 진짜 사진',
-  webtoon:'한국 웹툰 스타일, 선명한 셀 셰이딩과 또렷한 윤곽선',
-  cinematic:'시네마틱한 영화 스틸컷, 영화적 색보정과 얕은 심도, 필름 그레인, 사실적 디테일',
-  oil:'정교한 유화 회화 스타일, 풍부한 붓터치와 질감',
-  watercolor:'부드러운 수채화 일러스트 스타일',
-  noir:'느와르 흑백 영화 톤, 강한 명암 대비',
-  pixel:'레트로 픽셀아트(도트) 스타일'
+  drama:'A cinematic still from a real Korean TV drama, shot on a professional cinema camera; full-frame 85mm lens look, shallow depth of field with soft bokeh, natural mixed lighting, filmic color grade (subtle teal and orange), fine film grain, realistic skin texture, pores and hair detail, candid natural moment, high-resolution photorealism — looks like a genuine photograph with no illustration, CG or anime feel',
+  anime:'anime / Japanese animation art style with a realistic Korean setting',
+  photo:'a photorealistic real-camera photograph with natural skin texture and pores, realistic lighting and shadows, shallow depth of field — a genuine photo, not an illustration',
+  webtoon:'Korean webtoon style with crisp cel shading and clean outlines',
+  cinematic:'a cinematic movie still with filmic color grading, shallow depth of field, film grain and realistic detail',
+  oil:'a detailed oil painting style with rich brushwork and texture',
+  watercolor:'a soft watercolor illustration style',
+  noir:'film-noir black-and-white tone with strong chiaroscuro contrast',
+  pixel:'retro pixel-art (dot) style'
 };
 function styleFragment(){
   const s=cfg.imgStyle||'anime';
@@ -1609,45 +1609,32 @@ function styleFragment(){
 }
 function buildIllustPrompt(story, hasRef){
   let p='';
-  p+='[HARD RULES] Photorealistic, anatomically correct. Each person has exactly one head, two arms, two hands (five fingers each), two legs — no extra, duplicated, merged or deformed limbs/hands, and no extra/duplicate people. '
-    +'Simple, clear, uncluttered composition: subjects fully visible and clearly separated, NOT blocked by foreground objects (e.g., steering wheels, hands). No text, letters, captions, speech bubbles or watermark. '
-    +'Hands/gestures must be purposeful (if pointing, point at a real specific spot like a line on a document). ';
-  p+='🚫 절대 금지(해부학): 모든 인물은 정확한 인체 비율로, 1인당 머리 1개·팔 2개·손 2개·다리 2개, 손가락은 한 손에 5개. '
-    +'손·팔·다리·머리가 추가로 생기거나 중복·뒤섞이거나, 두 인물의 신체가 합쳐지거나, 기형적인 손/여섯 손가락이 나오지 않게 하라. '
-    +'전경(핸들·손 등)이 인물을 어색하게 가리지 않게, 단순하고 명확한 구도로. ';
-  p+='【손동작·시선의 의미】 손으로 가리키는 동작은 실제 대상의 구체적 지점(서류의 특정 글줄 등)을 자연스럽게 가리키게 하고, 허공·엉뚱한 곳을 가리키는 어색한 제스처는 금지. 시선도 상대/대상을 자연스럽게 향하게 하라. ';
+  p+='[HARD RULES] Photorealistic and anatomically correct. Each person: exactly one head, two arms, two hands with five fingers each, two legs — no extra, duplicated, merged or deformed limbs or hands, and no extra/duplicate people. '
+    +'Simple, clear, uncluttered composition: subjects fully visible and clearly separated, never blocked by foreground objects (steering wheels, hands, etc.). '
+    +'Hands and gestures must be purposeful — if pointing, point at a real specific spot (e.g., a line on a document); eyes look naturally at the other person or the object being viewed. '
+    +'Absolutely no text, letters, captions, subtitles, speech bubbles or watermark anywhere in the image. ';
   if(hasRef){
-    p+='⚠️ 참고 이미지 사용법: 참고①은 고정 인물의 "얼굴·외모"(같은 사람으로 유지)를 위한 것이고, 참고②는 "직전 장면의 장소·배경"이다. '
-      +'참고②의 장소가 본문 [장면]의 맥락과 맞을 때만(같은 장소가 이어질 때만) 그 배경·인테리어·조명을 유지하라. '
-      +'참고②의 배경이 본문 맥락과 맞지 않거나 어색하면(예: 격식 있는 사무실이어야 하는데 폐가·창고처럼 보이면) 참고②를 무시하고 본문에 맞는 올바른 장소로 새로 그려라. '
-      +'어떤 경우에도 참고 이미지의 카메라 구도·앵글·자세를 그대로 복제하지 말고 이번 장면에 맞는 새 샷으로 구성하라(얼굴 정체성만 유지). ';
+    p+='[REFERENCE IMAGES] Reference #1 shows the FACE and look of this story\'s fixed characters — render them as the SAME people (same face, hair, build) but do NOT copy its composition or poses. '
+      +'Reference #2 (if present) shows the PREVIOUS scene\'s location — if the story stays in the same place, keep that same background, interior and lighting and only change the camera angle; if the [SCENE] moves to a new place, use the correct new location instead. '
+      +'If a reference background contradicts the scene context (e.g., it should be a formal office but looks like a derelict room), ignore that reference and build the correct location. Never copy reference poses/limbs (this causes extra hands). ';
   }
-  p+='장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. ';
+  p+='Art style: '+styleFragment()+'. ';
   const cast=(cfg.cast||[]).filter(c=>c && (c.desc||c.role));
   if(cast.length){
-    p+='【등장인물 고정 — 아래 묘사를 글자 그대로 정확히, 빠짐없이 반영해 매 삽화 동일 인물로 그려라】 ';
-    cast.forEach(c=>{ p+='· '+((c.role||'인물').trim())+': '+((c.desc||'').trim())+'. '; });
-    p+='각 인물의 성별·나이대·체형·헤어·복장·전체 분위기와 매력 포인트까지 위 묘사와 일치시켜라. 묘사된 특징을 임의로 빼거나 평범하게 바꾸지 마라(단, 노출·선정적 묘사는 하지 말고 옷을 입은 매력적인 분위기로 표현). 본문에 위 인물이 등장하면 반드시 그 묘사대로 그려라. ';
+    p+='[FIXED CHARACTERS — render them identically in every illustration; apply every described trait, do not omit or make them plain] ';
+    cast.forEach(c=>{ p+='- '+((c.role||'character').trim())+': '+((c.desc||'').trim())+'. '; });
+    p+='Match each character\'s gender, age, body type, hair, clothing, overall vibe and charm exactly as described (keep it tasteful and clothed — no nudity or explicit content). Whenever such a character appears in the scene, draw them per their description. ';
   }
-  p+='【샷 선택 — 매번 다르게】 이번 장면의 핵심에 맞는 가장 임팩트 있는 한 컷을 선택하고, 직전 삽화와 다른 앵글·샷 사이즈를 써라. '
-    +'대화·대치·심리전이 핵심이면 인물 얼굴 클로즈업으로 표정·긴장감을 강조하고, 식사면 음식과 식사 행위가 보이는 컷, 이동·행동이면 그 결정적 동작의 순간을 잡아라. '
-    +'매 턴 같은 구도(예: 마주 앉은 투샷)를 반복하지 말고 장면 내용에 따라 클로즈업/미디엄/와이드를 다양하게 선택하라. ';
-  p+='【현실성·고증】 인물의 자세·동작·손 위치는 실제 그 상황에서 사람이 행동하는 방식 그대로 물리적으로 자연스럽게 그려라. '
-    +'보고/회의면 서류·노트북은 책상에 두거나 자연스럽게 들고 보며 화면을 상대 얼굴에 어색하게 들이밀지 마라. '
-    +'왜곡된 손가락·팔다리·비현실적 소품을 피하고, 화면(노트북·폰)엔 글자/UI를 넣지 마라. ';
-  p+='【모든 장소·상황 적합성 — 매우 중요】 먼저 이 장면이 "어떤 장소에서, 어떤 지위의 인물들이, 어떤 상황"인지 본문에서 파악한 뒤, 배경·건축·가구·조명·군중·복장·소품 하나하나를 그 실제 맥락에 정확히 맞춰라. '
-    +'장소는 그곳이 실제 한국에서 어떻게 생겼는지(격·용도·시대·분위기)를 사실적으로 고증하고, 등장인물의 지위·격식에 어울리게 표현하라. '
-    +'아무 데나 쓰는 일반적·엉뚱한 배경, 맥락과 안 맞는 허름함이나 과한 호화로움, 폐허·창고·취조실 같은 오인을 피하라(본문이 명시적으로 그런 장소라고 한 경우만 예외). '
-    +'이는 특정 장소만이 아니라 모든 장면(의원실·집무실·국회 본회의장·청문회장·기자회견장·고급 한정식집·포장마차·병원·검찰청·거리·자택 등)에 똑같이 적용한다 — 각 장소를 실제 모습 그대로. '
-    +'특히 국회의원 의원실은 국회 의원회관 안의 밝고 깔끔한 현대식 사무실이다: 카펫 바닥, 큰 원목 책상과 가죽 의자, 책장과 서류, 태극기, 응접용 소파와 탁자, 환한 실내 조명. '
-    +'어두컴컴한 콘크리트 방, 벗겨진 회벽, 종이박스 더미, 철제 책상의 취조실·창고·폐가 같은 모습으로 그리는 것은 틀린 것이니 금지한다. ';
-  p+='【장면 충실도】 아래 [장면] 본문은 이번 턴의 "현재 순간"이다. 등장인물·장소·시간대·행동·분위기를 본문에 정확히 맞추고, 본문에 없는 엉뚱한 상황을 만들지 마라. ';
-  p+='【인물 관계·지위·역할 — 상식 반영】 본문에서 각 인물의 지위와 상하관계, 이 장면에서의 역할(누가 상급자/하급자인지, 누가 보고·설명하는 쪽이고 누가 보고받는·결정하는 쪽인지, 행동의 주체가 누구인지)을 파악해 자세·시선·위치·태도·분위기로 정확히 표현하라. '
-    +'상하관계가 뒤바뀌어 보이지 않게 하라. 예: 보좌관이 의원에게 보고/수행하는 장면이면 의원(상급자)이 중심적·여유 있는 권위로, 보좌관은 자료를 공손히 제시·설명하는 역할로 그려라(보좌관이 의원을 지시·압도·내려다보는 구도 금지). '
-    +'반대로 의원이 지시하는 장면이면 의원이 주도하는 태도로. 누가 말하고 누가 듣는지, 누가 부탁/압박/보고하는지 본문 그대로의 관계가 한눈에 드러나게 연출하라. ';
-  p+='【사물·음식 빠짐없이】 본문에 언급되거나 그 상황에 당연히 있을 사물·음식·소품을 실제로 차려 넣어라(예: 한식당이면 반찬·국·밥 상차림). 빈 식탁/소품 누락 금지. ';
-  p+='시네마틱한 조명과 분위기, 인물 표정·상황이 드러나게. '
-    +'그림 안에 글자·자막·말풍선·워터마크는 절대 넣지 마라.\n\n[장면]\n'+plainScene(story);
+  p+='[SHOT VARIETY] Choose the single most impactful shot for this moment and use a different angle/shot size from the previous image: for dialogue/confrontation/mind-games use a face close-up to emphasize expression and tension; for a meal show the food and the act of eating; for movement/action capture the decisive moment. Do not repeat the same composition (e.g., two people facing each other) every turn; vary close-up / medium / wide by content. ';
+  p+='[REALISM] Poses, actions and hand positions must match how people really behave in that situation, physically natural. In a briefing/meeting, documents and laptops sit on the desk or are held naturally — never shoved awkwardly into someone\'s face. Avoid distorted fingers/limbs and unrealistic prop use; no text or UI on screens (laptops/phones). ';
+  p+='[LOCATION & SITUATION ACCURACY — very important] First infer from the text WHAT place, WHAT status of people and WHAT situation this is, then match background, architecture, furniture, lighting, crowd, clothing and props exactly to that real context. '
+    +'Render each location exactly as it really looks in Korea (its grade, purpose, era, mood) and fitting the characters\' status. Avoid generic/wrong backgrounds, mismatched shabbiness or excessive luxury, and ruin/warehouse/interrogation-room mistakes (unless the text explicitly says so). '
+    +'This applies to every location (member\'s office, government office, National Assembly chamber, hearing room, press conference, fine Korean restaurant, street food tent, hospital, prosecutor\'s office, street, home, etc.). '
+    +'In particular, a Korean National Assembly member\'s office is a bright, clean, modern office inside the Members\' Office Building: carpeted floor, a large wooden desk and leather chair, bookshelves and documents, the national flag, a sofa set, bright indoor lighting — NEVER a dim concrete room with peeling walls, cardboard boxes or a metal-desk interrogation/storage/derelict look. ';
+  p+='[FAITHFUL TO SCENE] The [SCENE] below is the exact CURRENT moment of this turn. Match the characters, place, time of day, actions and mood precisely; do not invent an unrelated situation. Include the objects/food that should naturally be present (e.g., a Korean restaurant scene must have actual side dishes, soup and rice on the table) — no empty tables or missing props. ';
+  p+='[ROLES & HIERARCHY — common sense] Reflect each character\'s status and role from the text through posture, gaze, position and attitude; never invert the hierarchy. '
+    +'If an aide reports to / serves a lawmaker, the lawmaker (superior) looks central and composed with authority while the aide presents/explains respectfully (the aide must not command, dominate or look down on the lawmaker). If the lawmaker is giving orders, the lawmaker leads. Make it instantly clear who speaks, who listens, who reports/pressures/requests. ';
+  p+='Cinematic lighting and mood; expressions and the situation clearly readable.\n\n[SCENE]\n'+plainScene(story);
   return p;
 }
 // 핵심: 스토리로 이미지 생성 → {src} 반환, 비용은 누적에 합산
