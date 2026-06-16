@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.13</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.14</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1232,7 +1232,8 @@ async function streamLLM(onToken){
   return streamOpenAI(model,key,onToken,msgs); // openrouter
 }
 function resolveCfg(){
-  return {provider:cfg.provider, model:(cfg.modelManual||cfg.model||'').trim(), key:cfg.key};
+  const key=((cfg.keys&&cfg.keys[cfg.provider])||cfg.key||'');
+  return {provider:cfg.provider, model:(cfg.modelManual||cfg.model||'').trim(), key};
 }
 
 // API로 보낼 메시지 = (요약 있으면 요약 쌍) + 미요약 최근 메시지
@@ -1500,7 +1501,7 @@ function plainScene(md){
 // 삽화 설정 해석: 제공사·키·모델 (키 비면 같은 제공사일 때 채팅 키 사용)
 function resolveImgCfg(){
   const prov=cfg.imgProvider||'gemini';
-  const key=(cfg.imgKey||'').trim() || (cfg.provider===prov ? (cfg.key||'') : '');
+  const key=(((cfg.imgKeys&&cfg.imgKeys[prov])||cfg.imgKey||'').trim()) || (cfg.provider===prov ? (cfg.key||'') : '');
   const def = prov==='openrouter' ? 'google/gemini-2.5-flash-image' : prov==='openai' ? 'gpt-image-1' : 'gemini-2.5-flash-image';
   const model=(cfg.imgModelManual||'').trim() || (cfg.imgModel||'').trim() || def;
   const quality=(cfg.imgQuality||'medium');
@@ -2299,13 +2300,11 @@ drivePrewarm(0);   // 로드 시 무음 토큰 확보(팝업 없이 로그인 �
 const cfgOverlay=$('cfgOverlay');
 function openCfg(){
   cfgOverlay.classList.add('on');
-  selectProv(cfg.provider||'openrouter');
-  $('apiKey').value=cfg.key||'';
+  selectProv(cfg.provider||'openrouter');   // 키 입력칸은 selectProv가 제공사별로 채움
   $('modelManual').value=cfg.modelManual||'';
   if(cfg.model){ ensureOption(cfg.model); $('modelSel').value=cfg.model; }
   // 삽화 설정
-  selectImgProv(cfg.imgProvider||'gemini');
-  $('imgKey').value=cfg.imgKey||'';
+  selectImgProv(cfg.imgProvider||'gemini');  // 삽화 키도 selectImgProv가 제공사별로 채움
   $('imgModel').value=cfg.imgModelManual||'';
   if(cfg.imgModel){ const s=$('imgModelSel'); if(![...s.options].some(o=>o.value===cfg.imgModel)){ const o=document.createElement('option'); o.value=cfg.imgModel; o.textContent=cfg.imgModel; s.appendChild(o);} s.value=cfg.imgModel; }
   $('imgStyleSel').value=cfg.imgStyle||'anime';
@@ -2324,13 +2323,18 @@ $('btnCfg').onclick=openCfg; $('cfgClose').onclick=closeCfg;
 cfgOverlay.addEventListener('click',e=>{if(e.target===cfgOverlay)closeCfg();});
 
 let selProv=cfg.provider||'openrouter';
+// 제공사별 채팅 키 저장(전환해도 유지)
+function ensureKeys(){ if(!cfg.keys||typeof cfg.keys!=='object'){ cfg.keys={}; if(cfg.key) cfg.keys[cfg.provider||'openrouter']=cfg.key; } return cfg.keys; }
 function selectProv(p){
   selProv=p;
   document.querySelectorAll('#provSeg button').forEach(b=>b.classList.toggle('on',b.dataset.prov===p));
   $('provHint').innerHTML=PROVIDERS[p].hint;
   $('keyHint').textContent=PROVIDERS[p].keyHint;
+  $('apiKey').value = ensureKeys()[p] || '';
 }
-document.querySelectorAll('#provSeg button').forEach(b=>b.onclick=()=>{ selectProv(b.dataset.prov); $('modelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
+document.querySelectorAll('#provSeg button').forEach(b=>b.onclick=()=>{
+  ensureKeys()[selProv]=$('apiKey').value.trim();   // 현재 키 보관 후 전환
+  selectProv(b.dataset.prov); $('modelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
 
 function setCfgStatus(msg,cls){ const e=$('cfgStatus'); e.textContent=msg; e.className='status-line '+(cls||''); }
 function ensureOption(v){ const sel=$('modelSel'); if(![...sel.options].some(o=>o.value===v)){ const o=document.createElement('option'); o.value=v;o.textContent=v; sel.appendChild(o);} }
@@ -2367,9 +2371,13 @@ $('btnModels').onclick=async()=>{
 
 // 삽화(이미지) 제공사 선택 + 모델 불러오기
 let selImgProv=cfg.imgProvider||'gemini';
+// 제공사별 삽화 키 저장(전환해도 유지)
+function ensureImgKeys(){ if(!cfg.imgKeys||typeof cfg.imgKeys!=='object'){ cfg.imgKeys={}; if(cfg.imgKey) cfg.imgKeys[cfg.imgProvider||'gemini']=cfg.imgKey; } return cfg.imgKeys; }
 function selectImgProv(p){ selImgProv=p;
-  document.querySelectorAll('#imgProvSeg button').forEach(b=>b.classList.toggle('on',b.dataset.iprov===p)); }
+  document.querySelectorAll('#imgProvSeg button').forEach(b=>b.classList.toggle('on',b.dataset.iprov===p));
+  $('imgKey').value = ensureImgKeys()[p] || ''; }
 document.querySelectorAll('#imgProvSeg button').forEach(b=>b.onclick=()=>{
+  ensureImgKeys()[selImgProv]=$('imgKey').value.trim();   // 현재 키 보관 후 전환
   selectImgProv(b.dataset.iprov); $('imgModelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
 const IMG_FALLBACK={ gemini:['gemini-2.5-flash-image','gemini-2.0-flash-preview-image-generation'],
   openai:['gpt-image-1'],
@@ -2423,8 +2431,10 @@ $('cfgSave').onclick=()=>{
   if(!key){ setCfgStatus('API 키를 입력하세요.','err'); return; }
   if(!model&&!manual){ setCfgStatus('모델을 선택하거나 직접 입력하세요.','err'); return; }
   cfg.provider=selProv; cfg.key=key; cfg.model=model; cfg.modelManual=manual;
+  ensureKeys()[selProv]=key;   // 제공사별 채팅 키 보존
   cfg.imgProvider=selImgProv;
   cfg.imgKey=$('imgKey').value.trim();
+  ensureImgKeys()[selImgProv]=cfg.imgKey;   // 제공사별 삽화 키 보존
   cfg.imgModel=$('imgModelSel').value.trim();
   cfg.imgModelManual=$('imgModel').value.trim();
   cfg.imgStyle=$('imgStyleSel').value;
