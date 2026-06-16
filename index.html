@@ -284,7 +284,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.03</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.04</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1524,9 +1524,10 @@ function resolveImgCfg(){
 }
 async function geminiImage(model,key,prompt,refs){
   refs=(Array.isArray(refs)?refs:(refs?[refs]:[])).filter(Boolean);
-  // 참고 이미지를 먼저(인물 정체성 우선), 그다음 지시 텍스트
+  // 참고 이미지(역할 라벨 + 이미지)를 먼저, 그다음 지시 텍스트
   const parts=[];
-  for(const ref of refs){ const m=String(ref).match(/^data:([^;]+);base64,(.+)$/); if(m) parts.push({inlineData:{mimeType:m[1], data:m[2]}}); }
+  for(const ref of refs){ const u=(ref&&ref.url)?ref.url:ref; const label=ref&&ref.label;
+    const m=String(u).match(/^data:([^;]+);base64,(.+)$/); if(m){ if(label) parts.push({text:label}); parts.push({inlineData:{mimeType:m[1], data:m[2]}}); } }
   parts.push({text:prompt});
   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -1545,9 +1546,10 @@ async function geminiImage(model,key,prompt,refs){
 }
 async function orImage(model,key,prompt,refs){
   refs=(Array.isArray(refs)?refs:(refs?[refs]:[])).filter(Boolean);
-  const content = refs.length
-    ? [...refs.map(u=>({type:'image_url', image_url:{url:u}})), {type:'text', text:prompt}]
-    : prompt;
+  let content;
+  if(refs.length){ content=[]; for(const ref of refs){ const u=(ref&&ref.url)?ref.url:ref; const label=ref&&ref.label;
+      if(label) content.push({type:'text', text:label}); content.push({type:'image_url', image_url:{url:u}}); } content.push({type:'text', text:prompt}); }
+  else content=prompt;
   const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
       'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
@@ -1592,9 +1594,10 @@ function styleFragment(){
 function buildIllustPrompt(story, hasRef){
   let p='';
   if(hasRef){
-    p+='⚠️ 참고 이미지 사용법: 첨부 이미지는 이 이야기의 고정 인물(주인공·보좌관 등)의 "얼굴·외모 식별용"이다. '
-      +'그 인물의 얼굴 생김새·이목구비·헤어·머리색·피부톤·체형을 동일한 "같은 사람"으로 유지하라(다른 사람으로 바꾸지 말 것). '
-      +'단, 참고 이미지의 구도·배경·자세·샷은 절대 그대로 복제하지 마라 — 이번 장면에 맞는 완전히 새로운 구도/앵글로 새로 구성하라. ';
+    p+='⚠️ 참고 이미지 사용법: 참고①은 고정 인물의 "얼굴·외모"(같은 사람으로 유지), 참고②는 "직전 장면의 장소·배경"이다. '
+      +'같은 장소에서 이야기가 이어지면 참고②의 장소·공간·인테리어·소품·조명 톤을 동일하게 유지해 몰입이 깨지지 않게 하라. '
+      +'본문 [장면]에서 다른 장소로 이동했다고 나오면 그때만 새 장소로 바꿔라. '
+      +'단, 참고 이미지들의 카메라 구도·앵글·자세를 그대로 복제하지는 말고 이번 장면에 맞는 새 샷으로 구성하라(인물·장소 정체성은 유지, 앵글만 변화). ';
   }
   p+='장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. ';
   const chars=(cfg.imgChars||'').trim();
@@ -1618,11 +1621,13 @@ function withTimeout(p, ms, label){
 async function fetchIllust(story){
   const {prov, key, model}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
-  // 인물 일관성: 첫 삽화(정체성 기준) 1장만, 작게 축소해 첨부 → 속도↑·구도복제↓
+  // 참고①: 인물 얼굴(정체성) / 참고②: 직전 장면(장소 연속성) — 512px로 축소해 첨부
   let refs=[];
   if(cfg.imgConsist!==false){
+    const ds=async(u)=>{ try{ return await downscaleDataUrl(u,512,0.78); }catch(e){ return u; } };
     const anchor=await getCharAnchor();
-    if(anchor){ try{ refs.push(await downscaleDataUrl(anchor, 512, 0.78)); }catch(e){ refs.push(anchor); } }
+    if(anchor) refs.push({url:await ds(anchor), label:'[참고①: 이 이야기 고정 인물의 얼굴·외모. 같은 사람으로 유지. 단 구도는 복제 금지]'});
+    if(lastIllustSrc && lastIllustSrc!==anchor) refs.push({url:await ds(lastIllustSrc), label:'[참고②: 직전 장면. 같은 장소가 이어지면 이 배경·공간·인테리어·조명 톤을 동일하게 유지하라(카메라 앵글·구도만 새로). 단 본문에서 장소가 바뀌면 새 장소로 바꿔라]'});
   }
   const prompt=buildIllustPrompt(story, refs.length>0);
   const out = prov==='openrouter' ? await orImage(model,key,prompt,refs) : await geminiImage(model,key,prompt,refs);
