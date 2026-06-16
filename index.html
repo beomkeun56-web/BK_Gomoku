@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.23</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.24</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1204,6 +1204,7 @@ const PRICE={                       // 100만 토큰당 [입력$, 출력$]
 let lastUsage=null;                 // 최근 호출의 토큰 사용량
 let costLastTurn=0;
 let costTotal=parseFloat(localStorage.getItem(LS+'_cost')||'0')||0;
+let costImgTotal=parseFloat(localStorage.getItem(LS+'_costimg')||'0')||0;   // 이미지 비용만 누적
 let turnCount=parseInt(localStorage.getItem(LS+'_turns')||'0')||0;
 function priceFor(model){ const m=(model||'').toLowerCase();
   for(const k in PRICE) if(m.includes(k)) return PRICE[k]; return null; }
@@ -1217,18 +1218,21 @@ function usageCostUSD(model,u){
 function krw(v){ return Math.round(v*USD_KRW).toLocaleString('ko-KR')+'원'; }
 function costBadge(){ const b=$('costBadge'); if(!b) return;
   b.textContent = (costTotal>0||costLastTurn>0||turnCount>0)
-    ? '1턴 '+krw(costLastTurn)+' · 누적 '+krw(costTotal)+' · '+turnCount+'턴' : '';
+    ? '1턴 '+krw(costLastTurn)+' · 누적 '+krw(costTotal)+' (이미지 '+krw(costImgTotal)+') · '+turnCount+'턴' : '';
 }
-// 비용 합산: 누적 + 이번 턴 모두에 더함(이미지 비용도 여기로)
-function addCost(usd){ if(!(usd>0)) return; costLastTurn+=usd; costTotal+=usd; localStorage.setItem(LS+'_cost',String(costTotal)); costBadge(); }
+// 비용 합산: kind='img'이면 이미지 누적도 별도 집계
+function addCost(usd, kind){ if(!(usd>0)) return;
+  costLastTurn+=usd; costTotal+=usd; localStorage.setItem(LS+'_cost',String(costTotal));
+  if(kind==='img'){ costImgTotal+=usd; localStorage.setItem(LS+'_costimg',String(costImgTotal)); }
+  costBadge(); }
 function newTurnCost(){ costLastTurn=0; costBadge(); }   // 새 턴 시작 시 1턴 비용 초기화
 function recordTurnCost(){   // 텍스트(스토리) 비용 합산
   const {model}=resolveCfg();
   addCost(usageCostUSD(model,lastUsage));
 }
 function bumpTurn(){ turnCount++; localStorage.setItem(LS+'_turns',String(turnCount)); }
-function resetCost(){ costTotal=0; costLastTurn=0; turnCount=0;
-  localStorage.setItem(LS+'_cost','0'); localStorage.setItem(LS+'_turns','0'); costBadge(); }
+function resetCost(){ costTotal=0; costLastTurn=0; costImgTotal=0; turnCount=0;
+  localStorage.setItem(LS+'_cost','0'); localStorage.setItem(LS+'_costimg','0'); localStorage.setItem(LS+'_turns','0'); costBadge(); }
 
 /* ---------- LLM call (streaming) ---------- */
 async function streamLLM(onToken){
@@ -1678,7 +1682,7 @@ async function fetchIllust(story){
   if(prov==='openai') out=await openaiImage(model,key,prompt,refs,quality);
   else if(prov==='openrouter') out=await orImage(model,key,prompt,refs);
   else out=await geminiImage(model,key,prompt,refs);
-  addCost(out.usd);   // 이미지 비용을 1턴·누적에 합산
+  addCost(out.usd, 'img');   // 이미지 비용을 1턴·누적·이미지누적에 합산
   return out.src;
 }
 // 박스에 이미지 채우기(로딩 표시 → 성공/실패). idx 주면 해당 턴에 저장(드라이브)
@@ -2031,7 +2035,7 @@ const _btnNew=$('btnNew'); if(_btnNew) _btnNew.onclick=newGame;
 /* ---------- 기기 간 이어하기 (전체 진행 내보내기/가져오기) ---------- */
 function makeSaveCode(){
   const data={ v:2, history, stats, summary, summaryUpto, illusts,
-    cost: costTotal, turns: turnCount,   // 누적 비용(이미지 포함)·턴수 동기화
+    cost: costTotal, costImg: costImgTotal, turns: turnCount,   // 누적 비용(텍스트+이미지)·이미지누적·턴수 동기화
     cfg: cfg,   // 모든 설정값(제공사·키·모델·삽화·화풍·인물 등) 전체 저장
     ui:{ font:localStorage.getItem(LS+'_font'), fs:localStorage.getItem(LS+'_fs'),
          uifs:localStorage.getItem(LS+'_uifs'), speed:localStorage.getItem(LS+'_speed'),
@@ -2054,6 +2058,7 @@ async function applySaveCode(code){
   saveHistory(); saveStats(); persistSummary(); saveIllusts();
   // 누적 비용(이미지 포함)·턴수 동기화
   if(typeof d.cost==='number'){ costTotal=d.cost; localStorage.setItem(LS+'_cost', String(costTotal)); }
+  if(typeof d.costImg==='number'){ costImgTotal=d.costImg; localStorage.setItem(LS+'_costimg', String(costImgTotal)); }
   if(typeof d.turns==='number'){ turnCount=d.turns; localStorage.setItem(LS+'_turns', String(turnCount)); }
   // 설정값 복원: v2는 전체 cfg, 구버전은 일부 필드
   if(d.cfg && typeof d.cfg==='object'){ cfg=d.cfg; saveCfg(); }
