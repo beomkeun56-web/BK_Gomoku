@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.10</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.11</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1507,7 +1507,8 @@ function resolveImgCfg(){
 }
 // OpenAI 이미지 생성(gpt-image). 참고 이미지 있으면 edits, 없으면 generations. 품질 기본 medium.
 async function openaiImage(model,key,prompt,refs,quality){
-  const urls=(Array.isArray(refs)?refs:(refs?[refs]:[])).map(r=>(r&&r.url)?r.url:r).filter(Boolean);
+  // 속도: GPT는 참고 이미지가 많을수록 느려서 1장(인물 앵커)만 사용
+  const urls=(Array.isArray(refs)?refs:(refs?[refs]:[])).map(r=>(r&&r.url)?r.url:r).filter(Boolean).slice(0,1);
   const q=quality||'medium';
   let r;
   if(urls.length){
