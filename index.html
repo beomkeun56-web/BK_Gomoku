@@ -186,6 +186,11 @@
   .illust img{display:block; width:100%; border-radius:14px; border:1px solid var(--line)}
   .illust .cap{font-size:.78rem; color:var(--dim); margin-top:6px; text-align:center}
   .illust.loading{color:var(--mut); font-size:.85rem; text-align:center; padding:18px; border:1px dashed var(--line); border-radius:14px}
+  .slot-item{display:flex; align-items:center; gap:10px; padding:12px 13px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; cursor:pointer; background:var(--panel2); transition:.12s}
+  .slot-item:hover{border-color:var(--accent)} .slot-item:active{transform:scale(.99)}
+  .slot-item .nm{flex:1; font-weight:700; color:#fff; word-break:break-all}
+  .slot-item .dt{font-size:.72rem; color:var(--dim); white-space:nowrap}
+  .slot-del{background:none; border:none; color:var(--red); cursor:pointer; font-size:1rem; padding:2px 4px}
   .pill{background:transparent; border:1px solid #3a3b42; color:var(--mut); border-radius:20px;
     padding:7px 14px; font-size:.85em; font-weight:600; cursor:pointer; font-family:inherit;
     display:flex; align-items:center; gap:5px; transition:.15s}
@@ -278,7 +283,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.01</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.02</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -530,6 +535,26 @@
       <span style="display:block; font-weight:500; font-size:.78rem; color:var(--dim); margin-top:3px">지금 · 현재+이전 턴 스토리를 파악해 생성</span></button>
     <button class="save-btn" id="illustNext" style="margin-top:10px; background:#2a2d36; color:#fff; text-align:left">다음 턴 삽화 생성
       <span style="display:block; font-weight:500; font-size:.78rem; color:var(--dim); margin-top:3px">다음 턴 시작 시 제목 아래에 · 다음 턴 내용으로 생성</span></button>
+  </div>
+</div>
+
+<!-- ===== Drive save slots modal ===== -->
+<div class="overlay" id="slotOverlay">
+  <div class="modal">
+    <div style="display:flex; align-items:center">
+      <h2 id="slotTitle">💾 저장</h2>
+      <button class="modal-x" id="slotClose">✕</button>
+    </div>
+    <div class="field" id="slotSaveRow">
+      <label>새 이름으로 저장</label>
+      <div class="row">
+        <input type="text" id="slotName" placeholder="저장 이름 (예: 1회차 · 비리루트)" style="flex:1">
+        <button class="mini-btn" id="slotNewSave">저장</button>
+      </div>
+      <div class="hint">아래 목록의 기존 칸을 누르면 그 칸에 덮어쓰기 됩니다.</div>
+    </div>
+    <div class="status-line" id="slotStatus"></div>
+    <div id="slotList" style="max-height:48vh; overflow:auto; margin-top:8px"></div>
   </div>
 </div>
 
@@ -2220,14 +2245,14 @@ async function driveFindFile(){
 }
 async function driveSave(){
   await uploadPendingIllusts();   // 삽화를 드라이브에 올리고 fileId 확보(토큰 있는 지금)
-  const body=JSON.stringify({app:'gukga', code:makeSaveCode(), savedAt:new Date().toISOString()});
+  const body=JSON.stringify({app:'gukga', title:'자동저장', code:makeSaveCode(), savedAt:new Date().toISOString()});
   let id=gFileId|| await driveFindFile();
   if(id){
     const r=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',{method:'PATCH',headers:{Authorization:'Bearer '+gToken,'Content-Type':'application/json'},body});
     if(!r.ok) throw await driveErr(r);
   }else{
     const form=new FormData();
-    form.append('metadata', new Blob([JSON.stringify({name:'gukga_save.json',mimeType:'application/json'})],{type:'application/json'}));
+    form.append('metadata', new Blob([JSON.stringify({name:'gukga_save.json',mimeType:'application/json',appProperties:{app:'gukga',title:'자동저장'}})],{type:'application/json'}));
     form.append('file', new Blob([body],{type:'application/json'}));
     const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:'Bearer '+gToken},body:form});
     if(!r.ok) throw await driveErr(r);
@@ -2235,6 +2260,93 @@ async function driveSave(){
   }
   gFileId=id; localStorage.setItem(LS+'_gfid',id);
 }
+/* ===== 이름별 저장 슬롯(구글 드라이브) ===== */
+function safeName(n){ return (n||'슬롯').replace(/[\\/:*?"<>|]/g,'_').slice(0,60); }
+async function driveListSaves(){
+  const q=encodeURIComponent("trashed=false and mimeType='application/json' and name contains 'gukga_save'");
+  const r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=drive&orderBy=modifiedTime desc&pageSize=100&fields=files(id,name,modifiedTime,appProperties)',{headers:{Authorization:'Bearer '+gToken}});
+  if(!r.ok) throw await driveErr(r);
+  const j=await r.json();
+  return (j.files||[]).map(f=>({ id:f.id, name:f.name, modifiedTime:f.modifiedTime,
+    title:(f.appProperties&&f.appProperties.title) || f.name.replace(/^gukga_save_?/,'').replace(/\.json$/,'') || '저장',
+    auto:f.name==='gukga_save.json' }));
+}
+async function driveSaveNamed(title, fileId){
+  await uploadPendingIllusts();
+  const body=JSON.stringify({app:'gukga', title, code:makeSaveCode(), savedAt:new Date().toISOString()});
+  if(fileId){
+    const form=new FormData();
+    form.append('metadata', new Blob([JSON.stringify({appProperties:{app:'gukga',title}})],{type:'application/json'}));
+    form.append('file', new Blob([body],{type:'application/json'}));
+    const r=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart',{method:'PATCH',headers:{Authorization:'Bearer '+gToken},body:form});
+    if(!r.ok) throw await driveErr(r); return fileId;
+  }
+  const form=new FormData();
+  form.append('metadata', new Blob([JSON.stringify({name:'gukga_save_'+safeName(title)+'_'+Date.now()+'.json', mimeType:'application/json', appProperties:{app:'gukga',title}})],{type:'application/json'}));
+  form.append('file', new Blob([body],{type:'application/json'}));
+  const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:'Bearer '+gToken},body:form});
+  if(!r.ok) throw await driveErr(r); return (await r.json()).id;
+}
+async function driveLoadById(id){
+  const r=await fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media',{headers:{Authorization:'Bearer '+gToken}});
+  if(!r.ok) throw await driveErr(r);
+  const j=await r.json(); if(!j.code) throw new Error('저장 형식 오류');
+  await applySaveCode(j.code); gFileId=id; localStorage.setItem(LS+'_gfid',id);
+  for(const it of illusts){ if(it && it.fileId){ try{ const v=await driveFetchImage(it.fileId);
+    if(!it.id) it.id='i'+Date.now()+Math.random().toString(36).slice(2,6);
+    imgLSset(it.id, v); try{ await imgPut(it.id, v); }catch(_){}
+  }catch(e){} } }
+  saveIllusts();
+}
+async function driveDeleteFile(id){
+  const r=await fetch('https://www.googleapis.com/drive/v3/files/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+gToken}});
+  if(!r.ok && r.status!==204) throw await driveErr(r);
+}
+let slotMode='save';
+function slotStatus(t,cls){ const e=$('slotStatus'); if(e){ e.textContent=t||''; e.className='status-line '+(cls||''); } }
+function openSlots(mode){
+  slotMode=mode;
+  $('slotTitle').textContent = mode==='save' ? '💾 저장 (이름 지정)' : '📂 불러오기';
+  $('slotSaveRow').style.display = mode==='save' ? 'block' : 'none';
+  $('slotName').value=''; slotStatus(''); $('slotList').innerHTML='<div class="hint">목록 불러오는 중…</div>';
+  $('slotOverlay').classList.add('on');
+  withDriveToken(()=>{ enableDriveAuto(); refreshSlots(); });
+}
+async function refreshSlots(){
+  try{ renderSlots(await driveListSaves()); }
+  catch(e){ $('slotList').innerHTML='<div class="hint">목록 실패: '+e.message+'</div>'; }
+}
+function fmtDate(t){ try{ const d=new Date(t),p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }catch(e){ return ''; } }
+function renderSlots(items){
+  const wrap=$('slotList'); wrap.innerHTML='';
+  if(!items.length){ wrap.innerHTML='<div class="hint">저장된 게임이 없습니다.'+(slotMode==='save'?' 위에 이름을 입력해 저장하세요.':'')+'</div>'; return; }
+  items.forEach(it=>{
+    const row=document.createElement('div'); row.className='slot-item';
+    const nm=document.createElement('span'); nm.className='nm'; nm.textContent=(it.auto?'☁ ':'')+it.title;
+    const dt=document.createElement('span'); dt.className='dt'; dt.textContent=fmtDate(it.modifiedTime);
+    row.appendChild(nm); row.appendChild(dt);
+    if(!it.auto){ const del=document.createElement('button'); del.className='slot-del'; del.title='삭제'; del.textContent='🗑';
+      del.onclick=(e)=>{ e.stopPropagation(); if(confirm('["'+it.title+'"] 저장을 삭제할까요?')) withDriveToken(()=>driveDeleteFile(it.id).then(refreshSlots).catch(e=>slotStatus('삭제 실패: '+e.message,'err'))); };
+      row.appendChild(del); }
+    row.onclick=()=> slotMode==='save' ? overwriteSlot(it) : loadSlot(it);
+    wrap.appendChild(row);
+  });
+}
+function overwriteSlot(it){
+  if(!confirm('["'+it.title+'"]에 덮어쓸까요?')) return;
+  withDriveToken(()=>{ slotStatus('저장 중…','load'); driveSaveNamed(it.title, it.id).then(()=>{ slotStatus('덮어썼습니다.','ok'); refreshSlots(); }).catch(e=>slotStatus('저장 실패: '+e.message,'err')); });
+}
+function loadSlot(it){
+  withDriveToken(()=>{ slotStatus('불러오는 중…','load'); driveLoadById(it.id).then(()=>{ slotStatus('불러옴. 화면 갱신…','ok'); setTimeout(()=>location.reload(),700); }).catch(e=>slotStatus('불러오기 실패: '+e.message,'err')); });
+}
+$('slotClose').onclick=()=>$('slotOverlay').classList.remove('on');
+$('slotOverlay').addEventListener('click',e=>{ if(e.target===$('slotOverlay')) $('slotOverlay').classList.remove('on'); });
+$('slotNewSave').onclick=()=>{
+  const name=$('slotName').value.trim();
+  if(!name){ slotStatus('저장 이름을 입력하세요.','err'); return; }
+  withDriveToken(()=>{ slotStatus('저장 중…','load'); driveSaveNamed(name).then(()=>{ slotStatus('"'+name+'" 저장됨.','ok'); $('slotName').value=''; refreshSlots(); }).catch(e=>slotStatus('저장 실패: '+e.message,'err')); });
+};
 async function driveLoad(){
   let id=gFileId|| await driveFindFile();
   if(!id) throw new Error('드라이브에 저장된 게임이 없습니다.');
@@ -2284,12 +2396,12 @@ function nowHM(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return p(d.
 function refreshDriveBar(){ /* (불러오기 버튼은 Save/Load로 대체됨) */ }
 // 하단 Save: 드라이브 연결돼 있으면 즉시 드라이브 저장, 아니면 저장 창 열기
 $('btnBarSave').onclick=()=>{
-  if(gClientId){ withDriveToken(()=>{ driveBadge('☁ 저장중','load'); driveSave().then(()=>{ enableDriveAuto(); driveBadge('☁ '+nowHM(),'ok'); }).catch(e=>driveBadge('☁ 실패','err')); }); }
+  if(gClientId){ openSlots('save'); }
   else { try{ $('snapText').value=makeSaveCode(); }catch(e){} snapMsg(''); $('snapOverlay').classList.add('on'); }
 };
-// 하단 Load: 드라이브 연결돼 있으면 드라이브 불러오기, 아니면 저장 창 열기
+// 하단 Load: 드라이브 연결돼 있으면 슬롯 목록에서 선택, 아니면 저장 창 열기
 $('btnBarLoad').onclick=()=>{
-  if(gClientId){ withDriveToken(()=>{ driveBadge('☁ 불러오는중','load'); driveLoad().then(()=>{ enableDriveAuto(); setTimeout(()=>location.reload(),700); }).catch(e=>{ driveBadge('☁ 실패','err'); }); }); }
+  if(gClientId){ openSlots('load'); }
   else { snapMsg(''); $('snapOverlay').classList.add('on'); }
 };
 // 시작 시 자동저장 상태 배지·버튼 초기화 (항상 표시)
