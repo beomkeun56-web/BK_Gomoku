@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.16</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.17</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -447,6 +447,13 @@
       <div class="cast-row"><input type="text" id="cast2Role" class="cast-role" placeholder="보좌관"><input type="text" id="cast2Desc" class="cast-desc" placeholder="외모 묘사 (예: 20대 후반 여성, 글래머 체형, 단발, 베이지 블라우스)"></div>
       <div class="cast-row"><input type="text" id="cast3Role" class="cast-role" placeholder="그 외 인물 1"><input type="text" id="cast3Desc" class="cast-desc" placeholder="외모 묘사 (선택)"></div>
       <div class="cast-row"><input type="text" id="cast4Role" class="cast-role" placeholder="그 외 인물 2"><input type="text" id="cast4Desc" class="cast-desc" placeholder="외모 묘사 (선택)"></div>
+    </div>
+
+    <div class="field">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+        <input type="checkbox" id="imgBrief" style="width:auto" checked> AI 장면 요약으로 삽화 정확도↑
+      </label>
+      <div class="hint" style="margin-top:4px">켜면 채팅 AI가 이번 턴의 핵심 한 컷(장소·행동·구도·상하관계)을 먼저 요약해 이미지 모델에 전달합니다. 상황 일치도가 크게 좋아집니다(삽화당 채팅 1회 추가 호출 — 소량 비용).</div>
     </div>
 
     <div class="field">
@@ -1645,9 +1652,22 @@ function buildIllustPrompt(story, hasRef){
 function withTimeout(p, ms, label){
   return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error((label||'요청')+' 시간 초과('+Math.round(ms/1000)+'초) — 모델이 이미지 출력을 지원하지 않거나 너무 느립니다. 다른 이미지 모델(예: google/gemini-2.5-flash-image)을 권장합니다.')), ms))]);
 }
+// 채팅 LLM이 '이번 턴 핵심 한 컷'을 이미지용으로 요약(정확도↑)
+async function buildSceneBrief(body){
+  const sys='너는 삽화 연출가다. 주어진 [장면] 본문에서 "이번 순간 가장 중요한 한 컷"을 골라, 이미지 생성 모델에 줄 한국어 한 문단 묘사를 작성하라. '
+    +'반드시 포함: ①장소(실제 한국 배경, 구체적) ②등장인물 각자의 행동·자세·표정과 상하관계(누가 보고/지시/결정하는지) ③카메라 샷 크기(클로즈업/미디엄/와이드) ④분위기 ⑤핵심 소품. '
+    +'인물의 얼굴·외모는 따로 고정되니 적지 마라. 머리말·설명 없이 묘사문만, 200자 내외 한 문단으로.';
+  const out=await callOnce([{role:'user', content:'[장면]\n'+(body||'').slice(0,2000)}], sys);
+  return (out||'').trim();
+}
 async function fetchIllust(story){
   const {prov, key, model, quality}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
+  // 채팅 LLM으로 핵심 장면 요약(켜져 있고 채팅 키가 있을 때). 실패 시 원문 사용
+  let sceneText=story;
+  if(cfg.imgBrief!==false){
+    try{ const brief=await withTimeout(buildSceneBrief(story), 30000, '장면 요약'); if(brief && brief.length>10) sceneText=brief; }catch(e){}
+  }
   // 참고①: 인물 얼굴(정체성) / 참고②: 직전 장면(장소 연속성) — 512px로 축소해 첨부
   let refs=[];
   if(cfg.imgConsist!==false){
@@ -1656,7 +1676,7 @@ async function fetchIllust(story){
     if(anchor) refs.push({url:await ds(anchor), label:'[참고①: 이 이야기 고정 인물의 얼굴·외모. 같은 사람으로 유지. 단 구도는 복제 금지]'});
     if(lastIllustSrc && lastIllustSrc!==anchor) refs.push({url:await ds(lastIllustSrc), label:'[참고②: 직전 장면. 같은 장소가 이어지면 이 배경·공간·인테리어·조명 톤을 동일하게 유지하라(카메라 앵글·구도만 새로). 단 본문에서 장소가 바뀌면 새 장소로 바꿔라]'});
   }
-  const prompt=buildIllustPrompt(story, refs.length>0);
+  const prompt=buildIllustPrompt(sceneText, refs.length>0);
   let out;
   if(prov==='openai') out=await openaiImage(model,key,prompt,refs,quality);
   else if(prov==='openrouter') out=await orImage(model,key,prompt,refs);
@@ -2316,6 +2336,7 @@ function openCfg(){
   $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none';
   $('imgQuality').value=cfg.imgQuality||'medium';
   $('imgConsist').checked=(cfg.imgConsist!==false);
+  $('imgBrief').checked=(cfg.imgBrief!==false);
   // 등장인물 4명
   const cast=cfg.cast||[];
   for(let i=0;i<4;i++){ const c=cast[i]||{}; const rE=$('cast'+(i+1)+'Role'), dE=$('cast'+(i+1)+'Desc');
@@ -2445,6 +2466,7 @@ $('cfgSave').onclick=()=>{
   cfg.imgStyleCustom=$('imgStyleCustom').value.trim();
   cfg.imgQuality=$('imgQuality').value;
   cfg.imgConsist=$('imgConsist').checked;
+  cfg.imgBrief=$('imgBrief').checked;
   // 등장인물 4명(역할+묘사)
   const cast=[];
   for(let i=0;i<4;i++){ const role=($('cast'+(i+1)+'Role').value||'').trim(), desc=($('cast'+(i+1)+'Desc').value||'').trim();
