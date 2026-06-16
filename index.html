@@ -278,7 +278,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.00</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.01</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1201,11 +1201,12 @@ function costBadge(){ const b=$('costBadge'); if(!b) return;
   b.textContent = (costTotal>0||costLastTurn>0||turnCount>0)
     ? '1턴 '+krw(costLastTurn)+' · 누적 '+krw(costTotal)+' · '+turnCount+'턴' : '';
 }
-function recordTurnCost(){
+// 비용 합산: 누적 + 이번 턴 모두에 더함(이미지 비용도 여기로)
+function addCost(usd){ if(!(usd>0)) return; costLastTurn+=usd; costTotal+=usd; localStorage.setItem(LS+'_cost',String(costTotal)); costBadge(); }
+function newTurnCost(){ costLastTurn=0; costBadge(); }   // 새 턴 시작 시 1턴 비용 초기화
+function recordTurnCost(){   // 텍스트(스토리) 비용 합산
   const {model}=resolveCfg();
-  const c=usageCostUSD(model,lastUsage);
-  if(c>0){ costLastTurn=c; costTotal+=c; localStorage.setItem(LS+'_cost',String(costTotal)); }
-  costBadge();
+  addCost(usageCostUSD(model,lastUsage));
 }
 function bumpTurn(){ turnCount++; localStorage.setItem(LS+'_turns',String(turnCount)); }
 function resetCost(){ costTotal=0; costLastTurn=0; turnCount=0;
@@ -1382,6 +1383,7 @@ async function sendMessage(text, displayText){
 
 async function runAssistant(){
   busy=true; sendBtn.disabled=true;
+  newTurnCost();   // 1턴 비용 초기화(텍스트+이미지 합산용)
   renderChoices([]); removeFooters();
   await maybeSummarize();   // 오래된 대화 요약(토큰 절감)
   const {mdEl}=addMessage('assistant','',true);
@@ -1599,7 +1601,7 @@ async function fetchIllust(story){
   }
   const prompt=buildIllustPrompt(story, refs.length>0);
   const out = prov==='openrouter' ? await orImage(model,key,prompt,refs) : await geminiImage(model,key,prompt,refs);
-  if(out.usd>0){ costTotal+=out.usd; localStorage.setItem(LS+'_cost',String(costTotal)); costBadge(); }
+  addCost(out.usd);   // 이미지 비용을 1턴·누적에 합산
   return out.src;
 }
 // 박스에 이미지 채우기(로딩 표시 → 성공/실패). idx 주면 해당 턴에 저장(드라이브)
