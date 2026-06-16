@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.12</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.13</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -423,6 +423,7 @@
     <div class="field">
       <label>삽화 화풍</label>
       <select id="imgStyleSel">
+        <option value="drama">드라마 스틸컷 (시네마틱 실사) — 추천</option>
         <option value="anime">애니풍 (아니메)</option>
         <option value="photo">실사 사진풍 (포토리얼리스틱)</option>
         <option value="webtoon">한국 웹툰풍</option>
@@ -1583,10 +1584,11 @@ async function orImage(model,key,prompt,refs){
   return {src:url, usd};
 }
 const IMG_STYLES={
+  drama:'실제 한국 TV 드라마의 한 장면을 전문 영화 카메라로 촬영한 듯한 시네마틱 실사 사진. 풀프레임 카메라와 85mm 단렌즈 룩, 얕은 피사계 심도와 부드러운 보케, 자연스러운 실내외 혼합 조명, 영화적 색보정(은은한 티얼&오렌지 톤), 미세한 필름 그레인, 사실적인 피부 질감·모공·머리카락 디테일, 연출되지 않은 듯 자연스러운 순간 포착, 고해상도 포토리얼리즘. 일러스트·CG·애니 느낌이 전혀 없는 진짜 사진 같은 결과',
   anime:'현실적인 한국 배경의 애니메이션(아니메) 화풍',
-  photo:'사진처럼 사실적인 실사 포토리얼리스틱, 자연스러운 피부·질감과 시네마틱 조명',
+  photo:'실제 카메라로 찍은 듯한 포토리얼리스틱 실사 사진, 자연스러운 피부 질감과 모공, 사실적인 조명과 그림자, 얕은 심도, 일러스트 느낌 없는 진짜 사진',
   webtoon:'한국 웹툰 스타일, 선명한 셀 셰이딩과 또렷한 윤곽선',
-  cinematic:'시네마틱한 영화 스틸컷, 영화적 색보정과 얕은 심도',
+  cinematic:'시네마틱한 영화 스틸컷, 영화적 색보정과 얕은 심도, 필름 그레인, 사실적 디테일',
   oil:'정교한 유화 회화 스타일, 풍부한 붓터치와 질감',
   watercolor:'부드러운 수채화 일러스트 스타일',
   noir:'느와르 흑백 영화 톤, 강한 명암 대비',
