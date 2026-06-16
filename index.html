@@ -235,6 +235,9 @@
     padding:10px 12px; font-weight:700; font-size:.82rem; cursor:pointer; white-space:nowrap}
   .mini-btn:hover{color:#fff; border-color:var(--accent)}
   .hint{font-size:.74rem; color:var(--dim); margin-top:6px; line-height:1.5}
+  .cast-row{display:flex; gap:6px; margin-top:7px}
+  .cast-role{flex:0 0 92px; min-width:0}
+  .cast-desc{flex:1; min-width:0}
   .hint a{color:var(--blue); text-decoration:none}
   /* 시작 설정 예시 칩 */
   .ex{display:flex; gap:6px; flex-wrap:wrap; margin-top:7px}
@@ -284,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.04</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.05</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -425,44 +428,13 @@
 
     <div class="field">
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
-        <input type="checkbox" id="imgConsist" style="width:auto" checked> 인물 일관성 유지(주인공·보좌관 등)
+        <input type="checkbox" id="imgConsist" style="width:auto" checked> 인물 일관성 유지 — 아래 묘사 그대로 고정
       </label>
-      <textarea id="imgChars" rows="3" placeholder="고정 인물 외모 묘사 (예: 주인공=30대 후반 한국 남성, 각진 턱, 짧은 검은머리, 남색 정장 / 여비서=20대 후반, 단발, 베이지 블라우스)" style="margin-top:8px; width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:10px 12px; font-family:inherit; font-size:.9rem; resize:vertical"></textarea>
-      <div class="hint">매 삽화 프롬프트에 위 인물 묘사를 포함하고, 첫 삽화를 참고 이미지로 사용해 같은 인물로 그립니다(Gemini 등 이미지 입력 지원 모델에서 가장 잘 동작).</div>
-    </div>
-
-    <div style="border-top:1px solid var(--line); margin:6px 0 16px"></div>
-    <p class="desc" style="margin-bottom:14px">🔊 <b>음성(TTS) 설정</b> — 출력된 스토리를 음성으로 듣습니다. 채팅·삽화와 <b>별도</b> 제공사·키를 씁니다.</p>
-
-    <div class="field">
-      <label>음성 제공사</label>
-      <div class="seg" id="ttsProvSeg">
-        <button data-tprov="openai">OpenAI</button>
-        <button data-tprov="gemini">Gemini</button>
-        <button data-tprov="elevenlabs">ElevenLabs</button>
-      </div>
-    </div>
-    <div class="field">
-      <label>음성용 API 키</label>
-      <input type="password" id="ttsKey" placeholder="sk-... / AIza... / ElevenLabs 키" autocomplete="off">
-    </div>
-    <div class="field">
-      <label>음성 모델</label>
-      <div class="row">
-        <select id="ttsModelSel" style="flex:1"><option value="">— 키 입력 후 [모델 불러오기] —</option></select>
-        <button class="mini-btn" id="btnTtsModels">모델 불러오기</button>
-      </div>
-      <input type="text" id="ttsModel" placeholder="또는 직접 입력 (비우면 기본값)" style="margin-top:8px">
-    </div>
-    <div class="field">
-      <label>목소리</label>
-      <div class="row">
-        <select id="ttsVoiceSel" style="flex:1"></select>
-        <button class="mini-btn" id="btnTtsVoices">목소리 불러오기</button>
-      </div>
-      <input type="text" id="ttsVoice" placeholder="또는 직접 입력 (voice id/name)" style="margin-top:8px">
-      <div class="row" style="margin-top:8px"><button class="mini-btn" id="ttsPreview" style="flex:1">▶ 미리듣기</button></div>
-      <div class="hint" id="ttsHint">제공사를 고르면 목소리가 자동 표시됩니다. ElevenLabs는 [목소리 불러오기]로 내 계정 목소리를 받아오세요.</div>
+      <div class="hint" style="margin-top:4px">최대 4명. 역할과 외모를 적어두면 매 삽화에 그 묘사 그대로 반영됩니다.</div>
+      <div class="cast-row"><input type="text" id="cast1Role" class="cast-role" placeholder="주인공"><input type="text" id="cast1Desc" class="cast-desc" placeholder="외모 묘사 (예: 30대 후반 한국 남성, 각진 턱, 짧은 검은머리, 남색 정장)"></div>
+      <div class="cast-row"><input type="text" id="cast2Role" class="cast-role" placeholder="보좌관"><input type="text" id="cast2Desc" class="cast-desc" placeholder="외모 묘사 (예: 20대 후반 여성, 글래머 체형, 단발, 베이지 블라우스)"></div>
+      <div class="cast-row"><input type="text" id="cast3Role" class="cast-role" placeholder="그 외 인물 1"><input type="text" id="cast3Desc" class="cast-desc" placeholder="외모 묘사 (선택)"></div>
+      <div class="cast-row"><input type="text" id="cast4Role" class="cast-role" placeholder="그 외 인물 2"><input type="text" id="cast4Desc" class="cast-desc" placeholder="외모 묘사 (선택)"></div>
     </div>
 
     <div class="field">
@@ -1463,11 +1435,10 @@ function addGmFooter(msgWrap){
   if(!msgWrap) return;
   removeFooters();
   const f=document.createElement('div'); f.className='gm-footer';
-  f.innerHTML=`<button class="cont" id="btnCont">⚡ 이어서 생성</button><button id="btnRegen">↻ 다시 생성</button><button id="btnSpeak">🔊 듣기</button>`;
+  f.innerHTML=`<button class="cont" id="btnCont">⚡ 이어서 생성</button><button id="btnRegen">↻ 다시 생성</button>`;
   msgWrap.querySelector('.bubble').appendChild(f);
   f.querySelector('#btnCont').onclick=continueGen;
   f.querySelector('#btnRegen').onclick=regen;
-  f.querySelector('#btnSpeak').onclick=(e)=>speak(msgWrap.querySelector('.md').innerText, e.currentTarget);
 }
 
 async function continueGen(){
@@ -1600,8 +1571,12 @@ function buildIllustPrompt(story, hasRef){
       +'단, 참고 이미지들의 카메라 구도·앵글·자세를 그대로 복제하지는 말고 이번 장면에 맞는 새 샷으로 구성하라(인물·장소 정체성은 유지, 앵글만 변화). ';
   }
   p+='장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. ';
-  const chars=(cfg.imgChars||'').trim();
-  if(chars) p+='【고정 등장인물 설정 — 매 삽화마다 동일하게 유지】 '+chars+'. ';
+  const cast=(cfg.cast||[]).filter(c=>c && (c.desc||c.role));
+  if(cast.length){
+    p+='【등장인물 고정 — 아래 묘사를 글자 그대로 정확히, 빠짐없이 반영해 매 삽화 동일 인물로 그려라】 ';
+    cast.forEach(c=>{ p+='· '+((c.role||'인물').trim())+': '+((c.desc||'').trim())+'. '; });
+    p+='각 인물의 성별·나이대·체형·헤어·복장·전체 분위기와 매력 포인트까지 위 묘사와 일치시켜라. 묘사된 특징을 임의로 빼거나 평범하게 바꾸지 마라(단, 노출·선정적 묘사는 하지 말고 옷을 입은 매력적인 분위기로 표현). 본문에 위 인물이 등장하면 반드시 그 묘사대로 그려라. ';
+  }
   p+='【샷 선택 — 매번 다르게】 이번 장면의 핵심에 맞는 가장 임팩트 있는 한 컷을 선택하고, 직전 삽화와 다른 앵글·샷 사이즈를 써라. '
     +'대화·대치·심리전이 핵심이면 인물 얼굴 클로즈업으로 표정·긴장감을 강조하고, 식사면 음식과 식사 행위가 보이는 컷, 이동·행동이면 그 결정적 동작의 순간을 잡아라. '
     +'매 턴 같은 구도(예: 마주 앉은 투샷)를 반복하지 말고 장면 내용에 따라 클로즈업/미디엄/와이드를 다양하게 선택하라. ';
@@ -1685,163 +1660,6 @@ $('illustClose').onclick=closeIllustPopup;
 $('illustOverlay').addEventListener('click',e=>{ if(e.target===$('illustOverlay')) closeIllustPopup(); });
 $('illustNow').onclick=()=>{ closeIllustPopup(); genIllustNow(); };
 $('illustNext').onclick=()=>{ closeIllustPopup(); reserveNextIllust(); };
-
-/* ---------- 음성(TTS) — 채팅·삽화와 별도 제공사·키·모델·목소리 ---------- */
-const TTS_VOICES={
-  openai:['alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','shimmer','verse'],
-  gemini:['Zephyr','Puck','Charon','Kore','Fenrir','Aoede','Leda','Orus'],
-  elevenlabs:['Rachel|21m00Tcm4TlvDq8ikWAM','Bella|EXAVITQu4vr4xnSDxMaL','Antoni|ErXwobaYiN019PkySvjV','Adam|pNInz6obpgDQGcFmaJgB']
-};
-const TTS_DEFV={openai:'alloy', gemini:'Kore', elevenlabs:'21m00Tcm4TlvDq8ikWAM'};
-const TTS_DEFM={openai:'gpt-4o-mini-tts', gemini:'gemini-2.5-flash-preview-tts', elevenlabs:'eleven_multilingual_v2'};
-function resolveTts(){
-  const prov=cfg.ttsProvider||'openai';
-  return { prov, key:(cfg.ttsKey||'').trim(),
-    model:(cfg.ttsModelManual||'').trim()||(cfg.ttsModel||'').trim()||TTS_DEFM[prov],
-    voice:(cfg.ttsVoice||'').trim()||TTS_DEFV[prov] };
-}
-function pcmToWavUrl(b64, rate){
-  const bin=atob(b64), len=bin.length, buf=new ArrayBuffer(44+len), v=new DataView(buf);
-  const ws=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
-  ws(0,'RIFF'); v.setUint32(4,36+len,true); ws(8,'WAVE'); ws(12,'fmt '); v.setUint32(16,16,true);
-  v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,rate,true); v.setUint32(28,rate*2,true);
-  v.setUint16(32,2,true); v.setUint16(34,16,true); ws(36,'data'); v.setUint32(40,len,true);
-  for(let i=0;i<len;i++) v.setUint8(44+i, bin.charCodeAt(i));
-  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
-}
-async function ttsSynth(text){
-  const {prov,key,model,voice}=resolveTts();
-  if(!key) throw new Error('NOKEY');
-  const input=(text||'').slice(0,4000);   // 과금·길이 보호
-  if(prov==='openai'){
-    const r=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model, voice, input, response_format:'mp3'})});
-    if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
-    return URL.createObjectURL(await r.blob());
-  }
-  if(prov==='elevenlabs'){
-    const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+encodeURIComponent(voice),{method:'POST',
-      headers:{'Content-Type':'application/json','xi-api-key':key},
-      body:JSON.stringify({text:input, model_id:model})});
-    if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
-    return URL.createObjectURL(await r.blob());
-  }
-  // gemini TTS → PCM(L16 24kHz) → WAV
-  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:input}]}],
-      generationConfig:{responseModalities:['AUDIO'], speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voice}}}}})});
-  if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
-  const j=await r.json();
-  const p=(j.candidates?.[0]?.content?.parts||[]).find(x=>x.inlineData||x.inline_data);
-  const d=p&&(p.inlineData||p.inline_data);
-  if(!d||!d.data) throw new Error('음성을 받지 못했습니다.');
-  return pcmToWavUrl(d.data, 24000);
-}
-function ttsErrMsg(e){
-  if(!e) return '알 수 없는 오류';
-  if(e.message==='NOKEY') return '음성 설정에서 제공사·API 키를 입력하세요.';
-  if(/failed to fetch|networkerror|load failed/i.test(e.message)) return '브라우저에서 호출이 차단됐거나 네트워크 오류입니다. 키 종류(해당 제공사 키가 맞는지)·인터넷을 확인하세요.';
-  if(/HTTP 401|HTTP 403/.test(e.message)) return '키 인증 실패(401/403) — 이 제공사용 키가 맞는지 확인하세요. (OpenAI 음성엔 OpenAI 키, ElevenLabs엔 ElevenLabs 키)';
-  if(/HTTP 404/.test(e.message)) return '모델/목소리를 찾을 수 없습니다(404). 모델·목소리 이름을 확인하세요.';
-  return e.message;
-}
-let curAudio=null, curBtn=null;
-async function speak(text, btn){
-  // 재생 중이면 정지(같은 버튼 누르면 토글)
-  if(curAudio){ try{ curAudio.pause(); }catch(_){} curAudio=null; if(curBtn) curBtn.textContent='🔊 듣기';
-    if(curBtn===btn){ curBtn=null; return; } }
-  curBtn=btn;
-  try{
-    if(btn) btn.textContent='🔊 준비 중…';
-    const url=await ttsSynth(plainScene(text)||text);
-    const a=new Audio(url); curAudio=a;
-    a.onended=()=>{ if(btn) btn.textContent='🔊 듣기'; if(curAudio===a){ curAudio=null; curBtn=null; } };
-    await a.play();
-    if(btn) btn.textContent='⏸ 정지';
-  }catch(e){ if(btn) btn.textContent='🔊 듣기'; curAudio=null; curBtn=null;
-    alert('음성 실패: '+ttsErrMsg(e));
-    if(e.message==='NOKEY') openCfg(); }
-}
-
-/* TTS 설정 UI */
-let selTtsProv=cfg.ttsProvider||'openai';
-function fillTtsVoices(prov){
-  const sel=$('ttsVoiceSel'); sel.innerHTML='';
-  (TTS_VOICES[prov]||[]).forEach(v=>{ const [label,val]=v.includes('|')?v.split('|'):[v,v];
-    const o=document.createElement('option'); o.value=val; o.textContent=label; sel.appendChild(o); });
-  // 현재 cfg.ttsVoice 반영
-  if(cfg.ttsVoice && [...sel.options].some(o=>o.value===cfg.ttsVoice)) sel.value=cfg.ttsVoice;
-}
-function selectTtsProv(p){ selTtsProv=p;
-  document.querySelectorAll('#ttsProvSeg button').forEach(b=>b.classList.toggle('on',b.dataset.tprov===p));
-  fillTtsVoices(p);
-}
-document.querySelectorAll('#ttsProvSeg button').forEach(b=>b.onclick=()=>{
-  selectTtsProv(b.dataset.tprov); $('ttsModelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
-$('ttsVoiceSel').onchange=()=>{ $('ttsVoice').value=$('ttsVoiceSel').value; };
-// 음성 모델 불러오기(삽화처럼)
-const TTS_FALLBACK={ openai:['gpt-4o-mini-tts','tts-1','tts-1-hd'],
-  gemini:['gemini-2.5-flash-preview-tts','gemini-2.5-pro-preview-tts'],
-  elevenlabs:['eleven_multilingual_v2','eleven_turbo_v2_5','eleven_flash_v2_5','eleven_v3'] };
-async function fetchTtsModels(prov,key){
-  if(prov==='openai'){ const r=await fetch('https://api.openai.com/v1/models',{headers:{Authorization:'Bearer '+key}});
-    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
-    return (j.data||[]).map(m=>m.id).filter(id=>/tts|audio|speech/i.test(id)).sort(); }
-  if(prov==='gemini'){ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(key));
-    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
-    return (j.models||[]).map(m=>m.name.replace(/^models\//,'')).filter(n=>/tts/i.test(n)).sort(); }
-  if(prov==='elevenlabs'){ const r=await fetch('https://api.elevenlabs.io/v1/models',{headers:{'xi-api-key':key}});
-    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
-    return (Array.isArray(j)?j:[]).filter(m=>m.can_do_text_to_speech!==false).map(m=>m.model_id).filter(Boolean).sort(); }
-  return [];
-}
-$('btnTtsModels').onclick=async()=>{
-  const key=$('ttsKey').value.trim();
-  if(!key){ setCfgStatus('먼저 음성용 API 키를 입력하세요.','err'); return; }
-  setCfgStatus('음성 모델 목록을 불러오는 중…','load');
-  try{ let list=await fetchTtsModels(selTtsProv,key); if(!list.length) list=TTS_FALLBACK[selTtsProv]||[];
-    fillModelOptions(list, cfg.ttsModel, 'ttsModelSel'); setCfgStatus(list.length+'개 음성 모델 로드됨.','ok'); }
-  catch(e){ fillModelOptions(TTS_FALLBACK[selTtsProv]||[], cfg.ttsModel, 'ttsModelSel');
-    setCfgStatus('음성 모델 자동 불러오기 실패('+e.message+'). 대표 모델에서 고르거나 직접 입력하세요.','err'); }
-};
-// 목소리 불러오기 — ElevenLabs는 계정 목소리 API, OpenAI/Gemini는 고정 목록
-async function fetchTtsVoices(prov,key){
-  if(prov==='elevenlabs'){
-    const r=await fetch('https://api.elevenlabs.io/v1/voices',{headers:{'xi-api-key':key}});
-    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
-    return (j.voices||[]).map(v=>v.name+'|'+v.voice_id);
-  }
-  return TTS_VOICES[prov]||[];   // OpenAI/Gemini는 고정 목소리
-}
-function fillTtsVoiceList(list){
-  const sel=$('ttsVoiceSel'); sel.innerHTML='';
-  list.forEach(v=>{ const [label,val]=v.includes('|')?v.split('|'):[v,v];
-    const o=document.createElement('option'); o.value=val; o.textContent=label; sel.appendChild(o); });
-  if(cfg.ttsVoice && [...sel.options].some(o=>o.value===cfg.ttsVoice)) sel.value=cfg.ttsVoice;
-}
-$('btnTtsVoices').onclick=async()=>{
-  const key=$('ttsKey').value.trim();
-  if(selTtsProv==='elevenlabs' && !key){ setCfgStatus('ElevenLabs 키를 먼저 입력하세요.','err'); return; }
-  setCfgStatus('목소리 목록을 불러오는 중…','load');
-  try{ const list=await fetchTtsVoices(selTtsProv,key); fillTtsVoiceList(list); $('ttsVoice').value=$('ttsVoiceSel').value;
-    setCfgStatus(list.length+'개 목소리 로드됨.','ok'); }
-  catch(e){ fillTtsVoiceList(TTS_VOICES[selTtsProv]||[]); setCfgStatus('목소리 불러오기 실패('+e.message+').','err'); }
-};
-$('ttsPreview').onclick=async(e)=>{
-  // 미리듣기: 현재 입력값을 임시로 cfg에 반영해 샘플 재생
-  cfg.ttsProvider=selTtsProv; cfg.ttsKey=$('ttsKey').value.trim();
-  cfg.ttsModel=$('ttsModelSel').value.trim(); cfg.ttsModelManual=$('ttsModel').value.trim();
-  cfg.ttsVoice=($('ttsVoice').value.trim()||$('ttsVoiceSel').value);
-  const btn=e.currentTarget, old='▶ 미리듣기'; btn.textContent='▶ 준비 중…';
-  try{
-    if(curAudio){ try{curAudio.pause();}catch(_){} curAudio=null; }
-    const url=await ttsSynth('안녕하십니까. 국가의 시대, 음성 미리듣기입니다. 이 목소리로 진행하겠습니다.');
-    const a=new Audio(url); curAudio=a; a.onended=()=>{ btn.textContent=old; if(curAudio===a)curAudio=null; };
-    await a.play(); btn.textContent='⏸ 재생 중';
-  }catch(err){ btn.textContent=old; alert('미리듣기 실패: '+ttsErrMsg(err)); }
-};
 
 /* ---------- Input handlers ---------- */
 sendBtn.onclick=()=>sendMessage(inp.value);
@@ -2432,14 +2250,11 @@ function openCfg(){
   $('imgStyleSel').value=cfg.imgStyle||'anime';
   $('imgStyleCustom').value=cfg.imgStyleCustom||'';
   $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none';
-  $('imgChars').value=cfg.imgChars||'';
   $('imgConsist').checked=(cfg.imgConsist!==false);
-  // 음성 설정
-  selectTtsProv(cfg.ttsProvider||'openai');
-  $('ttsKey').value=cfg.ttsKey||'';
-  $('ttsModel').value=cfg.ttsModelManual||'';
-  if(cfg.ttsModel){ const s=$('ttsModelSel'); if(![...s.options].some(o=>o.value===cfg.ttsModel)){ const o=document.createElement('option'); o.value=cfg.ttsModel; o.textContent=cfg.ttsModel; s.appendChild(o);} s.value=cfg.ttsModel; }
-  $('ttsVoice').value=cfg.ttsVoice||'';
+  // 등장인물 4명
+  const cast=cfg.cast||[];
+  for(let i=0;i<4;i++){ const c=cast[i]||{}; const rE=$('cast'+(i+1)+'Role'), dE=$('cast'+(i+1)+'Desc');
+    if(rE) rE.value=c.role||''; if(dE) dE.value=c.desc||''; }
 }
 $('imgStyleSel').onchange=()=>{ $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none'; };
 function closeCfg(){ cfgOverlay.classList.remove('on'); }
@@ -2546,13 +2361,12 @@ $('cfgSave').onclick=()=>{
   cfg.imgModelManual=$('imgModel').value.trim();
   cfg.imgStyle=$('imgStyleSel').value;
   cfg.imgStyleCustom=$('imgStyleCustom').value.trim();
-  cfg.imgChars=$('imgChars').value.trim();
   cfg.imgConsist=$('imgConsist').checked;
-  cfg.ttsProvider=selTtsProv;
-  cfg.ttsKey=$('ttsKey').value.trim();
-  cfg.ttsModel=$('ttsModelSel').value.trim();
-  cfg.ttsModelManual=$('ttsModel').value.trim();
-  cfg.ttsVoice=($('ttsVoice').value.trim()||$('ttsVoiceSel').value);
+  // 등장인물 4명(역할+묘사)
+  const cast=[];
+  for(let i=0;i<4;i++){ const role=($('cast'+(i+1)+'Role').value||'').trim(), desc=($('cast'+(i+1)+'Desc').value||'').trim();
+    if(role||desc) cast.push({role, desc}); }
+  cfg.cast=cast;
   saveCfg();
   setCfgStatus('저장됨.','ok'); closeCfg();
 };
