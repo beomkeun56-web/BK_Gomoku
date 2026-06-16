@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.17</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.19</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1546,13 +1546,13 @@ async function geminiImage(model,key,prompt,refs){
   parts.push({text:prompt});
   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{role:'user', parts}]})
+    body:JSON.stringify({contents:[{role:'user', parts}], generationConfig:{responseModalities:['TEXT','IMAGE']}})
   });
   if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
   const j=await r.json();
   const rparts=j.candidates?.[0]?.content?.parts||[];
   const p=rparts.find(x=>x.inlineData||x.inline_data); const d=p&&(p.inlineData||p.inline_data);
-  if(!d||!d.data) throw new Error('이미지를 받지 못했습니다(키·모델 권한 확인).');
+  if(!d||!d.data) throw new Error('이미지를 받지 못했습니다 — 이 모델이 이미지 출력 모델이 아닐 수 있습니다. 모델을 gemini-2.5-flash-image 같은 "image" 모델로 바꾸세요.');
   let usd=0; const um=j.usageMetadata;
   if(um){ const pr=/image/i.test(model)?[0.3,30]:(priceFor(model)||[0.3,30]);
     usd=((um.promptTokenCount||0)*pr[0]+(um.candidatesTokenCount||0)*pr[1])/1e6; }
@@ -1652,12 +1652,21 @@ function buildIllustPrompt(story, hasRef){
 function withTimeout(p, ms, label){
   return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error((label||'요청')+' 시간 초과('+Math.round(ms/1000)+'초) — 모델이 이미지 출력을 지원하지 않거나 너무 느립니다. 다른 이미지 모델(예: google/gemini-2.5-flash-image)을 권장합니다.')), ms))]);
 }
-// 채팅 LLM이 '이번 턴 핵심 한 컷'을 이미지용으로 요약(정확도↑)
+// 채팅 LLM이 '이번 턴 핵심 한 컷'을 이미지용으로 상세 연출(정확도↑)
+function castRolesText(){
+  const cast=(cfg.cast||[]).filter(c=>c && (c.role||c.desc));
+  if(!cast.length) return '';
+  return '등장인물 역할 정보(상하관계 판단에 참고): '+cast.map(c=>(c.role||'인물')+(c.desc?('('+c.desc.slice(0,30)+')'):'')).join(', ')+'. ';
+}
 async function buildSceneBrief(body){
-  const sys='너는 삽화 연출가다. 주어진 [장면] 본문에서 "이번 순간 가장 중요한 한 컷"을 골라, 이미지 생성 모델에 줄 한국어 한 문단 묘사를 작성하라. '
-    +'반드시 포함: ①장소(실제 한국 배경, 구체적) ②등장인물 각자의 행동·자세·표정과 상하관계(누가 보고/지시/결정하는지) ③카메라 샷 크기(클로즈업/미디엄/와이드) ④분위기 ⑤핵심 소품. '
-    +'인물의 얼굴·외모는 따로 고정되니 적지 마라. 머리말·설명 없이 묘사문만, 200자 내외 한 문단으로.';
-  const out=await callOnce([{role:'user', content:'[장면]\n'+(body||'').slice(0,2000)}], sys);
+  const sys='너는 영화 콘티 연출가다. 주어진 [장면] 본문에서 "이번 순간 가장 중요한 한 컷"을 골라, 이미지 생성 모델에 줄 한국어 연출 지시문을 작성하라. '
+    +'다음을 빠짐없이 구체적으로 써라: '
+    +'①장소(실제 한국 배경, 구체적으로) ②이 컷에 등장하는 인물 각각을 "역할로" 지칭하고(예: 의원, 보좌관) 각자의 정확한 동작·자세·손위치·시선·표정을 서술 '
+    +'③두 인물의 권력/상하관계를 분명히: 누가 상급자(예: 의원)이고 누가 보고·수행·요청하는 쪽(예: 보좌관)인지, 그게 자세·위치·태도에 드러나게(상급자는 여유/권위, 하급자는 공손한 보고 자세) '
+    +'④누가 무엇을 누구에게 하는 행동인지(보고/지시/설득/압박/거래 등) ⑤카메라 샷(클로즈업/미디엄/와이드)과 구도 ⑥분위기·조명 ⑦핵심 소품. '
+    +'인물의 얼굴·외모·옷 묘사는 하지 마라(따로 고정됨). 머리말·설명 없이 연출 지시문만, 250자 내외.';
+  const usr=castRolesText()+'\n[장면]\n'+(body||'').slice(0,2200);
+  const out=await callOnce([{role:'user', content:usr}], sys);
   return (out||'').trim();
 }
 async function fetchIllust(story){
