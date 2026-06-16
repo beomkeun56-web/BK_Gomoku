@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.11</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.12</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1602,6 +1602,8 @@ function buildIllustPrompt(story, hasRef){
   p+='🚫 절대 금지(해부학): 모든 인물은 정확한 인체 비율로, 1인당 머리 1개·팔 2개·손 2개·다리 2개, 손가락은 한 손에 5개. '
     +'손·팔·다리·머리가 추가로 생기거나 중복·뒤섞이거나, 두 인물의 신체가 합쳐지거나, 기형적인 손/여섯 손가락이 나오지 않게 하라. '
     +'참고 이미지의 포즈·팔다리를 겹쳐 복사해 여분의 손이 생기는 일이 없도록, 각 인물의 자세를 처음부터 새로 자연스럽게 구성하라. ';
+  p+='【손동작·시선의 의미】 손으로 무언가를 가리키거나 짚는 동작은 반드시 실제 대상의 구체적 지점(예: 서류 위의 특정 글줄, 화면의 항목)을 자연스럽게 가리키게 하라. 허공·빈 공간·엉뚱한 곳을 가리키거나 의미 없는 어색한 제스처는 금지. '
+    +'인물의 시선도 대화 상대나 보고 있는 대상(서류·화면)을 자연스럽게 향하게 하라. 함께 서류를 보는 장면이면 두 사람의 시선이 같은 서류의 같은 지점을 향하게 하라. ';
   if(hasRef){
     p+='⚠️ 참고 이미지 사용법: 참고①은 고정 인물의 "얼굴·외모"(같은 사람으로 유지)를 위한 것이고, 참고②는 "직전 장면의 장소·배경"이다. '
       +'참고②의 장소가 본문 [장면]의 맥락과 맞을 때만(같은 장소가 이어질 때만) 그 배경·인테리어·조명을 유지하라. '
