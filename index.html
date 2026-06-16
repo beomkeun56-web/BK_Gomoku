@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.19</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.20</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1393,6 +1393,7 @@ async function sendMessage(text, displayText){
   hideWelcome();
   inp.value=''; autoGrow();
   $('inputRow').classList.add('hidden');   // 전송 후 입력창 닫기(입력 버튼으로 다시 열기)
+  newTurnCost();   // 1턴 비용 초기화(이 턴의 텍스트+삽화가 함께 잡히도록 새 메시지 시점에 리셋)
   renderChoices([]);
   addMessage('user', displayText||text);
   history.push({role:'user', content:text}); saveHistory();
@@ -1401,7 +1402,6 @@ async function sendMessage(text, displayText){
 
 async function runAssistant(){
   busy=true; sendBtn.disabled=true;
-  newTurnCost();   // 1턴 비용 초기화(텍스트+이미지 합산용)
   renderChoices([]); removeFooters();
   await maybeSummarize();   // 오래된 대화 요약(토큰 절감)
   const {mdEl}=addMessage('assistant','',true);
