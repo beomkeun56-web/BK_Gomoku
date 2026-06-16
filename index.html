@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.20</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.21</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1609,11 +1609,13 @@ function styleFragment(){
 }
 function buildIllustPrompt(story, hasRef){
   let p='';
+  p+='[HARD RULES] Photorealistic, anatomically correct. Each person has exactly one head, two arms, two hands (five fingers each), two legs — no extra, duplicated, merged or deformed limbs/hands, and no extra/duplicate people. '
+    +'Simple, clear, uncluttered composition: subjects fully visible and clearly separated, NOT blocked by foreground objects (e.g., steering wheels, hands). No text, letters, captions, speech bubbles or watermark. '
+    +'Hands/gestures must be purposeful (if pointing, point at a real specific spot like a line on a document). ';
   p+='🚫 절대 금지(해부학): 모든 인물은 정확한 인체 비율로, 1인당 머리 1개·팔 2개·손 2개·다리 2개, 손가락은 한 손에 5개. '
     +'손·팔·다리·머리가 추가로 생기거나 중복·뒤섞이거나, 두 인물의 신체가 합쳐지거나, 기형적인 손/여섯 손가락이 나오지 않게 하라. '
-    +'참고 이미지의 포즈·팔다리를 겹쳐 복사해 여분의 손이 생기는 일이 없도록, 각 인물의 자세를 처음부터 새로 자연스럽게 구성하라. ';
-  p+='【손동작·시선의 의미】 손으로 무언가를 가리키거나 짚는 동작은 반드시 실제 대상의 구체적 지점(예: 서류 위의 특정 글줄, 화면의 항목)을 자연스럽게 가리키게 하라. 허공·빈 공간·엉뚱한 곳을 가리키거나 의미 없는 어색한 제스처는 금지. '
-    +'인물의 시선도 대화 상대나 보고 있는 대상(서류·화면)을 자연스럽게 향하게 하라. 함께 서류를 보는 장면이면 두 사람의 시선이 같은 서류의 같은 지점을 향하게 하라. ';
+    +'전경(핸들·손 등)이 인물을 어색하게 가리지 않게, 단순하고 명확한 구도로. ';
+  p+='【손동작·시선의 의미】 손으로 가리키는 동작은 실제 대상의 구체적 지점(서류의 특정 글줄 등)을 자연스럽게 가리키게 하고, 허공·엉뚱한 곳을 가리키는 어색한 제스처는 금지. 시선도 상대/대상을 자연스럽게 향하게 하라. ';
   if(hasRef){
     p+='⚠️ 참고 이미지 사용법: 참고①은 고정 인물의 "얼굴·외모"(같은 사람으로 유지)를 위한 것이고, 참고②는 "직전 장면의 장소·배경"이다. '
       +'참고②의 장소가 본문 [장면]의 맥락과 맞을 때만(같은 장소가 이어질 때만) 그 배경·인테리어·조명을 유지하라. '
@@ -1659,13 +1661,13 @@ function castRolesText(){
   return '등장인물 역할 정보(상하관계 판단에 참고): '+cast.map(c=>(c.role||'인물')+(c.desc?('('+c.desc.slice(0,30)+')'):'')).join(', ')+'. ';
 }
 async function buildSceneBrief(body){
-  const sys='너는 영화 콘티 연출가다. 주어진 [장면] 본문에서 "이번 순간 가장 중요한 한 컷"을 골라, 이미지 생성 모델에 줄 한국어 연출 지시문을 작성하라. '
-    +'다음을 빠짐없이 구체적으로 써라: '
-    +'①장소(실제 한국 배경, 구체적으로) ②이 컷에 등장하는 인물 각각을 "역할로" 지칭하고(예: 의원, 보좌관) 각자의 정확한 동작·자세·손위치·시선·표정을 서술 '
-    +'③두 인물의 권력/상하관계를 분명히: 누가 상급자(예: 의원)이고 누가 보고·수행·요청하는 쪽(예: 보좌관)인지, 그게 자세·위치·태도에 드러나게(상급자는 여유/권위, 하급자는 공손한 보고 자세) '
-    +'④누가 무엇을 누구에게 하는 행동인지(보고/지시/설득/압박/거래 등) ⑤카메라 샷(클로즈업/미디엄/와이드)과 구도 ⑥분위기·조명 ⑦핵심 소품. '
-    +'인물의 얼굴·외모·옷 묘사는 하지 마라(따로 고정됨). 머리말·설명 없이 연출 지시문만, 250자 내외.';
-  const usr=castRolesText()+'\n[장면]\n'+(body||'').slice(0,2200);
+  const sys='You are a film storyboard director. From the [SCENE] (Korean), pick the SINGLE most important moment and write ONE concise English image-generation prompt (a single paragraph, ~60-90 words). '
+    +'Include: the setting (a real, specific Korean location), each character referred to by ROLE only (e.g., lawmaker, female aide) with their exact action, body pose, hand placement, gaze direction and facial expression; '
+    +'the power dynamic made obvious in body language (who is the superior giving orders / who is the subordinate reporting deferentially); the main action (reporting / instructing / persuading / pressuring / negotiating); '
+    +'camera shot (close-up / medium / wide) and a SIMPLE, CLEAR, uncluttered composition with the subjects clearly visible and separated; lighting and mood; key props. '
+    +'Keep the composition simple — avoid confusing multi-plane framing and avoid foreground objects (like a steering wheel or hands) awkwardly blocking the subjects. '
+    +'Do NOT describe faces, looks, age or clothing (these are fixed separately). Output ONLY the prompt text, no preamble.';
+  const usr=castRolesText()+'\n[SCENE]\n'+(body||'').slice(0,2200);
   const out=await callOnce([{role:'user', content:usr}], sys);
   return (out||'').trim();
 }
