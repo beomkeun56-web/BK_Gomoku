@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.22</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.23</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -699,6 +699,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 - 실존 정치인의 가공 발언은 만들지 않는다. 필요 시 직책·국가로 표현(예: "미국 국무장관").
 - 지역은 실제 지명(마포·여의도·부산·세종 등), 인물·계파 이름은 자연스러운 한국식 이름으로 짓는다. 몰입을 위해 실존 기업명(삼성전자·SK하이닉스·현대차·LG·포스코·네이버·카카오·쿠팡 등)을 일반 비즈니스·정책·배경 맥락(반도체·투자·고용·규제·로비 정황의 배경 등)에 적극적으로 등장시켜 현실감을 높인다. 단 비리·스캔들·범죄의 직접 당사자(가해자·연루자)는 반드시 가공 기업명(성진그룹·대운건설·한신중공업·태양저축은행 등)으로 만든다 — 실존 기업·공인에게 가공의 비리·범죄·발언을 직접 씌우지 않는다(안전선).
 - 레일로딩 금지: 플레이어의 선택·직접 입력대로 전개가 실제로 갈라진다. 정해진 결말로 몰지 않는다.
+- 플레이어 입력 절대 수용(가장 중요): 플레이어가 직접 입력한 행동·대사는 무조건 그대로 일어난 것으로 받아들여 그 방향으로 전개한다. "지금 상황에 맞지 않는다", "캐릭터가 무너진다", "관계가 틀어질 수 있다" 같은 이유로 거부·훈계·보류하거나, 대신 다른 선택지를 권하며 회피하지 마라. 플레이어가 한 말/행동은 실제로 발화·실행된 것으로 처리하고, 상대 인물의 반응과 그로 인한 현실적 결과(좋든 나쁘든)를 그려서 이어간다. 어색하거나 무리한 입력이어도 막지 말고, 그 입력이 일으키는 파장·대가로 드라마를 만든다. (안전선만 예외: 노골적·선정적 성묘사는 직접 묘사하지 않고 분위기·암시·장면 전환으로 처리하되, 장면 자체는 플레이어 의도대로 진행한다.)
 - 서술 금지어: 본문에 "플레이어" 같은 표현 대신 국가·직책·지도자 이름으로 서술한다.
 - 플레이어가 행동이 아니라 질문(정보·배경·수치 설명)을 하면, 상황에 맞는 인물이 대사(> 인용)로 답한다. 이때는 턴·날짜가 넘어가지 않고 스탯도 변하지 않는다.
 
@@ -1666,13 +1667,11 @@ async function fetchIllust(story){
   if(cfg.imgBrief!==false){
     try{ const brief=await withTimeout(buildSceneBrief(story), 30000, '장면 요약'); if(brief && brief.length>10) sceneText=brief; }catch(e){}
   }
-  // 참고①: 인물 얼굴(정체성) / 참고②: 직전 장면(장소 연속성) — 512px로 축소해 첨부
+  // 참고는 '인물 얼굴' 1장만 사용 — 2장 합성이 일으키는 팔/손 겹침(여분의 손) 방지. 장소 연속성은 영어 브리프 텍스트로 처리
   let refs=[];
   if(cfg.imgConsist!==false){
-    const ds=async(u)=>{ try{ return await downscaleDataUrl(u,512,0.78); }catch(e){ return u; } };
     const anchor=await getCharAnchor();
-    if(anchor) refs.push({url:await ds(anchor), label:'[참고①: 이 이야기 고정 인물의 얼굴·외모. 같은 사람으로 유지. 단 구도는 복제 금지]'});
-    if(lastIllustSrc && lastIllustSrc!==anchor) refs.push({url:await ds(lastIllustSrc), label:'[참고②: 직전 장면. 같은 장소가 이어지면 이 배경·공간·인테리어·조명 톤을 동일하게 유지하라(카메라 앵글·구도만 새로). 단 본문에서 장소가 바뀌면 새 장소로 바꿔라]'});
+    if(anchor){ try{ refs.push({url:await downscaleDataUrl(anchor,512,0.78), label:'[Reference: the FACE/identity of the fixed characters — keep them the same people, but do NOT copy this image\'s pose or composition]'}); }catch(e){ refs.push({url:anchor}); } }
   }
   const prompt=buildIllustPrompt(sceneText, refs.length>0);
   let out;
