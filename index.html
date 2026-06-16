@@ -278,7 +278,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.98</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.99</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -839,7 +839,8 @@ function saveHistory(){ localStorage.setItem(LS+'_hist', JSON.stringify(history)
 // 실제 이미지는 ① IndexedDB(이 기기, 토큰 불필요·즉시) ② 구글 드라이브(기기 간 동기화) 이중 저장.
 let illusts = (function(){ try{return JSON.parse(localStorage.getItem(LS+'_illust'))||[]}catch(e){return []} })();
 const illustCache={};   // id → dataURL (이번 세션 메모리)
-let charAnchor=null;    // 인물 일관성 기준 이미지(dataURL)
+let charAnchor=null;    // 인물 일관성 기준 이미지(첫 삽화, dataURL)
+let lastIllustSrc=null; // 직전 삽화(연속성 보조 참고, dataURL)
 async function getCharAnchor(){
   if(charAnchor) return charAnchor;
   const first=illusts.find(x=>x.src||x.id||x.fileId);
@@ -912,6 +913,7 @@ async function recordIllust(idx, src, pos){
   try{ await imgPut(id, small); }catch(e){}
   illusts.push({idx,id,pos:pos||'title'}); saveIllusts();
   if(!charAnchor) charAnchor=small;   // 첫 삽화를 인물 일관성 기준으로
+  lastIllustSrc=small;                // 직전 삽화(연속성 참고)
   // 토큰이 이미 있으면 즉시 드라이브 업로드 시도(없으면 '저장' 때 업로드)
   if(gClientId){ try{ await getTokenSilent(); const fileId=await driveUploadImage(small); const it=illusts.find(x=>x.id===id); if(it){ it.fileId=fileId; saveIllusts(); } }catch(e){} }
 }
@@ -1385,8 +1387,14 @@ async function runAssistant(){
   const {mdEl}=addMessage('assistant','',true);
   const typer=streamTyper(mdEl,'');
   let acc='';
+  // 자동 삽화: 선택지가 감지되는 즉시(타이핑·스트리밍 끝나기 전) 생성 시작 → 가장 빠른 출력
+  let autoIllustP=null;
+  const startAutoIllust=()=>{ if(autoIllustP||!autoIllustOn) return;
+    const sb=sanitizeBody(splitChoices(acc).body);
+    if(sb.replace(/\s/g,'').length<30) return;   // 본문이 충분히 쌓였을 때만
+    autoIllustP=fetchIllust(sb).then(src=>({src})).catch(e=>({err:e.message})); };
   const feed=()=>{ const m=acc.match(HEAD_DETECT); typer.setTarget(sanitizeBody(m?acc.slice(0,m.index):acc));
-    const {choices}=splitChoices(acc); if(choices.length>=2) renderChoices(choices); };
+    const {choices}=splitChoices(acc); if(choices.length>=2){ renderChoices(choices); startAutoIllust(); } };
   try{
     try{
       await streamLLM((tok)=>{ acc+=tok; feed(); });
@@ -1394,12 +1402,7 @@ async function runAssistant(){
       const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
       acc+=em; typer.setTarget(acc);
     }
-    // 자동 삽화 ON이면 본문 확보 즉시 타이핑과 병렬로 미리 생성(끝나면 바로 표시)
-    let autoIllustP=null;
-    if(autoIllustOn && !/⚠️ 오류/.test(acc)){
-      const sb=sanitizeBody(splitChoices(acc).body);
-      autoIllustP=fetchIllust(sb).then(src=>({src})).catch(e=>({err:e.message}));
-    }
+    if(!/⚠️ 오류/.test(acc)) startAutoIllust();   // 폴백: 선택지 미감지로 아직 안 시작했으면 지금
     await typer.finish();
     const {body, choices}=splitChoices(acc);
     renderGm(mdEl, sanitizeBody(body), false);
@@ -1408,16 +1411,19 @@ async function runAssistant(){
     addGmFooter(mdEl.closest('.msg'));
     if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
     if(autoIllustP){
+      // 비차단: 삽화는 백그라운드로 채운다(선택지 즉시 사용 가능)
+      const aidx=lastAssistantIndex();
       const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
       mdEl.appendChild(box); maybeScroll();
-      const r=await autoIllustP;
-      if(r.src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+r.src+'"><div class="cap">AI 생성 삽화</div>'; await recordIllust(lastAssistantIndex(), r.src, 'end'); }
-      else if(r.err==='NOKEY'){ box.className='illust loading'; box.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
-      else { box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+(r.err||''); }
-      maybeScroll();
+      autoIllustP.then(async r=>{
+        if(r.src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+r.src+'"><div class="cap">AI 생성 삽화</div>'; await recordIllust(aidx, r.src, 'end'); }
+        else if(r.err==='NOKEY'){ box.className='illust loading'; box.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
+        else { box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+(r.err||''); }
+        maybeScroll();
+      });
     }
   } finally {
-    busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지
+    busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지 — 삽화는 기다리지 않음
     bumpTurn();        // 누적 턴수 +1
     recordTurnCost();  // 이번 턴 추정 비용 누적
     autoDriveSave();   // 연결돼 있으면 드라이브 자동 저장(무음)
@@ -1475,8 +1481,10 @@ function lastStoryText(){
   return '';
 }
 function plainScene(md){
-  return (md||'').replace(/```[\s\S]*?```/g,' ').replace(/[#>*_`~|]/g,' ')
-    .replace(/\[[^\]]*\]/g,' ').replace(/!\(.*?\)/g,' ').replace(/\s+/g,' ').trim().slice(0,700);
+  const t=(md||'').replace(/```[\s\S]*?```/g,' ').replace(/[#>*_`~|]/g,' ')
+    .replace(/\[[^\]]*\]/g,' ').replace(/!\(.*?\)/g,' ').replace(/\s+/g,' ').trim();
+  // 현재 턴의 '지금 이 순간'이 잘 반영되도록 뒷부분(최근 전개)을 우선 사용
+  return t.length>1100 ? '…'+t.slice(t.length-1100) : t;
 }
 // 삽화 설정 해석: 제공사·키·모델 (키 비면 같은 제공사일 때 채팅 키 사용)
 function resolveImgCfg(){
@@ -1486,9 +1494,12 @@ function resolveImgCfg(){
   const model=(cfg.imgModelManual||'').trim() || (cfg.imgModel||'').trim() || def;
   return {prov, key, model};
 }
-async function geminiImage(model,key,prompt,refDataUrl){
-  const parts=[{text:prompt}];
-  if(refDataUrl){ const m=String(refDataUrl).match(/^data:([^;]+);base64,(.+)$/); if(m) parts.push({inlineData:{mimeType:m[1], data:m[2]}}); }
+async function geminiImage(model,key,prompt,refs){
+  refs=(Array.isArray(refs)?refs:(refs?[refs]:[])).filter(Boolean);
+  // 참고 이미지를 먼저(인물 정체성 우선), 그다음 지시 텍스트
+  const parts=[];
+  for(const ref of refs){ const m=String(ref).match(/^data:([^;]+);base64,(.+)$/); if(m) parts.push({inlineData:{mimeType:m[1], data:m[2]}}); }
+  parts.push({text:prompt});
   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{role:'user', parts}]})
@@ -1504,9 +1515,10 @@ async function geminiImage(model,key,prompt,refDataUrl){
   if(!usd) usd=0.039;   // 토큰 정보 없으면 1장 기준 추정
   return {src:'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data, usd};
 }
-async function orImage(model,key,prompt,refDataUrl){
-  const content = refDataUrl
-    ? [{type:'text', text:prompt}, {type:'image_url', image_url:{url:refDataUrl}}]
+async function orImage(model,key,prompt,refs){
+  refs=(Array.isArray(refs)?refs:(refs?[refs]:[])).filter(Boolean);
+  const content = refs.length
+    ? [...refs.map(u=>({type:'image_url', image_url:{url:u}})), {type:'text', text:prompt}]
     : prompt;
   const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
@@ -1550,11 +1562,21 @@ function styleFragment(){
   return IMG_STYLES[s] || IMG_STYLES.anime;
 }
 function buildIllustPrompt(story, hasRef){
-  let p='장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. ';
+  let p='';
+  if(hasRef){
+    p+='⚠️ 최우선 규칙(인물 일관성): 첨부된 참고 이미지에 등장하는 인물들이 이 이야기의 고정 인물(주인공·보좌관 등)이다. '
+      +'그들의 얼굴 생김새·이목구비·헤어스타일·머리색·피부톤·체형·기본 복장을 참고 이미지와 정확히 동일한 "같은 사람"으로 그려라. '
+      +'절대 다른 얼굴/다른 사람으로 바꾸지 마라. 바뀌는 것은 배경·구도·표정·동작·상황뿐이고, 인물의 정체성(identity)은 100% 보존하라. ';
+  }
+  p+='장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. ';
   const chars=(cfg.imgChars||'').trim();
   if(chars) p+='【고정 등장인물 설정 — 매 삽화마다 동일하게 유지】 '+chars+'. ';
-  p+='주인공과 보좌관 등 고정 인물은 매번 같은 얼굴·헤어·체형·복장 톤을 가진 동일 인물로 일관되게 그려라. ';
-  if(hasRef) p+='첨부된 참고 이미지 속 인물들과 같은 외모의 동일 인물로 그려라(배경·구도는 새 장면에 맞게). ';
+  p+='주인공과 보좌관 등 고정 인물은 매 삽화마다 같은 얼굴·헤어·체형·복장 톤을 가진 동일 인물로 일관되게 그려라. ';
+  p+='【현실성·고증 필수】 인물의 자세·동작·손 위치는 실제 그 상황에서 사람이 행동하는 방식 그대로, 물리적으로 자연스럽고 사실적으로 그려라. '
+    +'보고/회의 장면이면 서류·태블릿·노트북은 책상에 두거나 자연스럽게 들고 보며, 화면을 상대 얼굴에 어색하게 들이밀지 마라. '
+    +'어색한 포즈·왜곡된 손가락이나 팔다리·비현실적인 소품 사용을 피하고, 한국의 실제 공간·복장·소품(관공서·집무실·회의실 등)을 사실적으로 고증하라. '
+    +'노트북·휴대폰 등 화면에는 글자나 UI를 넣지 말고 자연스럽게 처리하라. ';
+  p+='【장면 충실도】 아래 [장면] 본문은 이번 턴에 실제로 벌어지는 상황이다. 등장인물·장소·시간대·행동·소품·분위기를 본문 내용에 정확히 맞춰 그려라. 본문에 없는 엉뚱한 상황을 만들지 마라. ';
   p+='시네마틱한 조명과 분위기, 인물의 표정·상황이 드러나게. '
     +'그림 안에 글자·자막·말풍선·워터마크는 절대 넣지 마라.\n\n[장면]\n'+plainScene(story);
   return p;
@@ -1566,9 +1588,15 @@ function withTimeout(p, ms, label){
 async function fetchIllust(story){
   const {prov, key, model}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
-  const ref = (cfg.imgConsist!==false) ? await getCharAnchor() : null;   // 인물 일관성 기준 이미지
-  const prompt=buildIllustPrompt(story, !!ref);
-  const out = prov==='openrouter' ? await orImage(model,key,prompt,ref) : await geminiImage(model,key,prompt,ref);
+  // 인물 일관성: 첫 삽화(정체성 기준) + 직전 삽화(연속성)를 참고로 첨부
+  let refs=[];
+  if(cfg.imgConsist!==false){
+    const anchor=await getCharAnchor();
+    if(anchor) refs.push(anchor);
+    if(lastIllustSrc && lastIllustSrc!==anchor) refs.push(lastIllustSrc);
+  }
+  const prompt=buildIllustPrompt(story, refs.length>0);
+  const out = prov==='openrouter' ? await orImage(model,key,prompt,refs) : await geminiImage(model,key,prompt,refs);
   if(out.usd>0){ costTotal+=out.usd; localStorage.setItem(LS+'_cost',String(costTotal)); costBadge(); }
   return out.src;
 }
@@ -1582,16 +1610,18 @@ async function renderIllustInto(box, story, idx, pos){
     box.textContent = e.message==='NOKEY' ? '⚠️ 삽화 설정에서 제공사·API 키를 입력하세요.' : '⚠️ 삽화 실패: '+e.message;
     if(e.message==='NOKEY'){ openCfg(); } }
 }
-// 현재 턴: 직전 스토리로 즉시 생성(대화 아래)
+// 현재 턴: 직전 스토리로 즉시 생성(대화 아래). 게임 진행(선택지)은 막지 않음(별도 illustBusy)
+let illustBusy=false;
 async function genIllustNow(){
-  if(busy) return;
+  if(illustBusy) return;
   const story=lastStoryText();
   if(!story){ alert('먼저 장면이 전개된 뒤에 삽화를 만들 수 있습니다.'); return; }
-  busy=true; sendBtn.disabled=true;
+  illustBusy=true;
+  const idx=lastAssistantIndex();
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
   logEl.appendChild(box); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
-  await renderIllustInto(box, story, lastAssistantIndex(), 'end');
-  scrollDown(); busy=false; sendBtn.disabled=false;
+  try{ await renderIllustInto(box, story, idx, 'end'); } finally { illustBusy=false; }
+  scrollDown();
 }
 // 다음 턴 예약: 다음 GM 응답 시작 후 제목 아래 자동 생성
 let pendingIllust=false;
