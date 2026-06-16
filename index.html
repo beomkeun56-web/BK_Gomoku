@@ -263,20 +263,26 @@
   .status-line.err{color:var(--red)} .status-line.ok{color:var(--green)} .status-line.load{color:var(--gold)}
 
   /* welcome / 메인(홈) 화면 — 전체 오버레이 */
-  .welcome{position:fixed; inset:0; z-index:45; background:#000; overflow-y:auto;
+  .welcome{position:fixed; inset:0; z-index:45; overflow-y:auto;
+    background:radial-gradient(1200px 600px at 50% -10%, #161a2e 0%, #0b0d16 45%, #000 100%);
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px 16px}
   .welcome.gone{display:none}
-  .welcome .inner{max-width:560px; width:100%}
-  .welcome .big{font-size:1.9rem; font-weight:900; letter-spacing:1px; margin-bottom:6px}
-  .welcome .big .crown{color:var(--gold)}
+  .welcome .inner{max-width:560px; width:100%; background:rgba(20,23,38,.55); border:1px solid #232843;
+    border-radius:20px; padding:34px 26px; backdrop-filter:blur(4px)}
+  .welcome .big{font-size:2rem; font-weight:900; letter-spacing:1px; margin-bottom:6px; color:#eef1ff}
+  .welcome .big .crown{color:#8ea2ff}
   .welcome p{color:var(--mut); line-height:1.7; font-size:.92rem}
-  .welcome .cta{margin-top:18px; background:linear-gradient(135deg,var(--gold),#caa14a); color:#1a1206;
-    border:none; border-radius:14px; padding:14px 26px; font-weight:900; font-size:1rem; cursor:pointer}
-  .welcome .cta2{margin:10px 0 0 10px; background:transparent; border:1px solid #3a3b42; color:var(--txt);
-    border-radius:14px; padding:14px 22px; font-weight:700; font-size:.95rem; cursor:pointer}
+  .welcome .cta{margin-top:20px; background:linear-gradient(135deg,#5b8cff,#8b6cff); color:#fff;
+    border:none; border-radius:14px; padding:14px 28px; font-weight:800; font-size:1rem; cursor:pointer;
+    box-shadow:0 6px 20px rgba(99,120,255,.35); transition:.15s}
+  .welcome .cta:hover{filter:brightness(1.08); transform:translateY(-1px)}
+  .welcome .cta2{background:#1b2030; border:1px solid #2f3656; color:#dfe4ff;
+    border-radius:12px; padding:11px 18px; font-weight:700; font-size:.9rem; cursor:pointer; transition:.15s}
+  .welcome .cta2:hover{border-color:#5b8cff; color:#fff}
+  .welcome-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px}
   .brand{cursor:pointer}
   .feat{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px}
-  .feat span{font-size:.74rem; color:var(--dim); border:1px solid var(--line); border-radius:20px; padding:5px 11px}
+  .feat span{font-size:.74rem; color:#9aa3c7; border:1px solid #2a3050; border-radius:20px; padding:5px 11px}
 </style>
 <!-- 국기 등 컬러 이모지가 모든 기기에서 표시되도록(Windows 등 국기 글꼴 없는 환경 대응) -->
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -287,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.25</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.26</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -316,7 +322,11 @@
       <button class="cta" id="ctaStart">게임 시작하기</button>
       <button class="cta2" id="ctaContinue" style="display:none">이어서 하기</button>
     </div>
-    <div><button class="cta2" id="ctaCfg" style="margin-top:12px">⚙ API 설정</button></div>
+    <div class="welcome-actions">
+      <button class="cta2" id="ctaSave">⬇ 저장</button>
+      <button class="cta2" id="ctaLoad">⬆ 불러오기</button>
+      <button class="cta2" id="ctaCfg">⚙ API 설정</button>
+    </div>
     <p style="margin-top:14px; font-size:.8rem">시작하려면 먼저 ⚙ 설정에서 제공사·모델·API 키를 입력하세요.</p>
    </div>
   </div>
@@ -1961,6 +1971,8 @@ $('setupGo').onclick=()=>{
 };
 $('ctaContinue').onclick=hideWelcome;
 $('ctaCfg').onclick=openCfg;
+$('ctaSave').onclick=()=>$('btnBarSave').click();   // 하단 Save와 동일(드라이브 슬롯/스냅샷)
+$('ctaLoad').onclick=()=>$('btnBarLoad').click();   // 하단 Load와 동일
 
 /* 홈(메인) 화면 토글 */
 function hideWelcome(){ $('welcome')?.classList.add('gone'); }
