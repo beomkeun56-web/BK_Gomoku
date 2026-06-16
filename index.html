@@ -182,10 +182,11 @@
   .inputrow.hidden + .toolrow{margin-top:0}
   .cmdrow.hidden + .inputrow.hidden + .toolrow{margin-top:0}
   .cost-badge{font-size:.74rem; color:#fff; white-space:nowrap; align-self:center; padding:0 4px; cursor:pointer}
-  .illust{max-width:820px; margin:6px auto 14px}
+  /* 삽화: 위·아래 구분선으로 본문(뉴스 등)과 분리 */
+  .illust{max-width:820px; margin:18px auto; padding:16px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
   .illust img{display:block; width:100%; border-radius:14px; border:1px solid var(--line)}
-  .illust .cap{font-size:.78rem; color:var(--dim); margin-top:6px; text-align:center}
-  .illust.loading{color:var(--mut); font-size:.85rem; text-align:center; padding:18px; border:1px dashed var(--line); border-radius:14px}
+  .illust .cap{font-size:.74rem; color:var(--dim); margin-top:7px; text-align:center; letter-spacing:.5px}
+  .illust.loading{color:var(--mut); font-size:.85rem; text-align:center; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
   .slot-item{display:flex; align-items:center; gap:10px; padding:12px 13px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; cursor:pointer; background:var(--panel2); transition:.12s}
   .slot-item:hover{border-color:var(--accent)} .slot-item:active{transform:scale(.99)}
   .slot-item .nm{flex:1; font-weight:700; color:#fff; word-break:break-all}
@@ -283,7 +284,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.02</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.03</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1591,22 +1592,22 @@ function styleFragment(){
 function buildIllustPrompt(story, hasRef){
   let p='';
   if(hasRef){
-    p+='⚠️ 최우선 규칙(인물 일관성): 첨부된 참고 이미지에 등장하는 인물들이 이 이야기의 고정 인물(주인공·보좌관 등)이다. '
-      +'그들의 얼굴 생김새·이목구비·헤어스타일·머리색·피부톤·체형·기본 복장을 참고 이미지와 정확히 동일한 "같은 사람"으로 그려라. '
-      +'절대 다른 얼굴/다른 사람으로 바꾸지 마라. 바뀌는 것은 배경·구도·표정·동작·상황뿐이고, 인물의 정체성(identity)은 100% 보존하라. ';
+    p+='⚠️ 참고 이미지 사용법: 첨부 이미지는 이 이야기의 고정 인물(주인공·보좌관 등)의 "얼굴·외모 식별용"이다. '
+      +'그 인물의 얼굴 생김새·이목구비·헤어·머리색·피부톤·체형을 동일한 "같은 사람"으로 유지하라(다른 사람으로 바꾸지 말 것). '
+      +'단, 참고 이미지의 구도·배경·자세·샷은 절대 그대로 복제하지 마라 — 이번 장면에 맞는 완전히 새로운 구도/앵글로 새로 구성하라. ';
   }
   p+='장면을 한 장의 이미지로 표현하라. 화풍/스타일: '+styleFragment()+'. ';
   const chars=(cfg.imgChars||'').trim();
   if(chars) p+='【고정 등장인물 설정 — 매 삽화마다 동일하게 유지】 '+chars+'. ';
-  p+='주인공과 보좌관 등 고정 인물은 매 삽화마다 같은 얼굴·헤어·체형·복장 톤을 가진 동일 인물로 일관되게 그려라. ';
-  p+='【현실성·고증 필수】 인물의 자세·동작·손 위치는 실제 그 상황에서 사람이 행동하는 방식 그대로, 물리적으로 자연스럽고 사실적으로 그려라. '
-    +'보고/회의 장면이면 서류·태블릿·노트북은 책상에 두거나 자연스럽게 들고 보며, 화면을 상대 얼굴에 어색하게 들이밀지 마라. '
-    +'어색한 포즈·왜곡된 손가락이나 팔다리·비현실적인 소품 사용을 피하고, 한국의 실제 공간·복장·소품(관공서·집무실·회의실 등)을 사실적으로 고증하라. '
-    +'노트북·휴대폰 등 화면에는 글자나 UI를 넣지 말고 자연스럽게 처리하라. ';
-  p+='【장면 충실도】 아래 [장면] 본문은 이번 턴에 실제로 벌어지는 "현재 순간"이다. 그 핵심 순간을 화면에 담되, 등장인물·장소·시간대·행동·분위기를 본문에 정확히 맞춰라. 본문에 없는 엉뚱한 상황을 만들지 마라. ';
-  p+='【구체적 사물·음식 빠짐없이】 본문에 언급되거나 그 상황에 당연히 있어야 할 사물·음식·소품을 실제로 상/공간에 사실적으로 차려 넣어라. '
-    +'예: 한식당 식사 장면이면 술병만 두지 말고 반찬·국·밥·찌개 등 실제 한식 상차림이 식탁에 차려져 있어야 한다. 빈 식탁/소품 누락은 금지. ';
-  p+='시네마틱한 조명과 분위기, 인물의 표정·상황이 드러나게. '
+  p+='【샷 선택 — 매번 다르게】 이번 장면의 핵심에 맞는 가장 임팩트 있는 한 컷을 선택하고, 직전 삽화와 다른 앵글·샷 사이즈를 써라. '
+    +'대화·대치·심리전이 핵심이면 인물 얼굴 클로즈업으로 표정·긴장감을 강조하고, 식사면 음식과 식사 행위가 보이는 컷, 이동·행동이면 그 결정적 동작의 순간을 잡아라. '
+    +'매 턴 같은 구도(예: 마주 앉은 투샷)를 반복하지 말고 장면 내용에 따라 클로즈업/미디엄/와이드를 다양하게 선택하라. ';
+  p+='【현실성·고증】 인물의 자세·동작·손 위치는 실제 그 상황에서 사람이 행동하는 방식 그대로 물리적으로 자연스럽게 그려라. '
+    +'보고/회의면 서류·노트북은 책상에 두거나 자연스럽게 들고 보며 화면을 상대 얼굴에 어색하게 들이밀지 마라. '
+    +'왜곡된 손가락·팔다리·비현실적 소품을 피하고, 한국의 실제 공간·복장·소품을 사실적으로 고증하라. 화면(노트북·폰)엔 글자/UI를 넣지 마라. ';
+  p+='【장면 충실도】 아래 [장면] 본문은 이번 턴의 "현재 순간"이다. 등장인물·장소·시간대·행동·분위기를 본문에 정확히 맞추고, 본문에 없는 엉뚱한 상황을 만들지 마라. ';
+  p+='【사물·음식 빠짐없이】 본문에 언급되거나 그 상황에 당연히 있을 사물·음식·소품을 실제로 차려 넣어라(예: 한식당이면 반찬·국·밥 상차림). 빈 식탁/소품 누락 금지. ';
+  p+='시네마틱한 조명과 분위기, 인물 표정·상황이 드러나게. '
     +'그림 안에 글자·자막·말풍선·워터마크는 절대 넣지 마라.\n\n[장면]\n'+plainScene(story);
   return p;
 }
@@ -1617,12 +1618,11 @@ function withTimeout(p, ms, label){
 async function fetchIllust(story){
   const {prov, key, model}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
-  // 인물 일관성: 첫 삽화(정체성 기준) + 직전 삽화(연속성)를 참고로 첨부
+  // 인물 일관성: 첫 삽화(정체성 기준) 1장만, 작게 축소해 첨부 → 속도↑·구도복제↓
   let refs=[];
   if(cfg.imgConsist!==false){
     const anchor=await getCharAnchor();
-    if(anchor) refs.push(anchor);
-    if(lastIllustSrc && lastIllustSrc!==anchor) refs.push(lastIllustSrc);
+    if(anchor){ try{ refs.push(await downscaleDataUrl(anchor, 512, 0.78)); }catch(e){ refs.push(anchor); } }
   }
   const prompt=buildIllustPrompt(story, refs.length>0);
   const out = prov==='openrouter' ? await orImage(model,key,prompt,refs) : await geminiImage(model,key,prompt,refs);
