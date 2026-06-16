@@ -191,6 +191,7 @@
     display:flex; align-items:center; gap:5px; transition:.15s}
   .pill:hover{color:#fff; border-color:var(--accent)}
   .pill:active{transform:scale(.97)}
+  .pill.on{color:#fff; border-color:var(--accent); background:#1b2030; font-weight:700}
   .drive-badge{font-size:.74rem; color:var(--dim); white-space:nowrap; align-self:center; padding:0 4px}
   .drive-badge.ok{color:var(--green)} .drive-badge.load{color:var(--gold)} .drive-badge.err{color:var(--red)}
   .spacer{flex:1}
@@ -277,7 +278,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.97</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v2.98</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -331,6 +332,7 @@
     <button class="pill" id="btnInput" title="입력창 열기">입력</button>
     <button class="pill" id="btnAddSit">상황추가</button>
     <button class="pill" id="btnSuggest">추천답변</button>
+    <button class="pill" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
     <span id="costBadge" class="cost-badge" title="추정 비용(클릭하면 누적 초기화)"></span>
     <div class="spacer"></div>
@@ -1392,6 +1394,12 @@ async function runAssistant(){
       const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
       acc+=em; typer.setTarget(acc);
     }
+    // 자동 삽화 ON이면 본문 확보 즉시 타이핑과 병렬로 미리 생성(끝나면 바로 표시)
+    let autoIllustP=null;
+    if(autoIllustOn && !/⚠️ 오류/.test(acc)){
+      const sb=sanitizeBody(splitChoices(acc).body);
+      autoIllustP=fetchIllust(sb).then(src=>({src})).catch(e=>({err:e.message}));
+    }
     await typer.finish();
     const {body, choices}=splitChoices(acc);
     renderGm(mdEl, sanitizeBody(body), false);
@@ -1399,6 +1407,15 @@ async function runAssistant(){
     parseStats(acc); renderChoices(choices);
     addGmFooter(mdEl.closest('.msg'));
     if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
+    if(autoIllustP){
+      const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
+      mdEl.appendChild(box); maybeScroll();
+      const r=await autoIllustP;
+      if(r.src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+r.src+'"><div class="cap">AI 생성 삽화</div>'; await recordIllust(lastAssistantIndex(), r.src, 'end'); }
+      else if(r.err==='NOKEY'){ box.className='illust loading'; box.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
+      else { box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+(r.err||''); }
+      maybeScroll();
+    }
   } finally {
     busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지
     bumpTurn();        // 누적 턴수 +1
@@ -1853,6 +1870,11 @@ $('btnIllust').onclick=openIllustPopup;
 // 입력 토글: 누르면 상단에 입력창+Enter 표시, 다시 누르면 숨김
 $('btnInput').onclick=()=>{ const r=$('inputRow'); const show=r.classList.contains('hidden');
   r.classList.toggle('hidden', !show); if(show){ autoGrow(); inp.focus(); } };
+// 매 턴 자동 삽화 토글
+let autoIllustOn = (cfg.autoIllust===true);
+function updateAutoIllustBtn(){ const b=$('btnAutoIllust'); if(b) b.classList.toggle('on', autoIllustOn); }
+$('btnAutoIllust').onclick=()=>{ autoIllustOn=!autoIllustOn; cfg.autoIllust=autoIllustOn; saveCfg(); updateAutoIllustBtn(); };
+updateAutoIllustBtn();
 $('sitClose').onclick=()=>$('sitOverlay').classList.remove('on');
 $('sitOverlay').addEventListener('click',e=>{ if(e.target===$('sitOverlay')) $('sitOverlay').classList.remove('on'); });
 $('sitGo').onclick=()=>{
