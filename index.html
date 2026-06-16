@@ -287,7 +287,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.09</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.10</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -390,13 +390,24 @@
       <label>삽화 제공사</label>
       <div class="seg" id="imgProvSeg">
         <button data-iprov="gemini">Gemini</button>
+        <button data-iprov="openai">OpenAI</button>
         <button data-iprov="openrouter">OpenRouter</button>
       </div>
     </div>
 
     <div class="field">
       <label>삽화용 API 키 <span style="color:var(--dim)">— 비우면 채팅 키 사용(같은 제공사일 때)</span></label>
-      <input type="password" id="imgKey" placeholder="AIza... / sk-or-..." autocomplete="off">
+      <input type="password" id="imgKey" placeholder="AIza... / sk-... / sk-or-..." autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label>삽화 화질 <span style="color:var(--dim)">— GPT(OpenAI) 이미지에만 적용</span></label>
+      <select id="imgQuality">
+        <option value="low">낮음 (가장 저렴)</option>
+        <option value="medium" selected>보통 (medium · 권장)</option>
+        <option value="high">높음 (고화질·비쌈)</option>
+      </select>
+      <div class="hint">높을수록 디테일·일관성·손/사물 표현이 좋아지지만 비용이 큽니다. Gemini는 화질 고정이라 이 옵션 무시.</div>
     </div>
 
     <div class="field">
@@ -405,8 +416,8 @@
         <select id="imgModelSel" style="flex:1"><option value="">— 키 입력 후 [모델 불러오기] —</option></select>
         <button class="mini-btn" id="btnImgModels">모델 불러오기</button>
       </div>
-      <input type="text" id="imgModel" placeholder="또는 직접 입력 (예: gemini-2.5-flash-image / google/gemini-2.5-flash-image)" style="margin-top:8px">
-      <div class="hint">비우면 제공사 기본값 사용 (Gemini: <b>gemini-2.5-flash-image</b>, OpenRouter: <b>google/gemini-2.5-flash-image</b>). 이미지 출력이 가능한 모델이어야 합니다.</div>
+      <input type="text" id="imgModel" placeholder="또는 직접 입력 (예: gemini-2.5-flash-image / gpt-image-1)" style="margin-top:8px">
+      <div class="hint">비우면 기본값 (Gemini: <b>gemini-2.5-flash-image</b>, OpenAI: <b>gpt-image-1</b>, OpenRouter: <b>google/gemini-2.5-flash-image</b>). 이미지 출력 모델이어야 합니다. (GPT는 OpenRouter가 아닌 <b>OpenAI</b> 제공사로 선택)</div>
     </div>
 
     <div class="field">
@@ -1489,9 +1500,32 @@ function plainScene(md){
 function resolveImgCfg(){
   const prov=cfg.imgProvider||'gemini';
   const key=(cfg.imgKey||'').trim() || (cfg.provider===prov ? (cfg.key||'') : '');
-  const def = prov==='openrouter' ? 'google/gemini-2.5-flash-image' : 'gemini-2.5-flash-image';
+  const def = prov==='openrouter' ? 'google/gemini-2.5-flash-image' : prov==='openai' ? 'gpt-image-1' : 'gemini-2.5-flash-image';
   const model=(cfg.imgModelManual||'').trim() || (cfg.imgModel||'').trim() || def;
-  return {prov, key, model};
+  const quality=(cfg.imgQuality||'medium');
+  return {prov, key, model, quality};
+}
+// OpenAI 이미지 생성(gpt-image). 참고 이미지 있으면 edits, 없으면 generations. 품질 기본 medium.
+async function openaiImage(model,key,prompt,refs,quality){
+  const urls=(Array.isArray(refs)?refs:(refs?[refs]:[])).map(r=>(r&&r.url)?r.url:r).filter(Boolean);
+  const q=quality||'medium';
+  let r;
+  if(urls.length){
+    const fd=new FormData();
+    fd.append('model', model); fd.append('prompt', prompt); fd.append('size','1024x1024'); fd.append('quality', q); fd.append('n','1');
+    for(let i=0;i<urls.length;i++){ const b=await (await fetch(urls[i])).blob(); fd.append('image[]', b, 'ref'+i+'.png'); }
+    r=await fetch('https://api.openai.com/v1/images/edits',{method:'POST',headers:{'Authorization':'Bearer '+key},body:fd});
+  } else {
+    r=await fetch('https://api.openai.com/v1/images/generations',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model, prompt, size:'1024x1024', quality:q, n:1})});
+  }
+  if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
+  const j=await r.json();
+  const b64=j.data&&j.data[0]&&j.data[0].b64_json;
+  if(!b64) throw new Error('이미지를 받지 못했습니다.');
+  const usd=({low:0.02, medium:0.04, high:0.17})[q] || 0.04;
+  return {src:'data:image/png;base64,'+b64, usd};
 }
 async function geminiImage(model,key,prompt,refs){
   refs=(Array.isArray(refs)?refs:(refs?[refs]:[])).filter(Boolean);
@@ -1606,7 +1640,7 @@ function withTimeout(p, ms, label){
   return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error((label||'요청')+' 시간 초과('+Math.round(ms/1000)+'초) — 모델이 이미지 출력을 지원하지 않거나 너무 느립니다. 다른 이미지 모델(예: google/gemini-2.5-flash-image)을 권장합니다.')), ms))]);
 }
 async function fetchIllust(story){
-  const {prov, key, model}=resolveImgCfg();
+  const {prov, key, model, quality}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
   // 참고①: 인물 얼굴(정체성) / 참고②: 직전 장면(장소 연속성) — 512px로 축소해 첨부
   let refs=[];
@@ -1617,7 +1651,10 @@ async function fetchIllust(story){
     if(lastIllustSrc && lastIllustSrc!==anchor) refs.push({url:await ds(lastIllustSrc), label:'[참고②: 직전 장면. 같은 장소가 이어지면 이 배경·공간·인테리어·조명 톤을 동일하게 유지하라(카메라 앵글·구도만 새로). 단 본문에서 장소가 바뀌면 새 장소로 바꿔라]'});
   }
   const prompt=buildIllustPrompt(story, refs.length>0);
-  const out = prov==='openrouter' ? await orImage(model,key,prompt,refs) : await geminiImage(model,key,prompt,refs);
+  let out;
+  if(prov==='openai') out=await openaiImage(model,key,prompt,refs,quality);
+  else if(prov==='openrouter') out=await orImage(model,key,prompt,refs);
+  else out=await geminiImage(model,key,prompt,refs);
   addCost(out.usd);   // 이미지 비용을 1턴·누적에 합산
   return out.src;
 }
@@ -2269,6 +2306,7 @@ function openCfg(){
   $('imgStyleSel').value=cfg.imgStyle||'anime';
   $('imgStyleCustom').value=cfg.imgStyleCustom||'';
   $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none';
+  $('imgQuality').value=cfg.imgQuality||'medium';
   $('imgConsist').checked=(cfg.imgConsist!==false);
   // 등장인물 4명
   const cast=cfg.cast||[];
@@ -2329,6 +2367,7 @@ function selectImgProv(p){ selImgProv=p;
 document.querySelectorAll('#imgProvSeg button').forEach(b=>b.onclick=()=>{
   selectImgProv(b.dataset.iprov); $('imgModelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
 const IMG_FALLBACK={ gemini:['gemini-2.5-flash-image','gemini-2.0-flash-preview-image-generation'],
+  openai:['gpt-image-1'],
   openrouter:['google/gemini-2.5-flash-image','google/gemini-2.5-flash-image-preview'] };
 $('btnImgModels').onclick=async()=>{
   const key=$('imgKey').value.trim() || (selImgProv===selProv ? $('apiKey').value.trim() : '');
@@ -2364,6 +2403,11 @@ async function fetchModels(prov,key){
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json(); return (j.data||[]).map(m=>m.id).sort();
   }
+  if(prov==='openai'){
+    const r=await fetch('https://api.openai.com/v1/models',{headers:{'Authorization':'Bearer '+key}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json(); return (j.data||[]).map(m=>m.id).sort();
+  }
   return [];
 }
 
@@ -2380,6 +2424,7 @@ $('cfgSave').onclick=()=>{
   cfg.imgModelManual=$('imgModel').value.trim();
   cfg.imgStyle=$('imgStyleSel').value;
   cfg.imgStyleCustom=$('imgStyleCustom').value.trim();
+  cfg.imgQuality=$('imgQuality').value;
   cfg.imgConsist=$('imgConsist').checked;
   // 등장인물 4명(역할+묘사)
   const cast=[];
