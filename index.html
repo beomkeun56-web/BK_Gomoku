@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.35</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.36</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1441,7 +1441,7 @@ async function runAssistant(){
     if(prevBody.replace(/\s/g,'').length>=30){
       recapP = fetchIllust(prevBody, true).then(src=>({src})).catch(e=>({err:e.message}));   // 요약 생략, 텍스트와 동시 시작
       recapBox=document.createElement('div'); recapBox.className='illust loading'; recapBox.textContent='🎨 지난 장면…';
-      const bub=mdEl.parentElement; if(bub) bub.insertBefore(recapBox, mdEl); else mdEl.prepend(recapBox); maybeScroll();
+      const bub=mdEl.parentElement; if(bub) bub.appendChild(recapBox); else mdEl.appendChild(recapBox); maybeScroll();   // 본문(.md) 아래·선택지 위
     }
   }
   const typer=streamTyper(mdEl,'');
@@ -2551,7 +2551,7 @@ function restore(){
         if(imgs.length){
           const h=mdEl.querySelector('h1,h2,h3'); let after=h&&h.parentNode===mdEl?h:null;
           imgs.forEach(im=>{ const box=mkIllustBox(im, im.pos==='recap');
-            if(im.pos==='recap'){ const bub=mdEl.parentElement; if(bub) bub.insertBefore(box, mdEl); else mdEl.prepend(box); }  // 회상 컷: 본문 위(말풍선 안)
+            if(im.pos==='recap'){ const bub=mdEl.parentElement; if(bub) bub.appendChild(box); else mdEl.appendChild(box); }  // 회상 컷: 본문 아래(선택지 위)
             else if(im.pos==='end'){ mdEl.appendChild(box); }       // 본문 끝(아래)
             else if(after){ after.after(box); after=box; }          // 제목 바로 아래
             else mdEl.prepend(box);
