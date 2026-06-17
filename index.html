@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.31</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.32</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1435,7 +1435,9 @@ async function runAssistant(){
   // 지난 장면 회상 삽화: 직전 트리거 턴에서 미리 만들어 둔 그림을 이번 턴 맨 위에 즉시 표시
   const myRecap=recapWork; recapWork=null;
   let recapBox=null;
-  if(myRecap){ recapBox=document.createElement('div'); recapBox.className='illust loading'; recapBox.textContent='🎨 지난 장면…'; mdEl.prepend(recapBox); maybeScroll(); }
+  if(myRecap){ recapBox=document.createElement('div'); recapBox.className='illust loading'; recapBox.textContent='🎨 지난 장면…';
+    // 본문(.md) 바깥, 말풍선 안 텍스트 위에 둔다 → 타이핑 렌더러/렌더가 지우지 않음
+    const bub=mdEl.parentElement; if(bub) bub.insertBefore(recapBox, mdEl); else mdEl.prepend(recapBox); maybeScroll(); }
   const typer=streamTyper(mdEl,'');
   let acc='';
   // 자동 삽화: N턴마다 1장. 트리거 턴이면 '그 턴 장면'을 병렬로 미리 생성 → 다음 턴 맨 위에 표시
@@ -2553,7 +2555,7 @@ function restore(){
         if(imgs.length){
           const h=mdEl.querySelector('h1,h2,h3'); let after=h&&h.parentNode===mdEl?h:null;
           imgs.forEach(im=>{ const box=mkIllustBox(im, im.pos==='recap');
-            if(im.pos==='recap'){ mdEl.prepend(box); }              // 회상 컷: 맨 위
+            if(im.pos==='recap'){ const bub=mdEl.parentElement; if(bub) bub.insertBefore(box, mdEl); else mdEl.prepend(box); }  // 회상 컷: 본문 위(말풍선 안)
             else if(im.pos==='end'){ mdEl.appendChild(box); }       // 본문 끝(아래)
             else if(after){ after.after(box); after=box; }          // 제목 바로 아래
             else mdEl.prepend(box);
