@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.27</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.28</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -469,6 +469,7 @@
     <div class="field">
       <label>자동 삽화 빈도 <span style="color:var(--dim)">— 하단 '삽화' 켜짐일 때</span></label>
       <select id="autoIllustEvery">
+        <option value="0">끔 (자동 안 함)</option>
         <option value="1">매 턴 (가장 비쌈)</option>
         <option value="2">2턴마다 1장</option>
         <option value="3">3턴마다 1장</option>
@@ -1434,7 +1435,7 @@ async function runAssistant(){
   const typer=streamTyper(mdEl,'');
   let acc='';
   // 자동 삽화: N턴마다 1장. 이번 턴이 트리거 턴이면, 최근 N턴 서사를 종합해 병렬 생성(스트리밍 중 시작 → 글 끝나면 바로 표시)
-  const isTrigger = autoIllustOn && ((imgSinceLast+1) >= autoEvery());
+  const isTrigger = autoActive() && ((imgSinceLast+1) >= autoEvery());
   let autoIllustP=null;
   const startAutoIllust=()=>{ if(autoIllustP || !isTrigger) return;
     const sb=sanitizeBody(splitChoices(acc).body);
@@ -1470,7 +1471,7 @@ async function runAssistant(){
         else { box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+(r.err||''); }
         maybeScroll();
       });
-    } else if(autoIllustOn && !/⚠️ 오류/.test(acc)){
+    } else if(autoActive() && !/⚠️ 오류/.test(acc)){
       imgSinceLast++;   // 트리거 아님 — 카운트만 증가
     }
   } finally {
@@ -1860,9 +1861,14 @@ $('btnIllust').onclick=openIllustPopup;
 $('btnInput').onclick=()=>{ const r=$('inputRow'); const show=r.classList.contains('hidden');
   r.classList.toggle('hidden', !show); if(show){ autoGrow(); inp.focus(); } };
 // 매 턴 자동 삽화 토글
-let autoIllustOn = (cfg.autoIllust===true);
 let imgSinceLast=9999;   // 충분히 크게 시작 → 새 게임/새로고침 후 첫 턴에 1장 생성, 이후 N턴마다
-function autoEvery(){ const n=parseInt(cfg.autoIllustEvery)||4; return Math.max(1,Math.min(6,n)); }
+// 자동 삽화 빈도(단일 제어): 0=끔, 1=매턴, 2/3/4=N턴마다. 구버전 cfg.autoIllust(boolean) 호환.
+function autoEveryRaw(){
+  if(cfg.autoIllustEvery!=null && cfg.autoIllustEvery!==''){ const n=parseInt(cfg.autoIllustEvery); return isNaN(n)?0:n; }
+  return cfg.autoIllust===true ? 4 : 0;
+}
+function autoActive(){ return autoEveryRaw()>0; }
+function autoEvery(){ return Math.max(1,Math.min(6,autoEveryRaw()||1)); }
 // 최근 N턴의 서사(직전 N-1턴 + 이번 턴 acc)를 합쳐 핵심 컷 요약용 컨텍스트로
 function recentArcText(acc){
   const parts=[]; let cnt=0; const need=autoEvery()-1;
@@ -1870,8 +1876,13 @@ function recentArcText(acc){
   parts.push(sanitizeBody(splitChoices(acc).body));
   return parts.join('\n\n--- 다음 장면 ---\n\n');
 }
-function updateAutoIllustBtn(){ const b=$('btnAutoIllust'); if(b) b.classList.toggle('on', autoIllustOn); }
-$('btnAutoIllust').onclick=()=>{ autoIllustOn=!autoIllustOn; cfg.autoIllust=autoIllustOn; saveCfg(); updateAutoIllustBtn(); };
+function updateAutoIllustBtn(){ const b=$('btnAutoIllust'); if(b){ b.classList.toggle('on', autoActive()); b.title='자동 삽화: '+(autoActive()?(autoEvery()===1?'매 턴':autoEvery()+'턴마다'):'끔')+' (눌러서 켜기/끄기)'; } }
+// 툴바 '삽화' 토글: 켜짐(마지막 빈도) ↔ 끔
+$('btnAutoIllust').onclick=()=>{
+  if(autoActive()){ cfg._lastEvery=autoEveryRaw()||4; cfg.autoIllustEvery=0; }
+  else { cfg.autoIllustEvery=cfg._lastEvery||4; }
+  saveCfg(); updateAutoIllustBtn(); const s=$('autoIllustEvery'); if(s) s.value=String(autoEveryRaw());
+};
 updateAutoIllustBtn();
 $('sitClose').onclick=()=>$('sitOverlay').classList.remove('on');
 $('sitOverlay').addEventListener('click',e=>{ if(e.target===$('sitOverlay')) $('sitOverlay').classList.remove('on'); });
@@ -2377,14 +2388,14 @@ function openCfg(){
   $('imgQuality').value=cfg.imgQuality||'medium';
   $('imgConsist').checked=(cfg.imgConsist!==false);
   $('imgBrief').checked=(cfg.imgBrief!==false);
-  $('autoIllustEvery').value=String(parseInt(cfg.autoIllustEvery)||4);
+  $('autoIllustEvery').value=String(autoEveryRaw());
   // 등장인물 4명
   const cast=cfg.cast||[];
   for(let i=0;i<4;i++){ const c=cast[i]||{}; const rE=$('cast'+(i+1)+'Role'), dE=$('cast'+(i+1)+'Desc');
     if(rE) rE.value=c.role||''; if(dE) dE.value=c.desc||''; }
 }
 $('imgStyleSel').onchange=()=>{ $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none'; };
-$('autoIllustEvery').onchange=()=>{ cfg.autoIllustEvery=parseInt($('autoIllustEvery').value)||4; saveCfg(); };   // 즉시 반영
+$('autoIllustEvery').onchange=()=>{ let n=parseInt($('autoIllustEvery').value); cfg.autoIllustEvery=isNaN(n)?4:n; saveCfg(); updateAutoIllustBtn(); };   // 즉시 반영(끔=0 포함)
 function closeCfg(){ cfgOverlay.classList.remove('on'); }
 $('btnCfg').onclick=openCfg; $('cfgClose').onclick=closeCfg;
 cfgOverlay.addEventListener('click',e=>{if(e.target===cfgOverlay)closeCfg();});
@@ -2509,7 +2520,7 @@ $('cfgSave').onclick=()=>{
   cfg.imgQuality=$('imgQuality').value;
   cfg.imgConsist=$('imgConsist').checked;
   cfg.imgBrief=$('imgBrief').checked;
-  cfg.autoIllustEvery=parseInt($('autoIllustEvery').value)||4;
+  cfg.autoIllustEvery=parseInt($('autoIllustEvery').value); if(isNaN(cfg.autoIllustEvery)) cfg.autoIllustEvery=4;
   // 등장인물 4명(역할+묘사)
   const cast=[];
   for(let i=0;i<4;i++){ const role=($('cast'+(i+1)+'Role').value||'').trim(), desc=($('cast'+(i+1)+'Desc').value||'').trim();
