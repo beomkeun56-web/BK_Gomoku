@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.34</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.35</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1432,17 +1432,22 @@ async function runAssistant(){
   renderChoices([]); removeFooters();
   await maybeSummarize();   // 오래된 대화 요약(토큰 절감)
   const {mdEl}=addMessage('assistant','',true);
+  // 병렬 회상 삽화: 트리거 턴이면 '직전 턴 장면'을 텍스트 생성과 "동시에" 시작 → 텍스트 끝날 때 완성 → 0대기 표시(맨 위 '지난 장면')
+  const prevIdx = lastAssistantIndex();   // 직전 어시스턴트 턴(이번 턴 push 전)
+  const wantRecap = autoActive() && prevIdx>=0 && ((imgSinceLast+1) >= autoEvery());
+  let recapBox=null, recapP=null;
+  if(wantRecap){
+    const prevBody = sanitizeBody(splitChoices(history[prevIdx].content).body);
+    if(prevBody.replace(/\s/g,'').length>=30){
+      recapP = fetchIllust(prevBody, true).then(src=>({src})).catch(e=>({err:e.message}));   // 요약 생략, 텍스트와 동시 시작
+      recapBox=document.createElement('div'); recapBox.className='illust loading'; recapBox.textContent='🎨 지난 장면…';
+      const bub=mdEl.parentElement; if(bub) bub.insertBefore(recapBox, mdEl); else mdEl.prepend(recapBox); maybeScroll();
+    }
+  }
   const typer=streamTyper(mdEl,'');
   let acc='';
-  // 자동 삽화: 트리거 턴이면 '이 턴 장면'을 본문 완성 즉시 생성(읽는 동안 병렬) → 본문 끝(선택지 위)에 준비되는 대로 표시
-  const isTrigger = autoActive() && ((imgSinceLast+1) >= autoEvery());
-  let autoIllustP=null;
-  const startAutoIllust=()=>{ if(autoIllustP || !isTrigger) return;
-    const sb=sanitizeBody(splitChoices(acc).body);
-    if(sb.replace(/\s/g,'').length<30) return;   // 본문이 충분히 쌓였을 때만
-    autoIllustP=fetchIllust(sb).then(src=>({src})).catch(e=>({err:e.message})); };   // '이 턴' 장면을 그림
   const feed=()=>{ const m=acc.match(HEAD_DETECT); typer.setTarget(sanitizeBody(m?acc.slice(0,m.index):acc));
-    const {choices}=splitChoices(acc); if(choices.length>=2){ renderChoices(choices); startAutoIllust(); } };
+    const {choices}=splitChoices(acc); if(choices.length>=2){ renderChoices(choices); } };
   try{
     try{
       await streamLLM((tok)=>{ acc+=tok; feed(); });
@@ -1450,7 +1455,6 @@ async function runAssistant(){
       const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
       acc+=em; typer.setTarget(acc);
     }
-    if(!/⚠️ 오류/.test(acc)) startAutoIllust();   // 폴백: 선택지 미감지로 아직 안 시작했으면 지금
     await typer.finish();
     const {body, choices}=splitChoices(acc);
     renderGm(mdEl, sanitizeBody(body), false);
@@ -1458,19 +1462,17 @@ async function runAssistant(){
     parseStats(acc); renderChoices(choices);
     addGmFooter(mdEl.closest('.msg'));
     if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
-    // 트리거 턴: 이 턴 장면을 본문 끝(선택지 위)에 비차단으로 채움(읽는 동안 생성돼 다 읽으면 거의 준비됨)
-    if(autoIllustP){
+    // 회상 삽화 채우기(이미 거의 완성됨) + 카운터
+    if(recapP && recapBox){
       imgSinceLast=0;
-      const aidx=lastAssistantIndex();
-      const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
-      mdEl.appendChild(box); maybeScroll();
-      autoIllustP.then(async r=>{
-        if(r.src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+r.src+'"><div class="cap">AI 생성 삽화</div>'; await recordIllust(aidx, r.src, 'end'); }
-        else if(r.err==='NOKEY'){ box.className='illust loading'; box.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
-        else { box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+(r.err||''); }
+      const ridx=lastAssistantIndex();   // 표시 위치(이번 턴)
+      recapP.then(async r=>{
+        if(r.src){ recapBox.className='illust'; recapBox.innerHTML='<img alt="지난 장면" src="'+r.src+'"><div class="cap">지난 장면</div>'; await recordIllust(ridx, r.src, 'recap'); }
+        else if(r.err==='NOKEY'){ recapBox.className='illust loading'; recapBox.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
+        else { recapBox.className='illust loading'; recapBox.textContent='⚠️ 삽화 실패: '+(r.err||''); }
         maybeScroll();
       });
-    } else if(autoActive() && !/⚠️ 오류/.test(acc)){ imgSinceLast++; }
+    } else if(autoActive() && prevIdx>=0 && !/⚠️ 오류/.test(acc)){ imgSinceLast++; }
   } finally {
     busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지 — 삽화는 기다리지 않음
     bumpTurn();        // 누적 턴수 +1
@@ -1687,12 +1689,12 @@ async function buildSceneBrief(body){
   const out=await callOnce([{role:'user', content:usr}], sys);
   return (out||'').trim();
 }
-async function fetchIllust(story){
+async function fetchIllust(story, skipBrief){
   const {prov, key, model, quality}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
-  // 채팅 LLM으로 핵심 장면 요약(켜져 있고 채팅 키가 있을 때). 실패 시 원문 사용
+  // 채팅 LLM으로 핵심 장면 요약(켜져 있고 채팅 키가 있을 때). skipBrief면 생략(속도↑). 실패 시 원문 사용
   let sceneText=story;
-  if(cfg.imgBrief!==false){
+  if(cfg.imgBrief!==false && !skipBrief){
     try{ const brief=await withTimeout(buildSceneBrief(story), 30000, '장면 요약'); if(brief && brief.length>10) sceneText=brief; }catch(e){}
   }
   // 참고는 '인물 얼굴' 1장만 사용 — 2장 합성이 일으키는 팔/손 겹침(여분의 손) 방지. 장소 연속성은 영어 브리프 텍스트로 처리
