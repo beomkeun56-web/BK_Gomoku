@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.26</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.27</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1861,7 +1861,7 @@ $('btnInput').onclick=()=>{ const r=$('inputRow'); const show=r.classList.contai
   r.classList.toggle('hidden', !show); if(show){ autoGrow(); inp.focus(); } };
 // 매 턴 자동 삽화 토글
 let autoIllustOn = (cfg.autoIllust===true);
-let imgSinceLast=0;   // 마지막 자동 삽화 이후 지난 턴 수
+let imgSinceLast=9999;   // 충분히 크게 시작 → 새 게임/새로고침 후 첫 턴에 1장 생성, 이후 N턴마다
 function autoEvery(){ const n=parseInt(cfg.autoIllustEvery)||4; return Math.max(1,Math.min(6,n)); }
 // 최근 N턴의 서사(직전 N-1턴 + 이번 턴 acc)를 합쳐 핵심 컷 요약용 컨텍스트로
 function recentArcText(acc){
@@ -1991,7 +1991,7 @@ function newGame(){
   illusts=[]; saveIllusts();
   if(typeof charAnchor!=='undefined') charAnchor=null;
   if(typeof lastIllustSrc!=='undefined') lastIllustSrc=null;
-  if(typeof imgSinceLast!=='undefined') imgSinceLast=0;
+  if(typeof imgSinceLast!=='undefined') imgSinceLast=9999;   // 새 게임 후 첫 턴에 삽화
   pendingIllust=false; if(pendingNote){ pendingNote.remove(); pendingNote=null; }
   clearLog(); $('hud').classList.remove('on'); renderChoices([]);
   $('cmdRow').classList.add('hidden');
@@ -2384,6 +2384,7 @@ function openCfg(){
     if(rE) rE.value=c.role||''; if(dE) dE.value=c.desc||''; }
 }
 $('imgStyleSel').onchange=()=>{ $('imgStyleCustom').style.display=($('imgStyleSel').value==='custom')?'block':'none'; };
+$('autoIllustEvery').onchange=()=>{ cfg.autoIllustEvery=parseInt($('autoIllustEvery').value)||4; saveCfg(); };   // 즉시 반영
 function closeCfg(){ cfgOverlay.classList.remove('on'); }
 $('btnCfg').onclick=openCfg; $('cfgClose').onclick=closeCfg;
 cfgOverlay.addEventListener('click',e=>{if(e.target===cfgOverlay)closeCfg();});
