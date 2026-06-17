@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.28</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.29</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1876,12 +1876,15 @@ function recentArcText(acc){
   parts.push(sanitizeBody(splitChoices(acc).body));
   return parts.join('\n\n--- 다음 장면 ---\n\n');
 }
-function updateAutoIllustBtn(){ const b=$('btnAutoIllust'); if(b){ b.classList.toggle('on', autoActive()); b.title='자동 삽화: '+(autoActive()?(autoEvery()===1?'매 턴':autoEvery()+'턴마다'):'끔')+' (눌러서 켜기/끄기)'; } }
-// 툴바 '삽화' 토글: 켜짐(마지막 빈도) ↔ 끔
+function autoLabel(){ const n=autoEveryRaw(); return n<=0?'삽화 끔': n===1?'삽화 매턴':'삽화 '+n+'턴'; }
+function updateAutoIllustBtn(){ const b=$('btnAutoIllust'); if(b){ b.textContent=autoLabel(); b.classList.toggle('on', autoActive());
+  b.title='자동 삽화 빈도 — 누를 때마다 끔→매턴→2턴→3턴→4턴 순환'; } }
+// 툴바 '삽화' 버튼: 누를 때마다 끔/매턴/2/3/4턴 순환(현재 상태가 글자로 보임)
 $('btnAutoIllust').onclick=()=>{
-  if(autoActive()){ cfg._lastEvery=autoEveryRaw()||4; cfg.autoIllustEvery=0; }
-  else { cfg.autoIllustEvery=cfg._lastEvery||4; }
-  saveCfg(); updateAutoIllustBtn(); const s=$('autoIllustEvery'); if(s) s.value=String(autoEveryRaw());
+  const order=[0,1,2,3,4]; let n=autoEveryRaw(); let i=order.indexOf(n); if(i<0) i=0;
+  n=order[(i+1)%order.length];
+  cfg.autoIllustEvery=n; saveCfg(); updateAutoIllustBtn();
+  const s=$('autoIllustEvery'); if(s) s.value=String(n);
 };
 updateAutoIllustBtn();
 $('sitClose').onclick=()=>$('sitOverlay').classList.remove('on');
