@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.49</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.50</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -917,6 +917,13 @@ const PROVIDERS = {
 
 /* ---------- State ---------- */
 const LS='gukga_v1';
+let gameTone=localStorage.getItem(LS+'_tone')||'';
+function setGameTone(t){ gameTone=t||''; try{ localStorage.setItem(LS+'_tone', gameTone); }catch(e){} }
+function activeToneReminder(){
+  if(!gameTone) return '';
+  return '\n\n[★현재 활성 드라마 톤 = "'+gameTone+'"] 이번 게임은 처음부터 끝까지 이 톤을 최우선으로 유지한다. 위 [톤 연출]에서 이 톤에 해당하는 항목 그대로, 매 턴 그 톤이 분명히 드러나게 써라(다른 톤처럼 밋밋하게 흐르지 말 것). 막장/코믹 톤이면 잔잔한 일상 턴 금지 — 매 턴 사건·반전·웃음을 강하게 살려라. 톤은 다시 묻지 말 것.';
+}
+function sysText(){ return SYSTEM_PROMPT + activeToneReminder(); }
 let cfg = loadCfg();
 let history = loadHistory();   // [{role:'user'|'assistant', content}] — 전체 기록(표시·복원용)
 let stats = loadStats();       // {국력,경제,...} last known
@@ -1403,8 +1410,8 @@ async function readSSE(res, onEvent){
 // OpenRouter system 메시지: 캐싱 지원 모델이면 cache_control 멀티파트로
 function orSystemMsg(model){
   if(orModelSupportsCache(model))
-    return {role:'system', content:[{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]};
-  return {role:'system', content:SYSTEM_PROMPT};
+    return {role:'system', content:[{type:'text', text:sysText(), cache_control:{type:'ephemeral'}}]};
+  return {role:'system', content:sysText()};
 }
 
 async function streamOpenAI(model,key,onToken,msgs){
@@ -1425,7 +1432,7 @@ async function streamOpenAI(model,key,onToken,msgs){
 }
 
 // Anthropic system: cache_control로 프롬프트 캐싱(반복되는 규칙부 토큰 절감)
-function anthropicSystem(){ return [{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]; }
+function anthropicSystem(){ const arr=[{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); return arr; }
 
 async function streamAnthropic(model,key,onToken,msgs){
   const res=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1452,7 +1459,7 @@ async function streamGemini(model,key,onToken,msgs){
   const res=await fetch(url,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      system_instruction:{parts:[{text:SYSTEM_PROMPT}]},
+      system_instruction:{parts:[{text:sysText()}]},
       contents,
       generationConfig:{maxOutputTokens:6000, temperature:0.9}
     })
@@ -2069,6 +2076,7 @@ $('setupGo').onclick=()=>{
   const lines=['시작. 아래 설정을 그대로 반영해 바로 게임을 시작해줘(되묻지 말 것).'];
   lines.push('- 시나리오: '+scen);
   lines.push('- 드라마 톤: '+setupTone+' (이 톤으로 시나리오 내내 유지, 톤은 되묻지 말 것)');
+  setGameTone(setupTone);   // 활성 톤을 저장 → 매 턴 시스템 프롬프트에 주입
   const me=[]; if(g('suName'))me.push('이름 '+g('suName')); if(g('suSex'))me.push('성별 '+g('suSex'));
   if(g('suAge'))me.push('나이 '+g('suAge')); if(g('suArea'))me.push('지역구/배경 '+g('suArea'));
   if(g('suParty'))me.push('소속 '+g('suParty')); if(g('suPersona'))me.push('성향 '+g('suPersona'));
@@ -2191,7 +2199,7 @@ const _btnNew=$('btnNew'); if(_btnNew) _btnNew.onclick=newGame;
 
 /* ---------- 기기 간 이어하기 (전체 진행 내보내기/가져오기) ---------- */
 function makeSaveCode(){
-  const data={ v:2, history, stats, summary, summaryUpto, illusts,
+  const data={ v:2, history, stats, summary, summaryUpto, illusts, tone: gameTone,
     cost: costTotal, costImg: costImgTotal, turns: turnCount,   // 누적 비용(텍스트+이미지)·이미지누적·턴수 동기화
     cfg: cfg,   // 모든 설정값(제공사·키·모델·삽화·화풍·인물 등) 전체 저장
     ui:{ font:localStorage.getItem(LS+'_font'), fs:localStorage.getItem(LS+'_fs'),
@@ -2212,6 +2220,7 @@ async function applySaveCode(code){
   if(!d || !Array.isArray(d.history)) throw new Error('형식 오류');
   history=d.history; stats=d.stats||{}; summary=d.summary||''; summaryUpto=d.summaryUpto||0;
   illusts=Array.isArray(d.illusts)?d.illusts:[];
+  if(typeof d.tone==='string') setGameTone(d.tone);   // 활성 드라마 톤 복원
   saveHistory(); saveStats(); persistSummary(); saveIllusts();
   // 누적 비용(이미지 포함)·턴수 동기화
   if(typeof d.cost==='number'){ costTotal=d.cost; localStorage.setItem(LS+'_cost', String(costTotal)); }
