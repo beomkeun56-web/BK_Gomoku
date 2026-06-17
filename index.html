@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.30</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.31</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1432,15 +1432,19 @@ async function runAssistant(){
   renderChoices([]); removeFooters();
   await maybeSummarize();   // 오래된 대화 요약(토큰 절감)
   const {mdEl}=addMessage('assistant','',true);
+  // 지난 장면 회상 삽화: 직전 트리거 턴에서 미리 만들어 둔 그림을 이번 턴 맨 위에 즉시 표시
+  const myRecap=recapWork; recapWork=null;
+  let recapBox=null;
+  if(myRecap){ recapBox=document.createElement('div'); recapBox.className='illust loading'; recapBox.textContent='🎨 지난 장면…'; mdEl.prepend(recapBox); maybeScroll(); }
   const typer=streamTyper(mdEl,'');
   let acc='';
-  // 자동 삽화: N턴마다 1장. 이번 턴이 트리거 턴이면, 최근 N턴 서사를 종합해 병렬 생성(스트리밍 중 시작 → 글 끝나면 바로 표시)
+  // 자동 삽화: N턴마다 1장. 트리거 턴이면 '그 턴 장면'을 병렬로 미리 생성 → 다음 턴 맨 위에 표시
   const isTrigger = autoActive() && ((imgSinceLast+1) >= autoEvery());
   let autoIllustP=null;
   const startAutoIllust=()=>{ if(autoIllustP || !isTrigger) return;
     const sb=sanitizeBody(splitChoices(acc).body);
     if(sb.replace(/\s/g,'').length<30) return;   // 본문이 충분히 쌓였을 때만
-    autoIllustP=fetchIllust(recentArcText(acc)).then(src=>({src})).catch(e=>({err:e.message})); };
+    autoIllustP=fetchIllust(sb).then(src=>({src})).catch(e=>({err:e.message})); };   // '이 턴' 장면을 그림
   const feed=()=>{ const m=acc.match(HEAD_DETECT); typer.setTarget(sanitizeBody(m?acc.slice(0,m.index):acc));
     const {choices}=splitChoices(acc); if(choices.length>=2){ renderChoices(choices); startAutoIllust(); } };
   try{
@@ -1458,22 +1462,19 @@ async function runAssistant(){
     parseStats(acc); renderChoices(choices);
     addGmFooter(mdEl.closest('.msg'));
     if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
-    if(autoIllustP){
-      // 트리거 턴: 본문 끝(선택지 바로 위)에 비차단으로 채움 → 다 읽은 자리에서 바로 보임
-      imgSinceLast=0;
-      const aidx=lastAssistantIndex();
-      const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
-      mdEl.appendChild(box);
-      maybeScroll();
-      autoIllustP.then(async r=>{
-        if(r.src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+r.src+'"><div class="cap">AI 생성 삽화</div>'; await recordIllust(aidx, r.src, 'end'); }
-        else if(r.err==='NOKEY'){ box.className='illust loading'; box.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
-        else { box.className='illust loading'; box.textContent='⚠️ 삽화 실패: '+(r.err||''); }
+    // 이번 턴 회상 삽화(직전 트리거 턴 그림)를 맨 위 박스에 채움
+    if(myRecap && recapBox){
+      const ridx=lastAssistantIndex();
+      myRecap.then(async r=>{
+        if(r.src){ recapBox.className='illust'; recapBox.innerHTML='<img alt="지난 장면" src="'+r.src+'"><div class="cap">지난 장면</div>'; await recordIllust(ridx, r.src, 'recap'); }
+        else if(r.err==='NOKEY'){ recapBox.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
+        else { recapBox.textContent='⚠️ 삽화 실패: '+(r.err||''); }
         maybeScroll();
       });
-    } else if(autoActive() && !/⚠️ 오류/.test(acc)){
-      imgSinceLast++;   // 트리거 아님 — 카운트만 증가
-    }
+    } else if(recapBox){ recapBox.remove(); }
+    // 트리거 턴: '이 턴' 그림을 미리 만들어 두고 다음 턴 맨 위에 표시(현재 턴엔 표시 안 함)
+    if(autoIllustP){ imgSinceLast=0; recapWork=autoIllustP; }
+    else if(autoActive() && !/⚠️ 오류/.test(acc)){ imgSinceLast++; }
   } finally {
     busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지 — 삽화는 기다리지 않음
     bumpTurn();        // 누적 턴수 +1
@@ -1862,6 +1863,7 @@ $('btnInput').onclick=()=>{ const r=$('inputRow'); const show=r.classList.contai
   r.classList.toggle('hidden', !show); if(show){ autoGrow(); inp.focus(); } };
 // 매 턴 자동 삽화 토글
 let imgSinceLast=9999;   // 충분히 크게 시작 → 새 게임/새로고침 후 첫 턴에 1장 생성, 이후 N턴마다
+let recapWork=null;      // 트리거 턴에 미리 만든 '이 턴 장면' 그림 → 다음 턴 맨 위에 표시
 // 자동 삽화 빈도(단일 제어): 0=끔, 1=매턴, 2/3/4=N턴마다. 구버전 cfg.autoIllust(boolean) 호환.
 function autoEveryRaw(){
   if(cfg.autoIllustEvery!=null && cfg.autoIllustEvery!==''){ const n=parseInt(cfg.autoIllustEvery); return isNaN(n)?0:n; }
@@ -2006,6 +2008,7 @@ function newGame(){
   if(typeof charAnchor!=='undefined') charAnchor=null;
   if(typeof lastIllustSrc!=='undefined') lastIllustSrc=null;
   if(typeof imgSinceLast!=='undefined') imgSinceLast=9999;   // 새 게임 후 첫 턴에 삽화
+  if(typeof recapWork!=='undefined') recapWork=null;
   pendingIllust=false; if(pendingNote){ pendingNote.remove(); pendingNote=null; }
   clearLog(); $('hud').classList.remove('on'); renderChoices([]);
   $('cmdRow').classList.add('hidden');
@@ -2549,9 +2552,10 @@ function restore(){
         const imgs=illusts.filter(x=>x.idx===i);
         if(imgs.length){
           const h=mdEl.querySelector('h1,h2,h3'); let after=h&&h.parentNode===mdEl?h:null;
-          imgs.forEach(im=>{ const box=mkIllustBox(im);
-            if(im.pos==='end'){ mdEl.appendChild(box); }            // 현재 턴: 본문 끝(아래)
-            else if(after){ after.after(box); after=box; }          // 다음 턴: 제목 바로 아래
+          imgs.forEach(im=>{ const box=mkIllustBox(im, im.pos==='recap');
+            if(im.pos==='recap'){ mdEl.prepend(box); }              // 회상 컷: 맨 위
+            else if(im.pos==='end'){ mdEl.appendChild(box); }       // 본문 끝(아래)
+            else if(after){ after.after(box); after=box; }          // 제목 바로 아래
             else mdEl.prepend(box);
           });
         }
@@ -2566,10 +2570,11 @@ function restore(){
   }
 }
 // 저장된 삽화 1개 → 박스 엘리먼트(로컬 IndexedDB 우선, 없으면 드라이브)
-function mkIllustBox(im){
+function mkIllustBox(im, isRecap){
+  const cap=isRecap?'지난 장면':'AI 생성 삽화';
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 불러오는 중…';
   (async()=>{ const src=await resolveIllustSrc(im);
-    if(src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>'; }
+    if(src){ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">'+cap+'</div>'; }
     else { box.className='illust loading'; box.textContent='🎨 삽화를 표시할 수 없습니다(드라이브 연결 후 새로고침).'; } })();
   return box;
 }
