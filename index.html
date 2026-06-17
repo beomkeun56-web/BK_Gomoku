@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.40</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.41</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1739,7 +1739,7 @@ function buildIllustPrompt(story, hasRef){
     cast.forEach(c=>{ p+='- '+((c.role||'character').trim())+': '+((c.desc||'').trim())+'. '; });
     p+='Match each character\'s gender, age, body type, hair, clothing, overall vibe and charm exactly as described (keep it tasteful and clothed — no nudity or explicit content). Whenever such a character appears in the scene, draw them per their description. ';
   }
-  p+='[FEMALE FIGURE — apply to every adult woman in the image, including unnamed background women] Render all adult female characters with a glamorous, attractive, curvy hourglass figure — full bust, slim waist, feminine silhouette — and a beautiful, charming face. Keep this consistent across every illustration. They must remain fully clothed, tasteful and elegant (well-fitted professional or stylish outfits, no nudity, no underwear, no explicit or sexual content). ';
+  p+='[FEMALE FIGURE — apply to every adult woman in the image, including unnamed background women; this OVERRIDES any reference image — even if a reference shows a plainer body, still render the glamorous figure described here] Render all adult female characters with a glamorous, attractive, curvy hourglass figure — full bust, slim waist, wide hips, soft feminine silhouette — and a beautiful, charming face. They wear well-tailored, form-fitting, flattering outfits (e.g., a fitted blouse and pencil skirt, a tailored dress, a slim suit) that clearly reveal the feminine hourglass silhouette and curves, while remaining fully clothed, tasteful and elegant (no nudity, no underwear, no explicit or sexual content). Keep this body type consistent across every illustration. ';
   p+='[SHOT VARIETY] Choose the single most impactful shot for this moment and use a different angle/shot size from the previous image: for dialogue/confrontation/mind-games use a face close-up to emphasize expression and tension; for a meal show the food and the act of eating; for movement/action capture the decisive moment. Do not repeat the same composition (e.g., two people facing each other) every turn; vary close-up / medium / wide by content. ';
   p+='[REALISM] Poses, actions and hand positions must match how people really behave in that situation, physically natural. In a briefing/meeting, documents and laptops sit on the desk or are held naturally — never shoved awkwardly into someone\'s face. Avoid distorted fingers/limbs and unrealistic prop use; no text or UI on screens (laptops/phones). ';
   p+='[LOCATION & SITUATION ACCURACY — very important] First infer from the text WHAT place, WHAT status of people and WHAT situation this is, then match background, architecture, furniture, lighting, crowd, clothing and props exactly to that real context. '
