@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.50</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.51</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -349,8 +349,9 @@
   <div class="toolrow">
     <button class="pill" id="btnMenu" title="메뉴 · 명령어">☰</button>
     <button class="pill" id="btnInput" title="입력창 열기">입력</button>
-    <button class="pill" id="btnAddSit">상황추가</button>
-    <button class="pill" id="btnSuggest">추천답변</button>
+    <button class="pill" id="btnAddSit">상황</button>
+    <button class="pill" id="btnSuggest">답변</button>
+    <button class="pill" id="btnMode" title="현재 드라마 모드 · 눌러서 변경">모드</button>
     <button class="pill" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
     <span id="costBadge" class="cost-badge" title="추정 비용(클릭하면 누적 초기화)"></span>
@@ -713,6 +714,27 @@
     </div>
 
     <button class="save-btn" id="setupGo">이 설정으로 시작</button>
+  </div>
+</div>
+
+<!-- ===== 드라마 모드 변경 팝업 ===== -->
+<div class="overlay" id="modeOverlay">
+  <div class="modal">
+    <div style="display:flex; align-items:center">
+      <h2>🎭 드라마 모드</h2>
+      <button class="modal-x" id="modeClose">✕</button>
+    </div>
+    <p class="desc">진행 중에도 모드를 바꿀 수 있습니다. 바꾸면 <b>다음 턴부터</b> 그 톤으로 전개됩니다. (이미 쌓인 이야기 맥락은 유지)</p>
+    <div class="field">
+      <div class="seg" id="modeSeg">
+        <button data-tone="진지한 정치 스릴러(하우스 오브 카드 톤)">정치</button>
+        <button data-tone="막장 드라마(자극·반전·치정·배신)">막장</button>
+        <button data-tone="코믹 정치 드라마(풍자·블랙코미디·병맛 유머)">코믹</button>
+        <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+코믹</button>
+        <button data-tone="진지+막장 혼합">혼합</button>
+      </div>
+    </div>
+    <button class="save-btn" id="modeSave">이 모드로 변경</button>
   </div>
 </div>
 
@@ -1964,6 +1986,38 @@ $('btnMenu').onclick=()=>{ const show=$('topbar').classList.contains('hidden');
 $('hudClose').onclick=hideHud;
 $('btnSuggest').onclick=showSuggestTendency;
 $('btnAddSit').onclick=openSituation;
+// 드라마 모드 표시·변경
+function modeShort(tone){
+  const t=tone||'';
+  if(/막장/.test(t)&&/코믹/.test(t)) return '막장+코믹';
+  if(/진지\+막장|진지·막장/.test(t)||(/막장/.test(t)&&/혼합/.test(t))) return '혼합';
+  if(/진지\+코믹/.test(t)||(/코믹/.test(t)&&/하우스 오브 카드/.test(t))) return '진지+코믹';
+  if(/막장/.test(t)) return '막장';
+  if(/코믹/.test(t)) return '코믹';
+  if(/하우스 오브 카드|정치 스릴러/.test(t)) return '정치';
+  return t?t.slice(0,6):'';
+}
+function updateModeBtn(){
+  const b=$('btnMode'); if(!b) return;
+  const s=gameTone?modeShort(gameTone):'';
+  b.textContent = s?('모드: '+s):'모드';
+}
+function openModePopup(){
+  document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on', x.dataset.tone===gameTone));
+  $('modeOverlay').classList.add('on');
+}
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b));
+});
+$('btnMode').onclick=openModePopup;
+$('modeClose').onclick=()=>$('modeOverlay').classList.remove('on');
+$('modeOverlay').addEventListener('click',e=>{ if(e.target===$('modeOverlay')) $('modeOverlay').classList.remove('on'); });
+$('modeSave').onclick=()=>{
+  const sel=document.querySelector('#modeSeg button.on');
+  if(sel){ setGameTone(sel.dataset.tone); updateModeBtn(); }
+  $('modeOverlay').classList.remove('on');
+};
+updateModeBtn();
 $('btnIllust').onclick=openIllustPopup;
 // 입력 토글: 누르면 상단에 입력창+Enter 표시, 다시 누르면 숨김
 $('btnInput').onclick=()=>{ const r=$('inputRow'); const show=r.classList.contains('hidden');
@@ -2077,6 +2131,7 @@ $('setupGo').onclick=()=>{
   lines.push('- 시나리오: '+scen);
   lines.push('- 드라마 톤: '+setupTone+' (이 톤으로 시나리오 내내 유지, 톤은 되묻지 말 것)');
   setGameTone(setupTone);   // 활성 톤을 저장 → 매 턴 시스템 프롬프트에 주입
+  updateModeBtn();
   const me=[]; if(g('suName'))me.push('이름 '+g('suName')); if(g('suSex'))me.push('성별 '+g('suSex'));
   if(g('suAge'))me.push('나이 '+g('suAge')); if(g('suArea'))me.push('지역구/배경 '+g('suArea'));
   if(g('suParty'))me.push('소속 '+g('suParty')); if(g('suPersona'))me.push('성향 '+g('suPersona'));
@@ -2220,7 +2275,7 @@ async function applySaveCode(code){
   if(!d || !Array.isArray(d.history)) throw new Error('형식 오류');
   history=d.history; stats=d.stats||{}; summary=d.summary||''; summaryUpto=d.summaryUpto||0;
   illusts=Array.isArray(d.illusts)?d.illusts:[];
-  if(typeof d.tone==='string') setGameTone(d.tone);   // 활성 드라마 톤 복원
+  if(typeof d.tone==='string'){ setGameTone(d.tone); updateModeBtn(); }   // 활성 드라마 톤 복원
   saveHistory(); saveStats(); persistSummary(); saveIllusts();
   // 누적 비용(이미지 포함)·턴수 동기화
   if(typeof d.cost==='number'){ costTotal=d.cost; localStorage.setItem(LS+'_cost', String(costTotal)); }
