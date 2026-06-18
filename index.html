@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.55</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.56</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -2019,7 +2019,7 @@ $('btnIllust').onclick=openIllustPopup;
 $('btnInput').onclick=()=>{ const r=$('inputRow'); const show=r.classList.contains('hidden');
   r.classList.toggle('hidden', !show); if(show){ autoGrow(); inp.focus(); } };
 // 매 턴 자동 삽화 토글
-let imgSinceLast=9999;   // 충분히 크게 시작 → 새 게임/새로고침 후 첫 턴에 1장 생성, 이후 N턴마다
+let imgSinceLast=0;   // 0에서 시작 → 시작/첫 턴엔 자동 삽화 없음, 이후 빈도(N턴마다) 따라 생성
 let recapReadySrc=null;  // 트리거 턴에서 생성 '완료'된 그림 → 다음 턴(완성된 시점) 맨 위에 0대기로 표시
 // 자동 삽화 빈도(단일 제어): 0=끔, 1=매턴, 2/3/4=N턴마다. 구버전 cfg.autoIllust(boolean) 호환.
 function autoEveryRaw(){
@@ -2168,7 +2168,7 @@ function newGame(){
   if(typeof charAnchor!=='undefined') charAnchor=null;
   if(typeof charSheetSrc!=='undefined'){ charSheetSrc=null; charSheetKey=''; }
   if(typeof lastIllustSrc!=='undefined') lastIllustSrc=null;
-  if(typeof imgSinceLast!=='undefined') imgSinceLast=9999;   // 새 게임 후 첫 턴에 삽화
+  if(typeof imgSinceLast!=='undefined') imgSinceLast=0;   // 새 게임: 첫 턴엔 자동 삽화 없음
   if(typeof recapReadySrc!=='undefined') recapReadySrc=null;
   pendingIllust=false; if(pendingNote){ pendingNote.remove(); pendingNote=null; }
   clearLog(); $('hud').classList.remove('on'); renderChoices([]);
