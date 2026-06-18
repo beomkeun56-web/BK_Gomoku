@@ -311,7 +311,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.75</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.76</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1468,14 +1468,21 @@ function resolveCfg(){
 
 // API로 보낼 메시지 = (요약 있으면 요약 쌍) + 미요약 최근 메시지
 function buildApiMessages(){
-  if(!summarizeOn) return history.slice();   // 축약 OFF: 전체 대화 그대로
-  const recent=history.slice(summaryUpto);
-  const out=[];
-  if(summary){
-    out.push({role:'user', content:'[지금까지 줄거리 요약 — 반드시 기억하고 이어서 진행하라]\n'+summary});
-    out.push({role:'assistant', content:'네, 줄거리를 숙지했습니다. 이어서 진행하겠습니다.'});
+  let msgs;
+  if(!summarizeOn){ msgs=history.slice(); }   // 축약 OFF: 전체 대화 그대로
+  else {
+    const recent=history.slice(summaryUpto);
+    const out=[];
+    if(summary){
+      out.push({role:'user', content:'[지금까지 줄거리 요약 — 반드시 기억하고 이어서 진행하라]\n'+summary});
+      out.push({role:'assistant', content:'네, 줄거리를 숙지했습니다. 이어서 진행하겠습니다.'});
+    }
+    msgs=out.concat(recent);
   }
-  return out.concat(recent);
+  // 활성 드라마 톤 지시를 '가장 최근 메시지' 위치에 한 번 더 주입(가장 강하게 반영됨). 히스토리엔 저장 안 함.
+  const tr=activeToneReminder();
+  if(tr) msgs=msgs.concat([{role:'user', content:'[연출 지시 — 이번 응답에 반드시 적용할 것]'+tr}]);
+  return msgs;
 }
 
 // OpenRouter에서 Anthropic 계열이면 프롬프트 캐싱 적용 가능
