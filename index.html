@@ -265,24 +265,35 @@
   /* welcome / 메인(홈) 화면 — 전체 오버레이 */
   .welcome{position:fixed; inset:0; z-index:45; overflow-y:auto;
     background:
-      linear-gradient(0deg, rgba(4,7,13,.94) 0%, rgba(4,7,13,.55) 24%, rgba(4,7,13,.10) 46%, rgba(4,7,13,.30) 70%, rgba(4,7,13,.62) 100%),
-      url('hero.jpg') center/cover no-repeat;
-    background-color:#05080f;
+      linear-gradient(0deg, rgba(2,4,8,.97) 0%, rgba(2,4,8,.78) 22%, rgba(2,4,8,.42) 45%, rgba(2,4,8,.55) 70%, rgba(2,4,8,.82) 100%),
+      url('hero.png') center/cover no-repeat;
+    background-color:#03050a;
     display:flex; flex-direction:column; align-items:center; justify-content:flex-end; text-align:center; padding:40px 16px 46px}
   .welcome.gone{display:none}
-  .welcome .inner{max-width:480px; width:100%; background:none; border:none; padding:0 14px}
-  .welcome .big{font-size:2.3rem; font-weight:900; letter-spacing:2px; margin-bottom:22px; color:#f4f7ff;
-    text-shadow:0 2px 10px rgba(0,0,0,.85), 0 0 34px rgba(80,150,230,.35)}
-  .welcome .big .crown{color:#5fd0ff; text-shadow:0 0 20px rgba(95,208,255,.75)}
+  .welcome .inner{max-width:520px; width:100%; background:none; border:none; padding:0 18px;
+    display:flex; flex-direction:column; align-items:center}
+  .welcome .kicker{font-size:.72rem; letter-spacing:4px; text-transform:uppercase; color:#8fa6c8;
+    margin-bottom:12px; text-shadow:0 1px 8px rgba(0,0,0,.9)}
+  .welcome .big{font-size:2.6rem; font-weight:900; letter-spacing:3px; margin-bottom:4px; color:#f4f7ff;
+    text-shadow:0 2px 14px rgba(0,0,0,.9), 0 0 40px rgba(80,150,230,.30); line-height:1.15}
+  .welcome .big .crown{color:#5fd0ff; text-shadow:0 0 22px rgba(95,208,255,.8)}
+  .welcome .tagline{color:#9fb0cc; font-size:.86rem; letter-spacing:.5px; margin-bottom:30px;
+    text-shadow:0 1px 8px rgba(0,0,0,.9)}
+  /* 가느다란 구분선 */
+  .welcome .rule{width:46px; height:1px; margin:0 auto 26px;
+    background:linear-gradient(90deg, transparent, rgba(95,208,255,.7), transparent)}
   .welcome p{color:var(--mut); line-height:1.7; font-size:.92rem}
-  .welcome .cta{margin-top:4px; background:linear-gradient(135deg,#2f7be6 0%,#22b8d6 100%); color:#fff;
-    border:none; border-radius:14px; padding:15px 34px; font-weight:800; font-size:1.05rem; cursor:pointer;
-    letter-spacing:.5px; box-shadow:0 10px 30px rgba(20,120,180,.55); transition:.15s}
-  .welcome .cta:hover{filter:brightness(1.10); transform:translateY(-1px); box-shadow:0 12px 34px rgba(34,160,210,.7)}
-  .welcome .cta2{background:rgba(10,16,28,.55); border:1px solid rgba(150,180,230,.30); color:#dfe9fb;
-    border-radius:12px; padding:11px 18px; font-weight:700; font-size:.9rem; cursor:pointer; transition:.15s; backdrop-filter:blur(4px)}
-  .welcome .cta2:hover{border-color:#5fd0ff; color:#fff; background:rgba(95,208,255,.14)}
-  .welcome-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px}
+  .welcome .cta{min-width:230px; background:linear-gradient(135deg, rgba(20,46,78,.92) 0%, rgba(14,78,98,.92) 100%); color:#eaf3ff;
+    border:1px solid rgba(95,208,255,.30); border-radius:13px; padding:16px 38px; font-weight:800; font-size:1.06rem; cursor:pointer;
+    letter-spacing:3px; box-shadow:0 12px 34px rgba(0,0,0,.6); transition:.18s; backdrop-filter:blur(3px)}
+  .welcome .cta:hover{transform:translateY(-2px); border-color:rgba(95,208,255,.7);
+    box-shadow:0 16px 40px rgba(20,120,160,.5), 0 0 0 1px rgba(95,208,255,.25)}
+  .welcome .cta.ghost{background:rgba(6,10,18,.55); border-color:rgba(120,150,200,.28); color:#c6d4ea; font-size:.98rem; letter-spacing:1.5px; margin-bottom:10px}
+  .welcome-actions{display:flex; gap:4px; justify-content:center; align-items:center; flex-wrap:wrap; margin-top:24px}
+  .welcome-actions button{background:none; border:none; color:#9fb0cc; font-size:.85rem; font-weight:600;
+    cursor:pointer; padding:6px 12px; letter-spacing:.5px; transition:.15s; text-shadow:0 1px 8px rgba(0,0,0,.9)}
+  .welcome-actions button:hover{color:#fff; text-shadow:0 0 14px rgba(95,208,255,.7)}
+  .welcome-actions button + button{border-left:1px solid rgba(140,160,200,.25)}
   .brand{cursor:pointer}
   .feat{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px}
   .feat span{font-size:.74rem; color:#9aa3c7; border:1px solid #2a3050; border-radius:20px; padding:5px 11px}
@@ -296,7 +307,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.63</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.65</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -316,15 +327,16 @@
 <div id="log">
   <div class="welcome" id="welcome">
    <div class="inner">
+    <div class="kicker">정치 권력 시뮬레이션</div>
     <div class="big"><span class="crown">✦</span> Reign of Nations</div>
-    <div>
-      <button class="cta" id="ctaStart">게임 시작하기</button>
-      <button class="cta2" id="ctaContinue" style="display:none">이어서 하기</button>
-    </div>
+    <div class="tagline">한 줄의 선택이 권력의 길을 가른다</div>
+    <div class="rule"></div>
+    <button class="cta ghost" id="ctaContinue" style="display:none">이어서 하기</button>
+    <button class="cta" id="ctaStart">시작</button>
     <div class="welcome-actions">
-      <button class="cta2" id="ctaSave">⬇ 저장</button>
-      <button class="cta2" id="ctaLoad">⬆ 불러오기</button>
-      <button class="cta2" id="ctaCfg">⚙ API 설정</button>
+      <button id="ctaLoad">불러오기</button>
+      <button id="ctaSave">저장</button>
+      <button id="ctaCfg">API 설정</button>
     </div>
    </div>
   </div>
