@@ -75,11 +75,11 @@
   #log{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain;
     padding:16px 14px 10px; font-size:var(--fs)}
   #log::-webkit-scrollbar{width:8px} #log::-webkit-scrollbar-thumb{background:#2a2d36; border-radius:8px}
-  .msg{max-width:820px; margin:0 0 16px; text-align:left}
+  .msg{max-width:820px; margin:0 auto 16px; text-align:left}
   .role{font-size:.78em; font-weight:800; letter-spacing:1px; margin-bottom:6px; color:var(--dim); text-align:left}
   .bubble{border:none; border-radius:0; padding:0; background:transparent; text-align:left}
   .msg.gm{margin-bottom:12px}
-  .msg.user{max-width:820px; margin:22px 0}
+  .msg.user{max-width:820px; margin:22px auto}
   .msg.user .bubble{display:block; background:transparent; border-radius:0;
     padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
     color:#fff; text-align:right; font-weight:800}
@@ -121,7 +121,7 @@
   .md-committed>*:last-child{margin-bottom:0}
 
   /* ===== Choices (회색 말풍선 + 연필) — 본문과 함께 스크롤 ===== */
-  #choices{max-width:820px; margin:0; padding:6px 0 10px; font-size:var(--fs); text-align:left}
+  #choices{max-width:820px; margin:0 auto; padding:6px 0 10px; font-size:var(--fs); text-align:left}
   #choices.empty{display:none}
   .choices-head{display:none}
   .choice-row{display:flex; gap:6px; align-items:flex-start; margin-bottom:10px}
@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.82</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.83</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
