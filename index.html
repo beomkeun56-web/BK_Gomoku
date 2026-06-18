@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.88</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.89</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1695,27 +1695,35 @@ async function runAssistant(){
   const feed=()=>{ const s=stripImgTag(acc); const m=s.match(HEAD_DETECT); typer.setTarget(sanitizeBody(m?s.slice(0,m.index):s));
     const {choices}=splitChoices(s); if(choices.length>=2) renderChoices(choices);
     if(wantImg && !imgStarted){ const p=extractImgTag(acc); if(p && p.length>=10) startImg(p); } };
+  let errored=false;
   try{
     try{
       await streamLLM((tok)=>{ acc+=tok; feed(); });
     }catch(e){
+      errored=true;
       const em=(acc?'\n\n':'')+'⚠️ 오류: '+e.message+'\n\n설정(⚙)에서 제공사/모델/키를 확인하세요. CORS·키·모델명 문제일 수 있습니다.';
       acc+=em; typer.setTarget(stripImgTag(acc));
     }
-    const clean=stripImgTag(acc);   // 화면·저장용([IMG] 제거)
+    const clean=stripImgTag(acc);   // 화면용([IMG] 제거)
     await typer.finish();
     const {body, choices}=splitChoices(clean);
     renderGm(mdEl, sanitizeBody(body), false);
-    history.push({role:'assistant', content:clean}); saveHistory();
-    parseStats(clean); renderChoices(choices);
-    addGmFooter(mdEl.closest('.msg'));
-    if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
-    // 표시는 fillImgBox가 준비 즉시 처리. 여기선 카운터 + 저장(턴 인덱스 확정 후)만
-    if(imgP){
-      imgSinceLast=0;
-      const aidx=lastAssistantIndex();
-      imgP.then(r=>{ if(r && r.src) recordIllust(aidx, r.src, 'end'); });
-    } else if(autoActive() && !/⚠️ 오류/.test(acc)){ imgSinceLast++; }
+    if(errored){
+      // 실패한 턴은 히스토리에 저장하지 않고, 직전 사용자 메시지도 롤백(재시도 시 누적·중복 과금 방지).
+      if(history.length && history[history.length-1].role==='user'){ history.pop(); saveHistory(); }
+      // 오류 메시지는 화면에만 표시(저장 안 함). 같은 행동을 다시 선택/입력하면 깨끗이 재시도됩니다.
+    } else {
+      history.push({role:'assistant', content:clean}); saveHistory();
+      parseStats(clean); renderChoices(choices);
+      addGmFooter(mdEl.closest('.msg'));
+      if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
+      // 표시는 fillImgBox가 준비 즉시 처리. 여기선 카운터 + 저장(턴 인덱스 확정 후)만
+      if(imgP){
+        imgSinceLast=0;
+        const aidx=lastAssistantIndex();
+        imgP.then(r=>{ if(r && r.src) recordIllust(aidx, r.src, 'end'); });
+      } else if(autoActive()){ imgSinceLast++; }
+    }
   } finally {
     busy=false; sendBtn.disabled=false;   // 어떤 경우에도 멈춤(stuck) 방지 — 삽화는 기다리지 않음
     bumpTurn();        // 누적 턴수 +1
