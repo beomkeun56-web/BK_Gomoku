@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.14</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.15</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1593,7 +1593,13 @@ function orSystemMsg(model){
 async function streamOpenAI(model,key,onToken,msgs){
   const orBody={model, stream:true, max_tokens:lenSpec().max, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
-  if(cfg.effort) orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter는 low/medium/high
+  // Claude 계열만 effort(reasoning) 사용. DeepSeek V3.2·GLM 등 '사고 모드' 모델은 끈다 —
+  // 사고가 켜져 있으면 본문이 reasoning 토큰으로 빠져 화면 content가 비고(=텍스트 안 나옴), max_tokens도 낭비됨.
+  if(orModelSupportsCache(model)){
+    if(cfg.effort) orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter는 low/medium/high
+  } else {
+    orBody.reasoning={enabled:false};
+  }
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
