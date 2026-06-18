@@ -311,7 +311,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.76</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.77</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1479,9 +1479,17 @@ function buildApiMessages(){
     }
     msgs=out.concat(recent);
   }
-  // 활성 드라마 톤 지시를 '가장 최근 메시지' 위치에 한 번 더 주입(가장 강하게 반영됨). 히스토리엔 저장 안 함.
+  // 활성 드라마 톤 지시를 '가장 최근 메시지'에 합쳐 주입(가장 강하게 반영). 히스토리엔 저장 안 함.
+  // user 메시지 연속을 만들지 않도록, 마지막이 user 문자열이면 그 뒤에 덧붙인다.
   const tr=activeToneReminder();
-  if(tr) msgs=msgs.concat([{role:'user', content:'[연출 지시 — 이번 응답에 반드시 적용할 것]'+tr}]);
+  if(tr && msgs.length){
+    const last=msgs[msgs.length-1];
+    if(last && last.role==='user' && typeof last.content==='string'){
+      msgs=msgs.slice(0,-1).concat([{role:'user', content:last.content+'\n\n[연출 지시 — 이번 응답에 반드시 적용]'+tr}]);
+    } else {
+      msgs=msgs.concat([{role:'user', content:'[연출 지시 — 이번 응답에 반드시 적용]'+tr}]);
+    }
+  }
   return msgs;
 }
 
@@ -1512,7 +1520,7 @@ function orSystemMsg(model){
 }
 
 async function streamOpenAI(model,key,onToken,msgs){
-  const orBody={model, stream:true, max_tokens:6000, temperature:0.9,
+  const orBody={model, stream:true, max_tokens:9000, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
   if(cfg.effort) orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter는 low/medium/high
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
@@ -1534,7 +1542,7 @@ async function streamOpenAI(model,key,onToken,msgs){
 function anthropicSystem(){ const arr=[{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); return arr; }
 
 async function streamAnthropic(model,key,onToken,msgs){
-  const body={model, max_tokens:6000, system:anthropicSystem(), stream:true,
+  const body={model, max_tokens:9000, system:anthropicSystem(), stream:true,
       messages:msgs.map(m=>({role:m.role, content:m.content}))};
   if(cfg.effort) body.output_config={effort:cfg.effort};   // 사고 강도(effort)
   const res=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1562,7 +1570,7 @@ async function streamGemini(model,key,onToken,msgs){
     body:JSON.stringify({
       system_instruction:{parts:[{text:sysText()}]},
       contents,
-      generationConfig:{maxOutputTokens:6000, temperature:0.9}
+      generationConfig:{maxOutputTokens:9000, temperature:0.9}
     })
   });
   await readSSE(res,(data)=>{
