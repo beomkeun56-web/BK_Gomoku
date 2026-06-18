@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.10</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.11</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -3402,8 +3402,10 @@ async function gbShow(id){
   const {mdEl}=addMessage('assistant','',true);
   gbSkip=false;
   const skip=()=>{ gbSkip=true; };
-  logEl.addEventListener('click', skip, {once:true});     // 화면 탭하면 즉시 완성
+  // 주의: 선택지 클릭이 logEl로 버블링되는 중에 바로 붙이면 그 클릭에 스킵이 발동됨 → 다음 틱에 등록
+  const armTimer=setTimeout(()=>{ logEl.addEventListener('click', skip); }, 0);
   await gbTypeRender(mdEl, sanitizeBody(n.body));
+  clearTimeout(armTimer);
   logEl.removeEventListener('click', skip);
   // 삽화: 자동 빈도마다(설정 켜진 경우)
   if(autoActive() && (gbTurn % autoEvery() === 0)){
