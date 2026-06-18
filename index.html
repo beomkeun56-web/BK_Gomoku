@@ -311,7 +311,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.80</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.81</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -900,7 +900,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 
 (공통) 위 [한다]/[안 한다]를 우선으로 지켜 톤 간 차이를 분명히 한다. 답답한 고구마 전개는 길게 끌지 않는다(막힌 국면은 적절히 풀어줌). 성묘사는 암시·감정선 중심, 노골적 묘사 금지.
 평소 턴도 절대 밋밋하게 흘리지 않는다 — 모든 장면에 이해관계의 긴장, 누군가의 숨은 의도, 다음을 암시하는 복선 한 가닥을 깔아 둔다(겉은 평온해도 물밑은 늘 움직인다).
-(밀도 보장 — 매우 중요) '매 턴 사건을 터뜨리라'는 지시가 이야기를 사건 나열·요약으로 얇게 만들면 안 된다. 사건의 '개수'보다 '깊이'가 우선이다. 한 턴은 충격 사건 여러 개를 빠르게 훑는 목록이 아니라, 보통 1개(많아야 2개)의 사건을 하나의 살아있는 장면으로 충실히 전개한 것이어야 한다: 원인 → 인물들의 구체적 반응·표정·대사 → 심리(짧은 속내) → 그 사건이 남긴 여파·관계 변화·다음 복선까지 인과로 촘촘히 잇는다. 막장/코믹이라도 이 '장면의 밀도'를 유지하고, 디테일·긴장·감정선이 살아있게 쓴다(빠르게 '~했다, ~터졌다' 식으로 건너뛰지 말 것). 즉 톤은 강하게, 전개는 깊게.
+(밀도 보장) '매 턴 사건을 터뜨리라'는 지시가 사건 나열·요약으로 얇아지면 안 된다. 보통 1개(많아야 2개)의 사건을 살아있는 장면으로 전개한다: 원인 → 인물 반응·대사 → 짧은 심리 → 여파·복선. 단 ★[분량 절제 — 중요] 깊이는 '길이'가 아니라 '선택과 임팩트'로 낸다. 본문은 간결하게: 핵심 장면 위주로 짧고 강하게 쓰고, 불필요한 수식·중복·곁가지 묘사로 길게 늘이지 말 것(전체 본문은 대략 공백 포함 1200자 안팎을 넘기지 않도록 절제). 톤은 강하게, 글은 간결하게.
 
 [매 턴 출력 형식]
 ① 제목+요약:
@@ -1530,7 +1530,7 @@ function orSystemMsg(model){
 }
 
 async function streamOpenAI(model,key,onToken,msgs){
-  const orBody={model, stream:true, max_tokens:9000, temperature:0.9,
+  const orBody={model, stream:true, max_tokens:7000, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
   if(cfg.effort) orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter는 low/medium/high
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
@@ -1552,7 +1552,7 @@ async function streamOpenAI(model,key,onToken,msgs){
 function anthropicSystem(){ const arr=[]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); arr.push({type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}); return arr; }
 
 async function streamAnthropic(model,key,onToken,msgs){
-  const body={model, max_tokens:9000, system:anthropicSystem(), stream:true,
+  const body={model, max_tokens:7000, system:anthropicSystem(), stream:true,
       messages:msgs.map(m=>({role:m.role, content:m.content}))};
   if(cfg.effort) body.output_config={effort:cfg.effort};   // 사고 강도(effort)
   const res=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1580,7 +1580,7 @@ async function streamGemini(model,key,onToken,msgs){
     body:JSON.stringify({
       system_instruction:{parts:[{text:sysText()}]},
       contents,
-      generationConfig:{maxOutputTokens:9000, temperature:0.9}
+      generationConfig:{maxOutputTokens:7000, temperature:0.9}
     })
   });
   await readSSE(res,(data)=>{
