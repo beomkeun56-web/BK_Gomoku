@@ -907,7 +907,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 
 (공통) 위 [한다]/[안 한다]를 우선으로 지켜 톤 간 차이를 분명히 한다. 답답한 고구마 전개는 길게 끌지 않는다(막힌 국면은 적절히 풀어줌). 성묘사는 암시·감정선 중심, 노골적 묘사 금지.
 평소 턴도 절대 밋밋하게 흘리지 않는다 — 모든 장면에 이해관계의 긴장, 누군가의 숨은 의도, 다음을 암시하는 복선 한 가닥을 깔아 둔다(겉은 평온해도 물밑은 늘 움직인다).
-(밀도 보장) '매 턴 사건을 터뜨리라'는 지시가 사건 나열·요약으로 얇아지면 안 된다. 보통 1개(많아야 2개)의 사건을 살아있는 장면으로 전개한다: 원인 → 인물 반응·대사 → 짧은 심리 → 여파·복선. 단 ★[분량 절제 — 중요] 깊이는 '길이'가 아니라 '선택과 임팩트'로 낸다. 본문은 간결하게: 핵심 장면 위주로 짧고 강하게 쓰고, 불필요한 수식·중복·곁가지 묘사로 길게 늘이지 말 것(전체 본문은 대략 공백 포함 1200자 안팎을 넘기지 않도록 절제). 톤은 강하게, 글은 간결하게.
+(밀도 보장) '매 턴 사건을 터뜨리라'는 지시가 사건 나열·요약으로 얇아지면 안 된다. 보통 1개(많아야 2개)의 사건을 살아있는 장면으로 전개한다: 원인 → 인물 반응·대사 → 짧은 심리 → 여파·복선. 단 ★[분량 절제 — 매우 중요] 깊이는 '길이'가 아니라 '선택과 임팩트'로 낸다. 본문은 반드시 간결하게: 핵심 장면 위주로 짧고 강하게 쓰고, 불필요한 수식·중복·곁가지 묘사·장황한 서술을 금지한다(전체 본문은 대략 공백 포함 900자 안팎, 길어도 1100자를 넘기지 말 것 — 비용·가독성). 장면은 1개 위주(많아야 2개), 한 장면을 길게 늘이지 말 것. 톤은 강하게, 글은 짧고 굵게.
 
 [매 턴 출력 형식]
 ① 제목+요약:
@@ -1036,7 +1036,7 @@ function activeToneReminder(){
   if(t==='__custom__') return buildCustomToneText();
   return '\n\n[★현재 활성 드라마 톤 = "'+t+'"] 이번 게임은 이 톤을 최우선으로 유지한다(다른 톤처럼 밋밋하게 흐르지 말 것). '+presetMandate(t)+'위 [톤 연출]에서 이 톤 항목대로, 본문·선택지 모두 이 톤이 분명히 드러나게 써라. 톤은 다시 묻지 말 것.';
 }
-function sysText(){ return activeToneReminder() + '\n\n' + SYSTEM_PROMPT; }
+function sysText(){ return SYSTEM_PROMPT + activeToneReminder(); }
 let cfg = loadCfg();
 let history = loadHistory();   // [{role:'user'|'assistant', content}] — 전체 기록(표시·복원용)
 let stats = loadStats();       // {국력,경제,...} last known
@@ -1557,7 +1557,7 @@ function orSystemMsg(model){
 }
 
 async function streamOpenAI(model,key,onToken,msgs){
-  const orBody={model, stream:true, max_tokens:7000, temperature:0.9,
+  const orBody={model, stream:true, max_tokens:5000, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
   if(cfg.effort) orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter는 low/medium/high
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
@@ -1576,10 +1576,10 @@ async function streamOpenAI(model,key,onToken,msgs){
 }
 
 // Anthropic system: cache_control로 프롬프트 캐싱(반복되는 규칙부 토큰 절감)
-function anthropicSystem(){ const arr=[]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); arr.push({type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}); return arr; }
+function anthropicSystem(){ const arr=[{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); return arr; }
 
 async function streamAnthropic(model,key,onToken,msgs){
-  const body={model, max_tokens:7000, system:anthropicSystem(), stream:true,
+  const body={model, max_tokens:5000, system:anthropicSystem(), stream:true,
       messages:msgs.map(m=>({role:m.role, content:m.content}))};
   if(cfg.effort) body.output_config={effort:cfg.effort};   // 사고 강도(effort)
   const res=await fetch('https://api.anthropic.com/v1/messages',{
