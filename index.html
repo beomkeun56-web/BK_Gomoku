@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.53</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.54</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -2002,7 +2002,7 @@ function modeShort(tone){
 }
 function updateModeBtn(){
   const b=$('btnMode'); if(!b) return;
-  b.textContent = '모드: '+modeShort(currentTone());
+  b.textContent = modeShort(currentTone());
 }
 function openModePopup(){
   document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on', x.dataset.tone===currentTone()));
