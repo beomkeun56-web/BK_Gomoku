@@ -311,7 +311,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.74</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.75</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -996,10 +996,16 @@ const CM_LABELS={
 };
 function cmGet(k,def){ const v=parseInt(cfg['cm_'+k]); return isNaN(v)?def:v; }
 function buildCustomToneText(){
-  const i=CM_LABELS.intensity[cmGet('intensity',2)], e=CM_LABELS.event[cmGet('event',1)],
-        c=CM_LABELS.comic[cmGet('comic',1)], s=CM_LABELS.cider[cmGet('cider',1)], r=CM_LABELS.romance[cmGet('romance',0)];
-  return '\n\n[★커스텀 드라마 톤 — 아래 수치대로 매 턴 톤을 조절하라] 전반 수위: '+i+'. '+e+'. '+c+'. '+s+'. '+r+'. '
-    +'수치가 낮은(0) 요소는 거의 빼고, 높을수록 그 요소를 강하게 살린다. 위 [톤 연출]의 프리셋보다 이 커스텀 수치를 우선하되, 인과·개연성과 장면 밀도는 유지한다. 톤은 다시 묻지 말 것.';
+  const iv=cmGet('intensity',2), ev=cmGet('event',1), cv=cmGet('comic',1), sv=cmGet('cider',1), rv=cmGet('romance',0);
+  let p='\n\n[★커스텀 드라마 톤 — 이 게임의 톤을 정의하는 최우선 지시. 아래 수치대로 매 턴 강하게 적용하라] '
+    +'전반 수위: '+CM_LABELS.intensity[iv]+'. '+CM_LABELS.event[ev]+'. '+CM_LABELS.comic[cv]+'. '+CM_LABELS.cider[sv]+'. '+CM_LABELS.romance[rv]+'. ';
+  p+='이 수치가 위 [톤 연출] 프리셋과, 본 시스템 프롬프트의 진지·현실 기본 성향보다 우선한다. 수치 0인 요소는 빼고, 3~4인 요소는 매 턴 분명히 드러나게 한다. ';
+  if(iv>=3||ev>=2) p+='★잔잔한 일상 턴·요약 턴 금지. 아래 [전개 속도(천천히)]와 [초반 등원 절차] 규칙보다 이 톤을 우선해, 등원 절차 중이라도 매 턴 사건·갈등·반전을 확실히 터뜨려라(하우스 오브 카드식 절제·점진 금지). ';
+  if(cv>=3) p+='★유머·드립·코믹 상황을 매 턴 넣어 가볍고 유쾌하게 굴린다. ';
+  if(sv>=3) p+='★통쾌한 응징·역전·사이다를 자주 주고, 답답한 고구마 전개는 금지. ';
+  if(rv>=2) p+='★치정·로맨스 라인을 적극적으로 전개한다. ';
+  p+='이전 턴까지 진지·잔잔했더라도 분위기를 끌고 가지 말고 지금 턴부터 즉시 이 톤으로 전환하라. 단 인과·개연성과 장면 밀도는 유지. 톤은 다시 묻지 말 것.';
+  return p;
 }
 function activeToneReminder(){
   const t=currentTone();
