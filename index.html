@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.92</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.93</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1582,10 +1582,19 @@ async function streamOpenAI(model,key,onToken,msgs){
   });
 }
 
+// GPT(OpenAI)는 양식을 덜 지켜서, 자주 어기는 핵심 규칙만 명령형으로 보강
+function gptFormatAddendum(){
+  return '\n\n[★출력 양식 — 반드시 지켜라(GPT 보강)]\n'
+    +'1) 매 응답 구조 고정: 「# **{국기} {국가} — {짧은 사건 제목}**」 한 줄 → 「> 한 줄 요약」 → 본문(짧은 장면 1~2개) → 맨 끝에 선택지 3개.\n'
+    +'2) 선택지는 응답 맨 끝에 정확히 3개, 각 줄 형식 `1. "주인공 1인칭 대사"` (큰따옴표, 15~35자). 절대 빠뜨리지 말 것.\n'
+    +'3) 소제목(##)은 짧은 명사구만(예: "예산결산위 기습 질의"). 문장형(~다/생겼다)·해설형(그리고/여기서/한편/오늘의 ~)·감탄형(웃긴/황당/충격/개그/사이다) 제목 금지.\n'
+    +'4) 평소 턴에는 상태창·스탯 수치·변동 알림을 출력하지 말 것(사용자가 \'상태\'라고 입력할 때만).\n'
+    +'5) 본문은 공백 포함 1200자 안팎으로 간결하게. 활성 드라마 톤을 본문과 선택지 모두에 분명히 반영.';
+}
 // OpenAI(GPT) 직접 연결 — chat/completions (브라우저 CORS 허용됨)
 async function streamOpenAIDirect(model,key,onToken,msgs){
   const body={model, stream:true, stream_options:{include_usage:true}, max_completion_tokens:7000,
-      messages:[{role:'system', content:sysText()}, ...msgs]};
+      messages:[{role:'system', content:sysText()+gptFormatAddendum()}, ...msgs]};
   // o·gpt-5 계열은 추론 모델 — 사고 강도를 낮춰 첫 출력 지연·비용을 줄인다. 미설정 시 'minimal'(가장 빠름)
   if(/^(o\d|gpt-5)/i.test(model)){
     body.reasoning_effort = cfg.effort ? (cfg.effort==='max'?'high':cfg.effort) : 'minimal';
