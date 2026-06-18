@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.02</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.03</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -3066,22 +3066,25 @@ function gbShow(id){
   gbRenderChoices(n);
   scrollDown();
 }
+function gbChoiceBtn(html, onclick, accent){
+  const row=document.createElement('div'); row.className='choice-row';
+  const el=document.createElement('button'); el.className='choice'; el.innerHTML=html; if(accent) el.style.borderColor='#5fd0ff';
+  el.onclick=()=>{ if(busy) return; onclick(); };
+  row.appendChild(el); choicesEl.appendChild(row); return el;
+}
 function gbRenderChoices(n){
   const choices=(n.choices||[]);
   choicesEl.className=''; choicesEl.innerHTML='';
   if(!choices.length){
-    const r=document.createElement('div'); r.className='choice'; r.innerHTML='<b>📖 처음부터 다시 시작</b>'; r.onclick=startGamebook;
-    choicesEl.appendChild(r);
+    gbChoiceBtn('<b>📖 처음부터 다시 시작</b>', startGamebook);
   } else {
     choices.forEach(c=>{
-      const el=document.createElement('div'); el.className='choice'; el.innerHTML='<b>'+esc(c.t)+'</b>';
-      el.onclick=()=>{
+      gbChoiceBtn('<b>'+esc(c.t)+'</b>', ()=>{
         addMessage('user', c.t.replace(/^"|"$/g,''));
         if(c.to==='__restart__'){ startGamebook(); return; }
         if(c.to==='__ai__'){ gbFreeInput('앞의 이야기에 자연스럽게 이어서 다음 전개를 만들어줘.', '(이야기 이어가기)'); return; }
         gbShow(c.to);
-      };
-      choicesEl.appendChild(el);
+      });
     });
   }
   if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl);
@@ -3101,10 +3104,7 @@ async function gbFreeInput(text, displayText){
 }
 function gbAddReturnButton(){
   if(!gbOn) return;
-  const b=document.createElement('div'); b.className='choice'; b.style.borderColor='#5fd0ff';
-  b.innerHTML='<b>📖 정해진 스토리로 복귀</b>';
-  b.onclick=()=>{ gbAI=false; history=[]; saveHistory(); addMessage('user','(정해진 스토리로 복귀)'); gbShow(gbId); };
-  choicesEl.appendChild(b);
+  gbChoiceBtn('<b>📖 정해진 스토리로 복귀</b>', ()=>{ gbAI=false; history=[]; saveHistory(); addMessage('user','(정해진 스토리로 복귀)'); gbShow(gbId); }, true);
   if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl);
 }
 $('ctaGamebook').onclick=startGamebook;
