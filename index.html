@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>국가의 시대 — 텍스트 국가운영 시뮬레이션</title>
+<title>Reign of Nations — 텍스트 국가운영 시뮬레이션</title>
 <style>
   :root{
     --bg:#000; --panel:#000; --panel2:#000; --line:#333;
@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.60</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.61</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -313,7 +313,7 @@
 <div id="log">
   <div class="welcome" id="welcome">
    <div class="inner">
-    <div class="big"><span class="crown">♛</span> 국가의 시대</div>
+    <div class="big"><span class="crown">♛</span> Reign of Nations</div>
     <p>당신은 한 나라의 지도자입니다. 매 분기 내려지는 결정이 국력·경제·군사·외교·민심을 바꾸고, 역사의 흐름을 가릅니다. AI 게임 마스터가 당신의 선택에 따라 세계를 움직입니다.</p>
     <div class="feat">
       <span>OpenRouter · Gemini · Claude</span><span>실시간 스탯 시각화</span><span>팝업 선택지</span><span>저장 / 이어하기</span>
@@ -686,37 +686,37 @@
     <div class="field">
       <label>나 (지도자/주인공)</label>
       <div class="row">
-        <input type="text" id="suName" placeholder="이름 (예: 강준혁)">
-        <select id="suSex" style="max-width:110px"><option value="">성별</option><option>남</option><option>여</option></select>
+        <input type="text" id="suName" placeholder="이름 (예: 강준혁)" value="지범근">
+        <select id="suSex" style="max-width:110px"><option value="">성별</option><option selected>남</option><option>여</option></select>
       </div>
-      <div class="ex"><button data-t="suName" data-v="강준혁">강준혁</button><button data-t="suName" data-v="윤서진">윤서진</button><button data-t="suName" data-v="박도현">박도현</button></div>
+      <div class="ex"><button data-t="suName" data-v="지범근">지범근</button><button data-t="suName" data-v="강준혁">강준혁</button><button data-t="suName" data-v="윤서진">윤서진</button><button data-t="suName" data-v="오세란">오세란</button><button data-t="suName" data-v="한재민">한재민</button></div>
       <div class="row" style="margin-top:8px">
-        <input type="text" id="suAge" placeholder="나이 (예: 42)" style="max-width:130px">
-        <input type="text" id="suArea" placeholder="지역구/출신·배경 (예: 서울 마포을)">
+        <input type="text" id="suAge" placeholder="나이 (예: 42)" style="max-width:130px" value="35">
+        <input type="text" id="suArea" placeholder="지역구/출신·배경 (예: 서울 마포을)" value="강남">
       </div>
-      <div class="ex"><button data-t="suAge" data-v="38">38세</button><button data-t="suAge" data-v="45">45세</button><button data-t="suAge" data-v="54">54세</button>
-        <button data-t="suArea" data-v="서울 마포을">서울 마포을</button><button data-t="suArea" data-v="부산 해운대갑">부산 해운대갑</button><button data-t="suArea" data-v="경기 성남 분당">성남 분당</button></div>
-      <input type="text" id="suParty" placeholder="소속 정당·계파 (선택)" style="margin-top:8px">
-      <div class="ex"><button data-t="suParty" data-v="국민통합당(여당)">국민통합당</button><button data-t="suParty" data-v="개혁신당">개혁신당</button><button data-t="suParty" data-v="무소속">무소속</button></div>
-      <input type="text" id="suPersona" placeholder="나의 성향·페르소나 (예: 청렴·강단, 개혁가)" style="margin-top:8px">
-      <div class="ex"><button data-t="suPersona" data-v="청렴·강단의 개혁가">청렴·강단 개혁가</button><button data-t="suPersona" data-v="노련한 실리주의 협상가">실리주의 협상가</button><button data-t="suPersona" data-v="냉철한 야심가">냉철한 야심가</button></div>
+      <div class="ex"><button data-t="suAge" data-v="35">35세</button><button data-t="suAge" data-v="41">41세</button><button data-t="suAge" data-v="49">49세</button><button data-t="suAge" data-v="58">58세</button>
+        <button data-t="suArea" data-v="강남">강남</button><button data-t="suArea" data-v="서울 마포을">마포을</button><button data-t="suArea" data-v="부산 해운대갑">해운대갑</button><button data-t="suArea" data-v="광주 서구">광주 서구</button><button data-t="suArea" data-v="대구 수성갑">수성갑</button></div>
+      <input type="text" id="suParty" placeholder="소속 정당·계파 (선택)" style="margin-top:8px" value="민주당">
+      <div class="ex"><button data-t="suParty" data-v="민주당">민주당</button><button data-t="suParty" data-v="국민의힘">국민의힘</button><button data-t="suParty" data-v="개혁신당">개혁신당</button><button data-t="suParty" data-v="정의당">정의당</button><button data-t="suParty" data-v="무소속">무소속</button></div>
+      <input type="text" id="suPersona" placeholder="나의 성향·페르소나 (예: 청렴·강단, 개혁가)" style="margin-top:8px" value="실리주의 협상가">
+      <div class="ex"><button data-t="suPersona" data-v="실리주의 협상가">실리주의 협상가</button><button data-t="suPersona" data-v="청렴·강단의 개혁가">청렴 개혁가</button><button data-t="suPersona" data-v="냉철한 야심가">냉철한 야심가</button><button data-t="suPersona" data-v="대중을 휘어잡는 포퓰리스트">포퓰리스트</button><button data-t="suPersona" data-v="원칙주의 강성 투사">강성 투사</button></div>
     </div>
 
     <div class="field">
       <label>핵심 보좌관 / 측근</label>
       <div class="row">
-        <input type="text" id="suAideName" placeholder="이름 (예: 이민정)">
-        <select id="suAideSex" style="max-width:110px"><option value="">성별</option><option>남</option><option>여</option></select>
+        <input type="text" id="suAideName" placeholder="이름 (예: 이민정)" value="이채영">
+        <select id="suAideSex" style="max-width:110px"><option value="">성별</option><option>남</option><option selected>여</option></select>
       </div>
-      <div class="ex"><button data-t="suAideName" data-v="이민정">이민정</button><button data-t="suAideName" data-v="한승우">한승우</button><button data-t="suAideName" data-v="김도현">김도현</button></div>
-      <input type="text" id="suAidePersona" placeholder="역할·페르소나 (예: 까탈스럽지만 일 잘하는 비서실장)" style="margin-top:8px">
-      <div class="ex"><button data-t="suAidePersona" data-v="까탈스럽지만 일 잘하는 비서실장">까탈스런 비서실장</button><button data-t="suAidePersona" data-v="충성스러운 책사형 참모">충성스런 책사</button><button data-t="suAidePersona" data-v="야망 있는 젊은 전략가">야망형 전략가</button></div>
+      <div class="ex"><button data-t="suAideName" data-v="이채영">이채영</button><button data-t="suAideName" data-v="이민정">이민정</button><button data-t="suAideName" data-v="한승우">한승우</button><button data-t="suAideName" data-v="서지안">서지안</button><button data-t="suAideName" data-v="김도현">김도현</button></div>
+      <input type="text" id="suAidePersona" placeholder="역할·페르소나 (예: 까탈스럽지만 일 잘하는 비서실장)" style="margin-top:8px" value="섹시한 말투의 매력적인 일잘하는 여비서">
+      <div class="ex"><button data-t="suAidePersona" data-v="섹시한 말투의 매력적인 일잘하는 여비서">섹시한 매력 여비서</button><button data-t="suAidePersona" data-v="까탈스럽지만 일 잘하는 비서실장">까탈스런 비서실장</button><button data-t="suAidePersona" data-v="충성스러운 책사형 참모">충성스런 책사</button><button data-t="suAidePersona" data-v="능청스러운 마당발 정무참모">마당발 정무참모</button><button data-t="suAidePersona" data-v="야망 있는 젊은 전략가">야망형 전략가</button></div>
     </div>
 
     <div class="field">
       <label>추가 설정 (자유)</label>
-      <input type="text" id="suExtra" placeholder="가족·라이벌·배경 사연 등 자유롭게">
-      <div class="ex"><button data-t="suExtra" data-v="정치 명문가 출신, 가업처럼 정치를 물려받음">정치 명문가 출신</button><button data-t="suExtra" data-v="자수성가한 시민운동가 출신">시민운동가 출신</button><button data-t="suExtra" data-v="검사 출신의 강골, 적이 많음">검사 출신 강골</button></div>
+      <input type="text" id="suExtra" placeholder="가족·라이벌·배경 사연 등 자유롭게" value="검사출신">
+      <div class="ex"><button data-t="suExtra" data-v="검사 출신, 적이 많음">검사 출신</button><button data-t="suExtra" data-v="정치 명문가 출신, 가업처럼 정치를 물려받음">정치 명문가</button><button data-t="suExtra" data-v="자수성가한 시민운동가 출신">시민운동가 출신</button><button data-t="suExtra" data-v="재벌가 사위, 비밀스러운 뒷배">재벌가 사위</button><button data-t="suExtra" data-v="군 장성 출신의 강골">군 장성 출신</button></div>
     </div>
 
     <button class="save-btn" id="setupGo">이 설정으로 시작</button>
