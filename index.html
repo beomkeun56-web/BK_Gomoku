@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.13</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.14</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -424,6 +424,17 @@
         <option value="max">max (가장 똑똑·비쌈)</option>
       </select>
       <div class="hint">사고(thinking) 깊이를 조절해 비용·속도·지능을 조절합니다. <b>low</b>일수록 출력 토큰↓ → 저렴·빠름. 소넷 4.6은 기본이 high라, 비용을 줄이려면 low/medium을 권장. (Gemini에는 적용 안 됨)</div>
+    </div>
+
+    <div class="field">
+      <label>출력 분량 (한 턴 길이)</label>
+      <select id="lenSel">
+        <option value="vshort">매우 짧게 (~400자 · 가장 저렴)</option>
+        <option value="short">짧게 (~700자)</option>
+        <option value="normal">보통 (~1,100자)</option>
+        <option value="long">길게 (~2,000자 · 가장 비쌈)</option>
+      </select>
+      <div class="hint">한 턴 본문 길이를 직접 정합니다. 짧을수록 출력 토큰↓ → <b>비용·시간 절감</b>. 비용이 부담되면 <b>짧게</b>를 권장합니다.</div>
     </div>
 
     <div style="border-top:1px solid var(--line); margin:6px 0 16px"></div>
@@ -910,7 +921,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 (밀도 보장) '매 턴 사건을 터뜨리라'는 지시가 사건 나열·요약으로 얇아지면 안 된다. 보통 1개(많아야 2개)의 사건을 살아있는 장면으로 전개한다: 원인 → 인물 반응·대사 → 짧은 심리 → 여파·복선. 단 ★[분량 절제 — 중요] 깊이는 '길이'가 아니라 '선택과 임팩트'로 낸다. 본문은 간결하게: 핵심 장면 위주로 짧고 강하게 쓰고, 불필요한 수식·중복·곁가지 묘사로 길게 늘이지 말 것(전체 본문은 대략 공백 포함 1200자 안팎을 넘기지 않도록 절제). 톤은 강하게, 글은 간결하게.
 
 [매 턴 출력 형식]
-① 제목+요약:
+① 제목+요약: ★[필수 — 생략 절대 금지] 매 턴 응답의 가장 첫 줄은 반드시 아래 형식의 '# 제목'으로 시작한다(제목 없이 본문부터 시작하지 말 것). 제목은 명사구로, 그 턴의 핵심 사건을 담담히 가리킨다.
 # **{국기} {국가} — {핵심 사건}**
 > {한 문장 결과 요약}
 ② 상황 전개: 보통 2개 정도의 짧은 장면(step)으로(소제목 ##은 0~2개). 인물 발언은 > 인용, 데이터는 표. (여러 날짜·사건을 길게 나열하지 말 것 — 위 [구성·분량] 규칙 준수)
@@ -1031,10 +1042,26 @@ function presetMandate(t){
   if(/혼합/.test(t)) return '★평소엔 진지한 현실 정치, 대략 5~6턴에 한 번 막장 이벤트(스캔들·치정·배신·충격 반전)를 크게 터뜨려 카타르시스. ';
   return '';
 }
+// 출력 분량 설정 — UI에서 사용자가 직접 선택. chars=프롬프트 목표치, max=max_tokens 안전 상한
+function lenSpec(){
+  switch(cfg.outLen){
+    case 'vshort': return {chars:'350~450자', max:1500};
+    case 'short':  return {chars:'600~800자', max:2200};
+    case 'long':   return {chars:'1800~2200자', max:5000};
+    case 'normal':
+    default:       return {chars:'1000~1200자', max:3000};
+  }
+}
+function lenMandate(){
+  const s=lenSpec();
+  return '\n\n[★출력 분량 — 엄수] 이번 턴 본문 전체를 공백 포함 '+s.chars+' 범위로 쓴다. 이 상한을 넘겨 길게 늘어뜨리지 말 것(수식·곁가지·중복 묘사 절제, 핵심 장면만). 선택지 텍스트는 이 분량 계산에서 제외한다.';
+}
 function activeToneReminder(){
   const t=currentTone();
-  if(t==='__custom__') return buildCustomToneText();
-  return '\n\n[★현재 활성 드라마 톤 = "'+t+'"] 이번 게임은 이 톤을 최우선으로 유지한다(다른 톤처럼 밋밋하게 흐르지 말 것). '+presetMandate(t)+'위 [톤 연출]에서 이 톤 항목대로, 본문·선택지 모두 이 톤이 분명히 드러나게 써라. 톤은 다시 묻지 말 것.';
+  const base = (t==='__custom__')
+    ? buildCustomToneText()
+    : '\n\n[★현재 활성 드라마 톤 = "'+t+'"] 이번 게임은 이 톤을 최우선으로 유지한다(다른 톤처럼 밋밋하게 흐르지 말 것). '+presetMandate(t)+'위 [톤 연출]에서 이 톤 항목대로, 본문·선택지 모두 이 톤이 분명히 드러나게 써라. 톤은 다시 묻지 말 것.';
+  return base + lenMandate();
 }
 function sysText(){ return activeToneReminder() + '\n\n' + SYSTEM_PROMPT; }
 let cfg = loadCfg();
@@ -1339,11 +1366,18 @@ function sanitizeBody(t){
     if(/^(국력|경제|군사|외교|민심|국방|군사력|외교력)\s*\d{1,3}\b.*[▲▼]/.test(s)) return false;
     if(/^과제\s*(달성|실패|신규)\s*[:：]/.test(s)) return false;
     // 해설형/문장형 소제목 제거 (예: "## ✦ 그리고 여기서 개그가 터졌다", "오늘의 황당한 사건")
-    const hm=s.match(/^#{1,6}\s*(.+)$/);
+    const hm=s.match(/^(#{1,6})\s*(.+)$/);
     if(hm){
-      const title=hm[1].replace(/[✦★*_`]/g,'').trim();
-      if(/(그리고|여기서|한편|웃긴|웃음|황당|충격|반전|개그|사이다|진짜|대박|경악|빵|오늘의|에피소드|활약)/.test(title)) return false;
-      if(/(다|요|까)[.!?]?$|[!?]$/.test(title)) return false;   // 문장·감탄형 제목
+      const level=hm[1].length;
+      const title=hm[2].replace(/[✦★*_`]/g,'').trim();
+      const editorial=/(그리고|여기서|한편|오늘의|에피소드|활약|개그)/;          // 메타·연출 라벨 — 어느 레벨이든 금지
+      const evaluative=/(웃긴|웃음|황당|충격|반전|진짜|대박|경악|빵|사이다)/;     // 평가·감탄 수식어
+      if(editorial.test(title)) return false;
+      // 평가·감탄·문장형 제거는 소제목(##~)에만 적용 — 메인 제목(#)은 보존(모델이 '~다'로 끝내도 제목이 사라지지 않게)
+      if(level>=2){
+        if(evaluative.test(title)) return false;
+        if(/(다|요|까)[.!?]?$|[!?]$/.test(title)) return false;   // 문장·감탄형 소제목
+      }
     }
     return true;
   }).join('\n');
@@ -1557,7 +1591,7 @@ function orSystemMsg(model){
 }
 
 async function streamOpenAI(model,key,onToken,msgs){
-  const orBody={model, stream:true, max_tokens:7000, temperature:0.9,
+  const orBody={model, stream:true, max_tokens:lenSpec().max, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
   if(cfg.effort) orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter는 low/medium/high
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
@@ -1579,7 +1613,7 @@ async function streamOpenAI(model,key,onToken,msgs){
 function anthropicSystem(){ const arr=[]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); arr.push({type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}); return arr; }
 
 async function streamAnthropic(model,key,onToken,msgs){
-  const body={model, max_tokens:7000, system:anthropicSystem(), stream:true,
+  const body={model, max_tokens:lenSpec().max, system:anthropicSystem(), stream:true,
       messages:msgs.map(m=>({role:m.role, content:m.content}))};
   // 사고 강도(effort)는 지원 모델에만 전송 (Opus 4.5+/Sonnet 4.6+). Haiku 등 미지원 모델은 400 발생.
   if(cfg.effort && /(opus-4-[5-9])|(sonnet-4-[6-9])|(opus-4\.[5-9])|(sonnet-4\.[6-9])/i.test(model)) body.output_config={effort:cfg.effort};
@@ -1608,7 +1642,7 @@ async function streamGemini(model,key,onToken,msgs){
     body:JSON.stringify({
       system_instruction:{parts:[{text:sysText()}]},
       contents,
-      generationConfig:{maxOutputTokens:7000, temperature:0.9}
+      generationConfig:{maxOutputTokens:lenSpec().max, temperature:0.9}
     })
   });
   await readSSE(res,(data)=>{
@@ -2700,6 +2734,7 @@ function populateAllForm(){
   selectProv(cfg.provider||'openrouter');   // 키 입력칸은 selectProv가 제공사별로 채움
   $('modelManual').value=cfg.modelManual||'';
   $('effortSel').value=cfg.effort||'';
+  $('lenSel').value=cfg.outLen||'normal';
   if(cfg.model){ ensureOption(cfg.model); $('modelSel').value=cfg.model; }
   // 삽화 API(제공사·키·화질·모델)
   selectImgProv(cfg.imgProvider||'gemini');  // 삽화 키도 selectImgProv가 제공사별로 채움
@@ -2857,6 +2892,7 @@ $('cfgSave').onclick=()=>{
   if(!model&&!manual){ setCfgStatus('모델을 선택하거나 직접 입력하세요.','err'); return; }
   cfg.provider=selProv; cfg.key=key; cfg.model=model; cfg.modelManual=manual;
   cfg.effort=$('effortSel').value;   // 사고 강도(effort)
+  cfg.outLen=$('lenSel').value;      // 출력 분량
   ensureKeys()[selProv]=key;   // 제공사별 채팅 키 보존
   cfg.imgProvider=selImgProv;
   cfg.imgKey=$('imgKey').value.trim();
