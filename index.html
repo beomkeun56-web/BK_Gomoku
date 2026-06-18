@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.90</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.91</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -394,6 +394,7 @@
         <button data-prov="openrouter">OpenRouter</button>
         <button data-prov="gemini">Gemini</button>
         <button data-prov="anthropic">Claude</button>
+        <button data-prov="openai">GPT</button>
       </div>
       <div class="hint" id="provHint"></div>
     </div>
@@ -987,6 +988,11 @@ const PROVIDERS = {
     hint:'<a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> 에서 키 발급. 브라우저 직접 호출을 사용합니다.',
     keyHint:'sk-ant-... 형식',
   },
+  openai: {
+    name:'OpenAI GPT',
+    hint:'OpenAI 직접 연결(GPT). <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a> 에서 키 발급.',
+    keyHint:'sk-... 형식',
+  },
 };
 
 /* ---------- State ---------- */
@@ -1453,7 +1459,7 @@ const PRICE={                       // 100만 토큰당 [입력$, 출력$]
   'gemini-3-pro':[2,12], 'gemini-3-flash':[0.5,3],
   'gemini-2.5-pro':[1.25,10], 'gemini-2.5-flash':[0.3,2.5], 'gemini-2.0-flash':[0.1,0.4],
   'gemini-1.5-pro':[1.25,5], 'gemini-1.5-flash':[0.075,0.3],
-  'gpt-4o-mini':[0.15,0.6], 'gpt-4o':[2.5,10], 'gpt-4':[10,30], 'gpt-3.5':[0.5,1.5]
+  'gpt-4o-mini':[0.15,0.6], 'gpt-4o':[2.5,10], 'gpt-4.1-mini':[0.4,1.6], 'gpt-4.1':[2,8], 'o4-mini':[1.1,4.4], 'gpt-5':[1.25,10], 'gpt-4':[10,30], 'gpt-3.5':[0.5,1.5]
 };
 let lastUsage=null;                 // 최근 호출의 토큰 사용량
 let costLastTurn=0;
@@ -1496,6 +1502,7 @@ async function streamLLM(onToken){
   const msgs=buildApiMessages();
   if(provider==='gemini') return streamGemini(model,key,onToken,msgs);
   if(provider==='anthropic') return streamAnthropic(model,key,onToken,msgs);
+  if(provider==='openai') return streamOpenAIDirect(model,key,onToken,msgs);
   return streamOpenAI(model,key,onToken,msgs); // openrouter
 }
 function resolveCfg(){
@@ -1571,6 +1578,23 @@ async function streamOpenAI(model,key,onToken,msgs){
     try{ const j=JSON.parse(data); const d=j.choices?.[0]?.delta?.content; if(d) onToken(d);
       if(j.usage) lastUsage={costUSD:(typeof j.usage.cost==='number'?j.usage.cost:undefined),
         inTok:j.usage.prompt_tokens||0, outTok:j.usage.completion_tokens||0};
+    }catch(e){}
+  });
+}
+
+// OpenAI(GPT) 직접 연결 — chat/completions (브라우저 CORS 허용됨)
+async function streamOpenAIDirect(model,key,onToken,msgs){
+  const body={model, stream:true, stream_options:{include_usage:true}, max_completion_tokens:7000,
+      messages:[{role:'system', content:sysText()}, ...msgs]};
+  if(cfg.effort && /^(o\d|gpt-5)/i.test(model)) body.reasoning_effort=(cfg.effort==='max'?'high':cfg.effort);   // o·gpt-5 계열만
+  const res=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify(body)
+  });
+  await readSSE(res,(data)=>{
+    if(data==='[DONE]') return;
+    try{ const j=JSON.parse(data); const d=j.choices?.[0]?.delta?.content; if(d) onToken(d);
+      if(j.usage) lastUsage={inTok:j.usage.prompt_tokens||0, outTok:j.usage.completion_tokens||0};
     }catch(e){}
   });
 }
@@ -2767,7 +2791,8 @@ function ensureOption(v){ const sel=$('modelSel'); if(![...sel.options].some(o=>
 const FALLBACK_MODELS={
   openrouter:['google/gemini-3-pro','google/gemini-3-flash','anthropic/claude-sonnet-4.5','deepseek/deepseek-chat'],
   gemini:['gemini-3-pro','gemini-3-flash','gemini-2.5-pro','gemini-2.5-flash'],
-  anthropic:['claude-sonnet-4-5','claude-3-7-sonnet-latest','claude-3-5-haiku-latest']
+  anthropic:['claude-sonnet-4-5','claude-3-7-sonnet-latest','claude-3-5-haiku-latest'],
+  openai:['gpt-4o','gpt-4o-mini','gpt-4.1','gpt-4.1-mini','o4-mini']
 };
 function fillModelOptions(list, picked, selId){
   const sel=$(selId||'modelSel'); sel.innerHTML='';
