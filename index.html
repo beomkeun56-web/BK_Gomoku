@@ -264,22 +264,25 @@
 
   /* welcome / 메인(홈) 화면 — 전체 오버레이 */
   .welcome{position:fixed; inset:0; z-index:45; overflow-y:auto;
-    background:radial-gradient(1200px 600px at 50% -10%, #161a2e 0%, #0b0d16 45%, #000 100%);
+    background:radial-gradient(1100px 560px at 50% -8%, #14263f 0%, #0a1322 48%, #05080f 100%);
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px 16px}
   .welcome.gone{display:none}
-  .welcome .inner{max-width:560px; width:100%; background:rgba(20,23,38,.55); border:1px solid #232843;
-    border-radius:20px; padding:34px 26px; backdrop-filter:blur(4px)}
-  .welcome .big{font-size:2rem; font-weight:900; letter-spacing:1px; margin-bottom:6px; color:#eef1ff}
-  .welcome .big .crown{color:#8ea2ff}
+  .welcome .inner{max-width:520px; width:100%;
+    background:linear-gradient(180deg, rgba(22,34,56,.72), rgba(12,19,33,.72));
+    border:1px solid rgba(120,160,220,.18); border-radius:22px; padding:44px 30px;
+    backdrop-filter:blur(8px); box-shadow:0 24px 70px rgba(0,0,0,.55)}
+  .welcome .big{font-size:2.3rem; font-weight:900; letter-spacing:2px; margin-bottom:24px; color:#f2f6ff;
+    text-shadow:0 2px 24px rgba(80,150,230,.25)}
+  .welcome .big .crown{color:#5fd0ff; text-shadow:0 0 18px rgba(95,208,255,.6)}
   .welcome p{color:var(--mut); line-height:1.7; font-size:.92rem}
-  .welcome .cta{margin-top:20px; background:linear-gradient(135deg,#5b8cff,#8b6cff); color:#fff;
-    border:none; border-radius:14px; padding:14px 28px; font-weight:800; font-size:1rem; cursor:pointer;
-    box-shadow:0 6px 20px rgba(99,120,255,.35); transition:.15s}
-  .welcome .cta:hover{filter:brightness(1.08); transform:translateY(-1px)}
-  .welcome .cta2{background:#1b2030; border:1px solid #2f3656; color:#dfe4ff;
+  .welcome .cta{margin-top:4px; background:linear-gradient(135deg,#2f7be6 0%,#22b8d6 100%); color:#fff;
+    border:none; border-radius:14px; padding:15px 30px; font-weight:800; font-size:1.02rem; cursor:pointer;
+    letter-spacing:.5px; box-shadow:0 8px 26px rgba(34,160,210,.40); transition:.15s}
+  .welcome .cta:hover{filter:brightness(1.10); transform:translateY(-1px); box-shadow:0 10px 30px rgba(34,160,210,.55)}
+  .welcome .cta2{background:rgba(255,255,255,.04); border:1px solid rgba(120,160,220,.22); color:#cfe0f5;
     border-radius:12px; padding:11px 18px; font-weight:700; font-size:.9rem; cursor:pointer; transition:.15s}
-  .welcome .cta2:hover{border-color:#5b8cff; color:#fff}
-  .welcome-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px}
+  .welcome .cta2:hover{border-color:#5fd0ff; color:#fff; background:rgba(95,208,255,.08)}
+  .welcome-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:22px}
   .brand{cursor:pointer}
   .feat{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px}
   .feat span{font-size:.74rem; color:#9aa3c7; border:1px solid #2a3050; border-radius:20px; padding:5px 11px}
@@ -293,7 +296,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.61</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.62</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -313,11 +316,7 @@
 <div id="log">
   <div class="welcome" id="welcome">
    <div class="inner">
-    <div class="big"><span class="crown">♛</span> Reign of Nations</div>
-    <p>당신은 한 나라의 지도자입니다. 매 분기 내려지는 결정이 국력·경제·군사·외교·민심을 바꾸고, 역사의 흐름을 가릅니다. AI 게임 마스터가 당신의 선택에 따라 세계를 움직입니다.</p>
-    <div class="feat">
-      <span>OpenRouter · Gemini · Claude</span><span>실시간 스탯 시각화</span><span>팝업 선택지</span><span>저장 / 이어하기</span>
-    </div>
+    <div class="big"><span class="crown">✦</span> Reign of Nations</div>
     <div>
       <button class="cta" id="ctaStart">게임 시작하기</button>
       <button class="cta2" id="ctaContinue" style="display:none">이어서 하기</button>
@@ -327,7 +326,6 @@
       <button class="cta2" id="ctaLoad">⬆ 불러오기</button>
       <button class="cta2" id="ctaCfg">⚙ API 설정</button>
     </div>
-    <p style="margin-top:14px; font-size:.8rem">시작하려면 먼저 ⚙ 설정에서 제공사·모델·API 키를 입력하세요.</p>
    </div>
   </div>
   <div id="choices" class="empty"></div>
