@@ -264,25 +264,25 @@
 
   /* welcome / 메인(홈) 화면 — 전체 오버레이 */
   .welcome{position:fixed; inset:0; z-index:45; overflow-y:auto;
-    background:radial-gradient(1100px 560px at 50% -8%, #14263f 0%, #0a1322 48%, #05080f 100%);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px 16px}
+    background:
+      linear-gradient(0deg, rgba(4,7,13,.94) 0%, rgba(4,7,13,.55) 24%, rgba(4,7,13,.10) 46%, rgba(4,7,13,.30) 70%, rgba(4,7,13,.62) 100%),
+      url('hero.jpg') center/cover no-repeat;
+    background-color:#05080f;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end; text-align:center; padding:40px 16px 46px}
   .welcome.gone{display:none}
-  .welcome .inner{max-width:520px; width:100%;
-    background:linear-gradient(180deg, rgba(22,34,56,.72), rgba(12,19,33,.72));
-    border:1px solid rgba(120,160,220,.18); border-radius:22px; padding:44px 30px;
-    backdrop-filter:blur(8px); box-shadow:0 24px 70px rgba(0,0,0,.55)}
-  .welcome .big{font-size:2.3rem; font-weight:900; letter-spacing:2px; margin-bottom:24px; color:#f2f6ff;
-    text-shadow:0 2px 24px rgba(80,150,230,.25)}
-  .welcome .big .crown{color:#5fd0ff; text-shadow:0 0 18px rgba(95,208,255,.6)}
+  .welcome .inner{max-width:480px; width:100%; background:none; border:none; padding:0 14px}
+  .welcome .big{font-size:2.3rem; font-weight:900; letter-spacing:2px; margin-bottom:22px; color:#f4f7ff;
+    text-shadow:0 2px 10px rgba(0,0,0,.85), 0 0 34px rgba(80,150,230,.35)}
+  .welcome .big .crown{color:#5fd0ff; text-shadow:0 0 20px rgba(95,208,255,.75)}
   .welcome p{color:var(--mut); line-height:1.7; font-size:.92rem}
   .welcome .cta{margin-top:4px; background:linear-gradient(135deg,#2f7be6 0%,#22b8d6 100%); color:#fff;
-    border:none; border-radius:14px; padding:15px 30px; font-weight:800; font-size:1.02rem; cursor:pointer;
-    letter-spacing:.5px; box-shadow:0 8px 26px rgba(34,160,210,.40); transition:.15s}
-  .welcome .cta:hover{filter:brightness(1.10); transform:translateY(-1px); box-shadow:0 10px 30px rgba(34,160,210,.55)}
-  .welcome .cta2{background:rgba(255,255,255,.04); border:1px solid rgba(120,160,220,.22); color:#cfe0f5;
-    border-radius:12px; padding:11px 18px; font-weight:700; font-size:.9rem; cursor:pointer; transition:.15s}
-  .welcome .cta2:hover{border-color:#5fd0ff; color:#fff; background:rgba(95,208,255,.08)}
-  .welcome-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:22px}
+    border:none; border-radius:14px; padding:15px 34px; font-weight:800; font-size:1.05rem; cursor:pointer;
+    letter-spacing:.5px; box-shadow:0 10px 30px rgba(20,120,180,.55); transition:.15s}
+  .welcome .cta:hover{filter:brightness(1.10); transform:translateY(-1px); box-shadow:0 12px 34px rgba(34,160,210,.7)}
+  .welcome .cta2{background:rgba(10,16,28,.55); border:1px solid rgba(150,180,230,.30); color:#dfe9fb;
+    border-radius:12px; padding:11px 18px; font-weight:700; font-size:.9rem; cursor:pointer; transition:.15s; backdrop-filter:blur(4px)}
+  .welcome .cta2:hover{border-color:#5fd0ff; color:#fff; background:rgba(95,208,255,.14)}
+  .welcome-actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px}
   .brand{cursor:pointer}
   .feat{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px}
   .feat span{font-size:.74rem; color:#9aa3c7; border:1px solid #2a3050; border-radius:20px; padding:5px 11px}
@@ -296,7 +296,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.62</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.63</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
