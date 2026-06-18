@@ -1600,9 +1600,12 @@ async function streamOpenAI(model,key,onToken,msgs){
   } else {
     orBody.reasoning={enabled:false};
   }
+<<<<<<< HEAD
   // GLM(z-ai/*)은 Z.ai 프로바이더를 우선 사용하도록 고정 — Z.ai는 자동 프롬프트 캐싱 지원(반복 입력 대폭 할인).
   // 로드밸런싱으로 NovitaAI 등 비-캐싱 프로바이더로 새는 것 방지. (Z.ai 장애 시엔 fallback 허용해 멈추지 않게)
   if(/^z-ai\//i.test(model)) orBody.provider={order:['z-ai']};
+=======
+>>>>>>> origin/main
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
