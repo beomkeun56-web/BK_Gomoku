@@ -311,7 +311,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.73</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.74</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -817,6 +817,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 2. "{주인공 1인칭 대사 한 줄}"
 3. "{주인공 1인칭 대사 한 줄}"
 - 선택지는 정확히 3개, 서로 다른 방향(진행 중 사안이 있으면 최소 2개는 그 사안을 진전시키는 대응). 사용자는 숫자(1·2·3)나 직접 행동을 입력한다. 선택지 없이 응답을 끝내지 않는다(게임 종료 턴 제외). 응답을 끝내기 직전 "헤더 + 1인칭 대사 선택지 3개를 넣었는가?"를 확인하고 빠졌으면 추가한다.
+- ★[선택지도 톤을 반영] 3개 선택지의 말투·내용·수위도 활성 드라마 톤에 맞춘다(본문만 톤을 타고 선택지는 밋밋하게 두지 말 것). 정치: 냉정·전략적 한 수("물밑에서 OO부터 잡자"), 막장: 자극적·도발적·감정 폭발("야, 다 까발려?"), 코믹: 위트·드립·엉뚱한 선택("일단 라면부터 끓이죠"), 진지+코믹: 진지하되 한 끗 위트, 혼합: 평소 진지·이벤트 때 자극적, 커스텀: 수치대로. 톤이 바뀌면 선택지의 느낌도 눈에 띄게 달라야 한다.
 
 [핵심 원칙]
 - 현실적·지정학적으로 설득력 있게 전개한다. 선택의 대가는 반드시 스탯에 반영한다.
