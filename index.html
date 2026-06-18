@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.15</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.16</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1600,6 +1600,9 @@ async function streamOpenAI(model,key,onToken,msgs){
   } else {
     orBody.reasoning={enabled:false};
   }
+  // GLM(z-ai/*)은 Z.ai 프로바이더를 우선 사용하도록 고정 — Z.ai는 자동 프롬프트 캐싱 지원(반복 입력 대폭 할인).
+  // 로드밸런싱으로 NovitaAI 등 비-캐싱 프로바이더로 새는 것 방지. (Z.ai 장애 시엔 fallback 허용해 멈추지 않게)
+  if(/^z-ai\//i.test(model)) orBody.provider={order:['z-ai']};
   const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
