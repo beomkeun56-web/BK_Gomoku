@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.54</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.55</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -537,14 +537,8 @@
 
     <div class="field">
       <label>자동 삽화 빈도 <span style="color:var(--dim)">— 하단 '삽화' 버튼과 연동</span></label>
-      <select id="autoIllustEvery">
-        <option value="0">끔 (자동 안 함)</option>
-        <option value="1">매 턴 (가장 비쌈)</option>
-        <option value="2">2턴마다 1장</option>
-        <option value="3">3턴마다 1장</option>
-        <option value="4" selected>4턴마다 1장 (권장)</option>
-      </select>
-      <div class="hint">매 N턴, 그 턴 장면을 GM이 준 프롬프트로 그려 선택지 위에 표시합니다. 빈도를 낮출수록 비용↓.</div>
+      <input type="number" id="autoIllustEvery" min="0" max="99" step="1" value="4" placeholder="N턴마다 1장">
+      <div class="hint">숫자를 직접 입력하세요. <b>0 = 끔</b>, <b>1 = 매 턴</b>, <b>N = N턴마다 1장</b> (예: 4, 7, 10…). 매 N턴, 그 턴 장면을 GM이 준 프롬프트로 그려 선택지 위에 표시합니다. 빈도를 낮출수록(숫자 ↑) 비용↓.</div>
     </div>
 
     <button class="save-btn" id="imgCfgSave">저장하고 닫기</button>
@@ -2033,7 +2027,7 @@ function autoEveryRaw(){
   return cfg.autoIllust===true ? 4 : 0;
 }
 function autoActive(){ return autoEveryRaw()>0; }
-function autoEvery(){ return Math.max(1,Math.min(6,autoEveryRaw()||1)); }
+function autoEvery(){ return Math.max(1,Math.min(99,autoEveryRaw()||1)); }
 // 최근 N턴의 서사(직전 N-1턴 + 이번 턴 acc)를 합쳐 핵심 컷 요약용 컨텍스트로
 function recentArcText(acc){
   const parts=[]; let cnt=0; const need=autoEvery()-1;
