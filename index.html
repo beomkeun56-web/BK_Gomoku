@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.93</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.94</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1765,6 +1765,15 @@ async function runAssistant(){
         imgSinceLast=0;
         const aidx=lastAssistantIndex();
         imgP.then(r=>{ if(r && r.src) recordIllust(aidx, r.src, 'end'); });
+      } else if(wantImg){
+        // [IMG] 태그를 안 준 모델(GPT 등) 폴백: 본문으로 삽화 생성
+        imgSinceLast=0;
+        const aidx=lastAssistantIndex();
+        const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
+        const bub=mdEl.parentElement; (bub||mdEl).appendChild(box); maybeScroll();
+        fetchIllust(sanitizeBody(body), true)
+          .then(src=>{ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">AI 생성 삽화</div>'; recordIllust(aidx, src, 'end'); maybeScroll(); })
+          .catch(e=>{ box.className='illust loading'; box.textContent = e.message==='NOKEY' ? '⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.' : '⚠️ 삽화 실패: '+e.message; });
       } else if(autoActive()){ imgSinceLast++; }
     }
   } finally {
