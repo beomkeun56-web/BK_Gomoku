@@ -293,7 +293,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.56</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.57</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1364,8 +1364,9 @@ function usageCostUSD(model,u){
 }
 function krw(v){ return Math.round(v*USD_KRW).toLocaleString('ko-KR')+'원'; }
 function costBadge(){ const b=$('costBadge'); if(!b) return;
-  b.textContent = (costTotal>0||costLastTurn>0||turnCount>0)
-    ? '1턴 '+krw(costLastTurn)+' · 누적 '+krw(costTotal)+' (이미지 '+krw(costImgTotal)+') · '+turnCount+'턴' : '';
+  const avg = turnCount>0 ? costTotal/turnCount : 0;
+  b.textContent = (costTotal>0||turnCount>0)
+    ? '1턴 '+krw(avg)+' · 누적 '+krw(costTotal)+' · '+turnCount+'턴' : '';
 }
 // 비용 합산: kind='img'이면 이미지 누적도 별도 집계
 function addCost(usd, kind){ if(!(usd>0)) return;
