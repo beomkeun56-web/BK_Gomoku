@@ -311,7 +311,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.72</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.73</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -693,6 +693,14 @@
         <button data-tone="코믹 정치 드라마(풍자·블랙코미디·병맛 유머)">코믹</button>
         <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+코믹</button>
         <button data-tone="진지+막장 혼합" class="on">혼합</button>
+        <button data-tone="__custom__">커스텀</button>
+      </div>
+      <div id="suCustomPanel" style="display:none; margin-top:8px">
+        <div class="cm-row"><span class="cm-label">진지 ↔ 자극</span><input type="range" id="su_cm_intensity" min="0" max="4" step="1"><span class="cm-val" id="sucmv_intensity"></span></div>
+        <div class="cm-row"><span class="cm-label">충격·반전 빈도</span><input type="range" id="su_cm_event" min="0" max="3" step="1"><span class="cm-val" id="sucmv_event"></span></div>
+        <div class="cm-row"><span class="cm-label">웃음·코믹</span><input type="range" id="su_cm_comic" min="0" max="4" step="1"><span class="cm-val" id="sucmv_comic"></span></div>
+        <div class="cm-row"><span class="cm-label">사이다(통쾌)</span><input type="range" id="su_cm_cider" min="0" max="3" step="1"><span class="cm-val" id="sucmv_cider"></span></div>
+        <div class="cm-row"><span class="cm-label">치정·로맨스</span><input type="range" id="su_cm_romance" min="0" max="2" step="1"><span class="cm-val" id="sucmv_romance"></span></div>
       </div>
     </div>
 
@@ -2183,9 +2191,13 @@ document.querySelectorAll('#setupScen button').forEach(b=>b.onclick=()=>{
   setupScen=b.dataset.scen;
   document.querySelectorAll('#setupScen button').forEach(x=>x.classList.toggle('on',x===b));
 });
+function syncSuCmLabels(){ CM_KEYS.forEach(k=>{ const el=$('sucmv_'+k); if(el) el.textContent=CM_LABELS[k][parseInt($('su_cm_'+k).value)]||''; }); }
+function loadSuCm(){ CM_KEYS.forEach(k=>{ const el=$('su_cm_'+k); if(el) el.value=String(cmGet(k, CM_DEF[k])); }); syncSuCmLabels(); }
+CM_KEYS.forEach(k=>{ const el=$('su_cm_'+k); if(el) el.oninput=syncSuCmLabels; });
 document.querySelectorAll('#setupTone button').forEach(b=>b.onclick=()=>{
   setupTone=b.dataset.tone;
   document.querySelectorAll('#setupTone button').forEach(x=>x.classList.toggle('on',x===b));
+  const p=$('suCustomPanel'); if(p){ if(b.dataset.tone==='__custom__'){ loadSuCm(); p.style.display=''; } else p.style.display='none'; }
 });
 // 예시 칩 → 해당 입력칸 채우기
 document.querySelectorAll('#setupOverlay .ex button').forEach(b=>b.onclick=()=>{ const t=$(b.dataset.t); if(t){ t.value=b.dataset.v; t.focus(); } });
@@ -2197,7 +2209,9 @@ $('setupGo').onclick=()=>{
   const scen=g('setupScenFree')||setupScen;
   const lines=['시작. 아래 설정을 그대로 반영해 바로 게임을 시작해줘(되묻지 말 것).'];
   lines.push('- 시나리오: '+scen);
-  lines.push('- 드라마 톤: '+setupTone+' (이 톤으로 시나리오 내내 유지, 톤은 되묻지 말 것)');
+  if(setupTone==='__custom__'){ CM_KEYS.forEach(k=>{ const el=$('su_cm_'+k); if(el) cfg['cm_'+k]=parseInt(el.value); }); saveCfg();
+    lines.push('- 드라마 톤: 커스텀(설정 수치대로, 톤은 되묻지 말 것)'); }
+  else lines.push('- 드라마 톤: '+setupTone+' (이 톤으로 시나리오 내내 유지, 톤은 되묻지 말 것)');
   setGameTone(setupTone);   // 활성 톤을 저장 → 매 턴 시스템 프롬프트에 주입
   updateModeBtn();
   const me=[]; if(g('suName'))me.push('이름 '+g('suName')); if(g('suSex'))me.push('성별 '+g('suSex'));
