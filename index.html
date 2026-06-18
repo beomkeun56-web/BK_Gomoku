@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.97</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.98</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1629,7 +1629,8 @@ function anthropicSystem(){ const arr=[]; const tr=activeToneReminder(); if(tr) 
 async function streamAnthropic(model,key,onToken,msgs){
   const body={model, max_tokens:7000, system:anthropicSystem(), stream:true,
       messages:msgs.map(m=>({role:m.role, content:m.content}))};
-  if(cfg.effort) body.output_config={effort:cfg.effort};   // 사고 강도(effort)
+  // effort는 일부 모델만 지원(Sonnet 4.6·Opus 4.5 이상). Sonnet 4.5/3.x/Haiku엔 보내면 400.
+  if(cfg.effort && /(opus-4-[5-9])|(sonnet-4-[6-9])|(opus-4\.[5-9])|(sonnet-4\.[6-9])/i.test(model)) body.output_config={effort:cfg.effort};
   const res=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,
