@@ -297,6 +297,10 @@
   .brand{cursor:pointer}
   .feat{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:20px}
   .feat span{font-size:.74rem; color:#9aa3c7; border:1px solid #2a3050; border-radius:20px; padding:5px 11px}
+  .cm-row{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .cm-row .cm-label{flex:0 0 96px; font-size:.84rem; color:var(--mut)}
+  .cm-row input[type=range]{flex:1; accent-color:#5fd0ff}
+  .cm-row .cm-val{flex:0 0 84px; font-size:.78rem; color:#9fb0cc; text-align:right}
 </style>
 <!-- 국기 등 컬러 이모지가 모든 기기에서 표시되도록(Windows 등 국기 글꼴 없는 환경 대응) -->
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -307,7 +311,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.71</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v3.72</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -747,7 +751,16 @@
         <button data-tone="코믹 정치 드라마(풍자·블랙코미디·병맛 유머)">코믹</button>
         <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+코믹</button>
         <button data-tone="진지+막장 혼합">혼합</button>
+        <button data-tone="__custom__">커스텀</button>
       </div>
+    </div>
+    <div class="field" id="customPanel" style="display:none">
+      <label>커스텀 수치 <span style="color:var(--dim)">— '커스텀' 선택 시 이 수치대로 톤이 만들어집니다</span></label>
+      <div class="cm-row"><span class="cm-label">진지 ↔ 자극</span><input type="range" id="cm_intensity" min="0" max="4" step="1"><span class="cm-val" id="cmv_intensity"></span></div>
+      <div class="cm-row"><span class="cm-label">충격·반전 빈도</span><input type="range" id="cm_event" min="0" max="3" step="1"><span class="cm-val" id="cmv_event"></span></div>
+      <div class="cm-row"><span class="cm-label">웃음·코믹</span><input type="range" id="cm_comic" min="0" max="4" step="1"><span class="cm-val" id="cmv_comic"></span></div>
+      <div class="cm-row"><span class="cm-label">사이다(통쾌)</span><input type="range" id="cm_cider" min="0" max="3" step="1"><span class="cm-val" id="cmv_cider"></span></div>
+      <div class="cm-row"><span class="cm-label">치정·로맨스</span><input type="range" id="cm_romance" min="0" max="2" step="1"><span class="cm-val" id="cmv_romance"></span></div>
     </div>
     <button class="save-btn" id="modeSave">이 모드로 변경</button>
   </div>
@@ -964,8 +977,24 @@ let gameTone=localStorage.getItem(LS+'_tone')||'';
 const DEFAULT_TONE='진지+막장 혼합';
 function currentTone(){ return gameTone || DEFAULT_TONE; }
 function setGameTone(t){ gameTone=t||''; try{ localStorage.setItem(LS+'_tone', gameTone); }catch(e){} }
+// 커스텀 모드 수치 → 한국어 톤 지시문
+const CM_LABELS={
+  intensity:['매우 차분·진중하게','진중하게','보통 수위로','자극적으로','매우 자극적·막장 수위로'],
+  event:['큰 충격·반전 사건은 드물게(약 5~6턴에 한 번)','충격·반전 사건은 가끔(약 3~4턴에 한 번)','충격·반전 사건을 자주(약 2턴에 한 번)','충격·반전 사건을 거의 매 턴'],
+  comic:['유머 없이 진지하게','웃음은 약간만(양념 수준)','웃음을 보통 수준으로','웃음·개그를 많이','웃음·개그를 최대로(코믹 전면)'],
+  cider:['통쾌한 사이다는 거의 없이','가끔 통쾌한 한 방','자주 통쾌한 사이다(응징·역전)','통쾌한 응징·역전·사이다를 매우 많이'],
+  romance:['치정·로맨스 요소 없이','로맨스·치정은 약간만','치정·로맨스를 적극적으로']
+};
+function cmGet(k,def){ const v=parseInt(cfg['cm_'+k]); return isNaN(v)?def:v; }
+function buildCustomToneText(){
+  const i=CM_LABELS.intensity[cmGet('intensity',2)], e=CM_LABELS.event[cmGet('event',1)],
+        c=CM_LABELS.comic[cmGet('comic',1)], s=CM_LABELS.cider[cmGet('cider',1)], r=CM_LABELS.romance[cmGet('romance',0)];
+  return '\n\n[★커스텀 드라마 톤 — 아래 수치대로 매 턴 톤을 조절하라] 전반 수위: '+i+'. '+e+'. '+c+'. '+s+'. '+r+'. '
+    +'수치가 낮은(0) 요소는 거의 빼고, 높을수록 그 요소를 강하게 살린다. 위 [톤 연출]의 프리셋보다 이 커스텀 수치를 우선하되, 인과·개연성과 장면 밀도는 유지한다. 톤은 다시 묻지 말 것.';
+}
 function activeToneReminder(){
   const t=currentTone();
+  if(t==='__custom__') return buildCustomToneText();
   return '\n\n[★현재 활성 드라마 톤 = "'+t+'"] 이번 게임은 처음부터 끝까지 이 톤을 최우선으로 유지한다. 위 [톤 연출]에서 이 톤에 해당하는 항목 그대로, 매 턴 그 톤이 분명히 드러나게 써라(다른 톤처럼 밋밋하게 흐르지 말 것). 막장/코믹 톤이면 잔잔한 일상 턴 금지 — 매 턴 사건·반전·웃음을 강하게 살려라. 톤은 다시 묻지 말 것.';
 }
 function sysText(){ return SYSTEM_PROMPT + activeToneReminder(); }
@@ -2017,6 +2046,7 @@ $('btnAddSit').onclick=openSituation;
 // 드라마 모드 표시·변경
 function modeShort(tone){
   const t=tone||'';
+  if(t==='__custom__') return '커스텀';
   if(/막장/.test(t)&&/코믹/.test(t)) return '막장+코믹';
   if(/진지\+막장|진지·막장/.test(t)||(/막장/.test(t)&&/혼합/.test(t))) return '혼합';
   if(/진지\+코믹/.test(t)||(/코믹/.test(t)&&/하우스 오브 카드/.test(t))) return '진지+코믹';
@@ -2029,19 +2059,30 @@ function updateModeBtn(){
   const b=$('btnMode'); if(!b) return;
   b.textContent = modeShort(currentTone());
 }
+const CM_KEYS=['intensity','event','comic','cider','romance'];
+const CM_DEF={intensity:2,event:1,comic:1,cider:1,romance:0};
+function syncCmLabels(){ CM_KEYS.forEach(k=>{ const el=$('cmv_'+k); if(el) el.textContent=CM_LABELS[k][parseInt($('cm_'+k).value)]||''; }); }
+function showCustomPanel(on){ const p=$('customPanel'); if(p) p.style.display=on?'':'none'; }
+function loadCmToForm(){ CM_KEYS.forEach(k=>{ const el=$('cm_'+k); if(el) el.value=String(cmGet(k, CM_DEF[k])); }); syncCmLabels(); }
 function openModePopup(){
   document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on', x.dataset.tone===currentTone()));
+  loadCmToForm(); showCustomPanel(currentTone()==='__custom__');
   $('modeOverlay').classList.add('on');
 }
 document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  showCustomPanel(b.dataset.tone==='__custom__');
 });
+CM_KEYS.forEach(k=>{ const el=$('cm_'+k); if(el) el.oninput=syncCmLabels; });
 $('btnMode').onclick=openModePopup;
 $('modeClose').onclick=()=>$('modeOverlay').classList.remove('on');
 $('modeOverlay').addEventListener('click',e=>{ if(e.target===$('modeOverlay')) $('modeOverlay').classList.remove('on'); });
 $('modeSave').onclick=()=>{
   const sel=document.querySelector('#modeSeg button.on');
-  if(sel){ setGameTone(sel.dataset.tone); updateModeBtn(); }
+  if(sel){
+    if(sel.dataset.tone==='__custom__'){ CM_KEYS.forEach(k=>{ cfg['cm_'+k]=parseInt($('cm_'+k).value); }); saveCfg(); }
+    setGameTone(sel.dataset.tone); updateModeBtn();
+  }
   $('modeOverlay').classList.remove('on');
 };
 updateModeBtn();
