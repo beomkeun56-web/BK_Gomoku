@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.26</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.27</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1604,11 +1604,13 @@ function orSystemMsg(model){
 async function streamOpenAI(model,key,onToken,msgs){
   const orBody={model, stream:true, max_tokens:lenSpec().max, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
-  // Claude 계열만 effort(reasoning) 사용. DeepSeek V3.2·GLM 등 '사고 모드' 모델은 끈다 —
-  // 사고가 켜져 있으면 본문이 reasoning 토큰으로 빠져 화면 content가 비고(=텍스트 안 나옴), max_tokens도 낭비됨.
+  // Claude 계열은 effort(reasoning) 사용.
   if(orModelSupportsCache(model)){
     if(cfg.effort) orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter는 low/medium/high
-  } else {
+  }
+  // DeepSeek V3.2·GLM 등 '사고 모드를 끌 수 있는' 모델만 끈다 — 사고가 켜져 있으면 본문이
+  // reasoning 토큰으로 빠져 화면 content가 비고 max_tokens도 낭비됨. (Gemini는 reasoning 필수라 끄면 400)
+  else if(/deepseek|glm|z-ai|qwen|kimi|moonshot|minimax/i.test(model)){
     orBody.reasoning={enabled:false};
   }
   // GLM(z-ai/*)은 Z.ai 프로바이더를 우선 사용하도록 고정 — Z.ai는 자동 프롬프트 캐싱 지원(반복 입력 대폭 할인).
