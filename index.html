@@ -324,7 +324,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.38</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.39</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -441,6 +441,12 @@
         <option value="long">길게 (~2,000자 · 가장 비쌈)</option>
       </select>
       <div class="hint">한 턴 본문 길이를 직접 정합니다. 짧을수록 출력 토큰↓ → <b>비용·시간 절감</b>. 비용이 부담되면 <b>짧게</b>를 권장합니다.</div>
+    </div>
+
+    <div class="field">
+      <label>최대 출력 토큰 (max tokens · 비우면 자동)</label>
+      <input type="number" id="maxTokIn" min="512" max="32000" step="256" placeholder="예: 4000 (비우면 모델별 자동)">
+      <div class="hint">한 턴 응답의 토큰 상한입니다. 낮추면 <b>비용 상한↓</b>이지만 본문이 잘릴 수 있어요(특히 Gemini는 생각이 먼저 소모). 자주 잘리면 숫자를 올리세요. 비우면 자동(Gemini는 넉넉히).</div>
     </div>
 
     <div style="border-top:1px solid var(--line); margin:6px 0 16px"></div>
@@ -1060,6 +1066,12 @@ function lenSpec(){
     default:       return {chars:'1000~1200자', max:3000};
   }
 }
+// 한 턴 출력 토큰 상한: 사용자가 직접 입력했으면 그 값, 아니면 모델별 자동(Gemini는 생각 여유분 포함)
+function outMax(model){
+  const u=parseInt(cfg.maxTokens);
+  if(u>0) return Math.max(256, u);
+  return /gemini|google\//i.test(model||'') ? Math.max(lenSpec().max, 8192) : lenSpec().max;
+}
 function lenMandate(){
   const s=lenSpec();
   return '\n\n[★출력 분량 — 엄수] 이번 턴 본문 전체를 공백 포함 '+s.chars+' 범위로 쓴다. 이 상한을 넘겨 길게 늘어뜨리지 말 것(수식·곁가지·중복 묘사 절제, 핵심 장면만). 선택지 텍스트는 이 분량 계산에서 제외한다.';
@@ -1638,10 +1650,8 @@ function orSystemMsg(model){
 
 async function streamOpenAI(model,key,onToken,msgs){
   const isGemini=/gemini|google\//i.test(model);
-  // Gemini는 추론(thinking) 모델 — 기본 상태에선 thinking이 max_tokens를 다 먹어 본문이 중간에 잘림.
-  // → Gemini는 출력 상한을 넉넉히 주고(잘림 방지), thinking 예산을 작게 제한(토큰 절감).
-  const maxTok = isGemini ? Math.max(lenSpec().max, 8192) : lenSpec().max;
-  const orBody={model, stream:true, max_tokens:maxTok, temperature:0.9,
+  // 출력 상한: 사용자 지정값 우선, 없으면 모델별 자동(Gemini는 생각 여유분 포함).
+  const orBody={model, stream:true, max_tokens:outMax(model), temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
   if(/deepseek|glm|z-ai|qwen|kimi|moonshot|minimax/i.test(model)){
     orBody.reasoning={enabled:false};                 // 사고 끌 수 있는 모델은 끔
@@ -1672,7 +1682,7 @@ async function streamOpenAI(model,key,onToken,msgs){
 function anthropicSystem(){ const arr=[]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); arr.push({type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}); return arr; }
 
 async function streamAnthropic(model,key,onToken,msgs){
-  const body={model, max_tokens:lenSpec().max, system:anthropicSystem(), stream:true,
+  const body={model, max_tokens:outMax(model), system:anthropicSystem(), stream:true,
       messages:msgs.map(m=>({role:m.role, content:m.content}))};
   // 사고 강도(effort)는 지원 모델에만 전송 (Opus 4.5+/Sonnet 4.6+). Haiku 등 미지원 모델은 400 발생.
   if(cfg.effort && /(opus-4-[5-9])|(sonnet-4-[6-9])|(opus-4\.[5-9])|(sonnet-4\.[6-9])/i.test(model)) body.output_config={effort:cfg.effort};
@@ -1701,7 +1711,7 @@ async function streamGemini(model,key,onToken,msgs){
     body:JSON.stringify({
       system_instruction:{parts:[{text:sysText()}]},
       contents,
-      generationConfig:{maxOutputTokens:lenSpec().max, temperature:0.9}
+      generationConfig:{maxOutputTokens:outMax(model), temperature:0.9}
     })
   });
   await readSSE(res,(data)=>{
@@ -2810,6 +2820,7 @@ function populateAllForm(){
   $('modelManual').value=cfg.modelManual||'';
   $('effortSel').value=cfg.effort||'';
   $('lenSel').value=cfg.outLen||'normal';
+  $('maxTokIn').value=cfg.maxTokens||'';
   if(cfg.model){ ensureOption(cfg.model); $('modelSel').value=cfg.model; }
   // 삽화 API(제공사·키·화질·모델)
   selectImgProv(cfg.imgProvider||'gemini');  // 삽화 키도 selectImgProv가 제공사별로 채움
@@ -2968,6 +2979,7 @@ $('cfgSave').onclick=()=>{
   cfg.provider=selProv; cfg.key=key; cfg.model=model; cfg.modelManual=manual;
   cfg.effort=$('effortSel').value;   // 사고 강도(effort)
   cfg.outLen=$('lenSel').value;      // 출력 분량
+  cfg.maxTokens=$('maxTokIn').value.trim();   // 최대 출력 토큰(직접 입력)
   ensureKeys()[selProv]=key;   // 제공사별 채팅 키 보존
   cfg.imgProvider=selImgProv;
   cfg.imgKey=$('imgKey').value.trim();
