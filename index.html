@@ -90,6 +90,7 @@
   .md h1{font-size:1.72em; font-weight:800; margin:.3em 0 .45em; line-height:1.3}
   .md h2{font-size:1.3em; margin:1em 0 .45em; color:#fff}
   .md h2.sec{border-top:1px solid var(--line); padding-top:1.15em; margin-top:1.5em}
+  .md h2 .sec-mark{color:var(--gold); margin-right:.15em}
   .md h3{font-size:1.06em; margin:.9em 0 .4em; color:#fff}
   .md p{margin:.55em 0; line-height:1.8}
   .md ul,.md ol{margin:.5em 0; padding-left:1.3em; line-height:1.7}
@@ -111,7 +112,7 @@
   .md th,.md td{border:1px solid var(--line); padding:7px 10px; text-align:center}
   .md th{background:#1d2029; color:#fff}
   .md tr:nth-child(even) td{background:rgba(255,255,255,.02)}
-  .md hr{border:0; border-top:1px solid var(--line); margin:1.4em 0}  /* --- 구분선 표시 */
+  .md hr{display:none}  /* --- 는 숨김(중복 구분선 방지) — 구분선은 소제목(h2.sec) 보더만 사용 */
   .cursor{display:inline-block; width:8px; height:1.05em; background:var(--gold); vertical-align:-2px; animation:blink 1s steps(1) infinite; border-radius:1px}
   @keyframes blink{50%{opacity:0}}
   /* 생성되는 글자가 부드럽게 떠오르는 효과 */
@@ -318,7 +319,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.27</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.28</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1233,8 +1234,13 @@ const logEl=$('log'), choicesEl=$('choices'), inp=$('inp'), sendBtn=$('send');
 if(window.marked){ marked.setOptions({breaks:true, gfm:true}); }
 function renderGm(mdEl, text, streaming){
   mdEl.innerHTML = mdToHtml(text) + (streaming ? '<span class="cursor"></span>' : '');
-  // 모든 소제목(h2) 위에 구분선 추가(모델 무관하게 섹션 구분 보이도록)
-  mdEl.querySelectorAll('h2').forEach(h=>h.classList.add('sec'));
+  // 모든 소제목(h2)에 구분선 + ✦ 기호 추가(모델 무관하게 일관 표시)
+  mdEl.querySelectorAll('h2').forEach(markSec);
+}
+function markSec(h){
+  h.classList.add('sec');
+  if((h.textContent||'').indexOf('✦')<0 && !h.querySelector('.sec-mark'))
+    h.insertAdjacentHTML('afterbegin','<span class="sec-mark">✦</span> ');
 }
 
 /* 타자기 렌더러: 네트워크가 토큰을 뭉텅이로 줘도, 일정한 속도로 부드럽게 표시.
@@ -1248,7 +1254,7 @@ function getSpeedKey(){
   if(v in migrate) v=migrate[v];
   return TYPE_SPEED[v] ? v : '3';
 }
-function decorateSec(el){ el.querySelectorAll('h2').forEach(h=>h.classList.add('sec')); }
+function decorateSec(el){ el.querySelectorAll('h2').forEach(markSec); }
 // 출력되면서 서식이 점진적으로 결정: 완성된 블록(빈 줄 기준)은 확정해 쌓고,
 // 지금 타이핑 중인 블록만 실시간으로 마크다운 적용(가벼움 + 표/인용/제목이 만들어지며 출력).
 function streamTyper(mdEl, initial){
