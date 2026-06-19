@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.22</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.23</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -2014,8 +2014,11 @@ async function fetchIllust(story, skipBrief){
     try{ const brief=await withTimeout(buildSceneBrief(story), 30000, '장면 요약'); if(brief && brief.length>10) sceneText=brief; }catch(e){}
   }
   // 참고는 '인물 얼굴' 1장만 사용 — 2장 합성이 일으키는 팔/손 겹침(여분의 손) 방지. 장소 연속성은 영어 브리프 텍스트로 처리
+  // 단, Seedream·FLUX 등 비-Gemini OpenRouter 이미지 모델은 참조 이미지를 '거의 그대로 복제'해서 매 턴 같은 그림·아티팩트가 나옴
+  // → 이런 모델에는 참조를 보내지 않고 프롬프트만으로 생성(매 턴 다른 장면). Gemini 계열만 참조로 인물 일관성 유지.
+  const refSupported = !(prov==='openrouter' && !/gemini/i.test(model));
   let refs=[];
-  if(cfg.imgConsist!==false){
+  if(cfg.imgConsist!==false && refSupported){
     const anchor=await getCharAnchorSmart();
     if(anchor){ try{ refs.push({url:await downscaleDataUrl(anchor,512,0.78), label:'[Reference: the FACE/identity of the fixed characters — keep them the same people, but do NOT copy this image\'s pose or composition]'}); }catch(e){ refs.push({url:anchor}); } }
   }
