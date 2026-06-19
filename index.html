@@ -105,7 +105,11 @@
   .md blockquote strong, .md blockquote em{color:inherit; background:none; padding:0; text-decoration:none}
   .md blockquote{margin:.7em 0; padding:.15em 0 .15em .95em; border-left:3px solid #3a3b42;
     background:none; color:#8c8c8c; line-height:1.8}  /* 대화: 더 진한 회색으로 구분 */
-  .md blockquote .spk{color:#5a5e66; font-weight:600; margin-right:1.1em}  /* 화자 이름: 더 어두운 회색 + 두 칸 띄움 */
+  /* 대사 한 줄 = [이름][대사] 2단 — 줄바꿈되면 대사는 대사 열 안에서만 접힘(이름 밑으로 안 감) */
+  .md blockquote .dl{display:flex; gap:1.1em; align-items:baseline}
+  .md blockquote .dl .spk{flex:0 0 auto; white-space:nowrap; color:#5a5e66; font-weight:600}  /* 화자 이름: 더 어두운 회색 */
+  .md blockquote .dl .qt{flex:1; min-width:0}
+  .md blockquote .dl + .dl{margin-top:.3em}
   .md code{background:#0d0f14; border:1px solid var(--line); border-radius:6px; padding:1px 5px; font-size:.86em}
   .md pre{background:#0b0d12; border:1px solid var(--line); border-radius:10px; padding:12px; overflow:auto}
   .md pre code{border:0; background:none; padding:0}
@@ -320,7 +324,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.34</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.35</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1240,9 +1244,13 @@ function renderGm(mdEl, text, streaming){
 function styleSpeakers(root){
   root.querySelectorAll('blockquote').forEach(bq=>{
     if(bq.dataset.spk) return; bq.dataset.spk='1';
-    bq.innerHTML = bq.innerHTML.split(/<br\s*\/?>/i).map(seg=>
-      seg.replace(/^(\s*(?:<[^>]+>\s*)*)([^"“”<][^"“”<]*?)\s*(["“])/, '$1<span class="spk">$2</span>$3')
-    ).join('<br>');
+    const segs = bq.innerHTML.replace(/<\/?p[^>]*>/gi,'').split(/<br\s*\/?>/i);
+    bq.innerHTML = segs.map(seg=>{
+      const t=seg.trim(); if(!t) return '';
+      const m=t.match(/^([^"“”<][^"“”<]*?)\s*(["“][\s\S]*)$/);   // 이름 + "대사"
+      if(m) return '<div class="dl"><span class="spk">'+m[1].trim()+'</span><span class="qt">'+m[2]+'</span></div>';
+      return '<div>'+t+'</div>';   // 대사 아닌 인용(요약·서술)
+    }).join('');
   });
 }
 function markSec(h){
