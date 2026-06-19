@@ -318,7 +318,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.21</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.22</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1905,10 +1905,13 @@ async function orImage(model,key,prompt,refs){
   if(refs.length){ content=[]; for(const ref of refs){ const u=(ref&&ref.url)?ref.url:ref; const label=ref&&ref.label;
       if(label) content.push({type:'text', text:label}); content.push({type:'image_url', image_url:{url:u}}); } content.push({type:'text', text:prompt}); }
   else content=prompt;
+  // Gemini 이미지 모델은 image+text 동시 출력, Seedream·FLUX 등은 이미지 전용 → 모델에 맞게 modalities 지정
+  // (이미지 전용 모델에 ['image','text']를 요청하면 "No endpoints found that support... image, text" 404 발생)
+  const mods = /gemini/i.test(model) ? ['image','text'] : ['image'];
   const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,
       'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
-    body:JSON.stringify({model, modalities:['image','text'], usage:{include:true}, messages:[{role:'user', content}]})
+    body:JSON.stringify({model, modalities:mods, usage:{include:true}, messages:[{role:'user', content}]})
   });
   if(!r.ok) throw new Error('HTTP '+r.status+': '+(await r.text()).slice(0,200));
   const j=await r.json();
