@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reign of Nations · 권력의 길</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+KR:wght@400;500;600;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000000; --line:#22242b; --txt:#e7ebf2; --dim:#8a93a3; --gold:#e8c06a;
+    --blue:#5aa0ff; --blue2:#2b4a6b; --red:#ff5a5a; --quote:#8c8c8c;
+    --font:"Noto Serif KR",serif; --fs:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg); color:var(--txt); font-family:var(--font); font-size:var(--fs); line-height:1.85}
+  #app{max-width:860px; margin:0 auto; min-height:100%; display:flex; flex-direction:column}
+  button,select,textarea{font-family:inherit}
+  button{cursor:pointer}
+
+  .top{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; background:rgba(11,14,20,.94); backdrop-filter:blur(6px)}
+  .brand{font-weight:800; letter-spacing:1.2px; white-space:nowrap; font-size:1rem}
+  .brand .m{color:var(--blue)} .brand .sub{color:var(--dim); font-weight:500; font-size:.78rem}
+  .tools{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end}
+  .icon{background:#12151c; border:1px solid var(--line); color:#b9c1d0; border-radius:8px; padding:6px 10px; font-size:.82rem}
+  .icon:hover{color:#fff; border-color:#34415a}
+  select.icon{padding:6px 8px}
+
+  #welcome{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:46px 22px; gap:18px}
+  #welcome .logo{font-size:2.2rem; font-weight:800; letter-spacing:3px; margin:0}
+  #welcome .logo .m{color:var(--blue)}
+  #welcome .tag{color:var(--gold); letter-spacing:3px; font-size:.95rem; margin-top:-4px}
+  #welcome .desc{color:var(--dim); max-width:440px; font-size:.92rem}
+  .field{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
+  .field label{color:var(--dim); font-size:.85rem}
+  .sel{background:#10141c; border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:10px 12px; font-size:.92rem}
+  .cta{margin-top:4px; background:linear-gradient(135deg,#1b3a5a,#0e1d30); border:1px solid #36608f; color:#eaf3ff;
+    font-weight:800; letter-spacing:3px; border-radius:13px; padding:14px 50px; font-size:1.06rem; box-shadow:0 10px 30px rgba(0,0,0,.45)}
+  .cta:hover{transform:translateY(-2px)}
+  .ghost{background:transparent; border:1px solid var(--line); color:var(--dim); border-radius:10px; padding:9px 16px; font-size:.85rem}
+  .ghost:hover{color:#fff}
+
+  #log{flex:1; padding:18px 16px 6px; overflow-y:auto}
+  .you{color:var(--gold); font-size:.92rem; margin:16px 2px 8px; font-weight:700}
+  .you::before{content:"▸ "; opacity:.7}
+  .turn{margin:0 0 14px}
+
+  /* ===== 앱과 동일한 마크다운 양식 ===== */
+  .md h1{font-size:1.72em; font-weight:800; margin:.3em 0 .5em; line-height:1.32}
+  .md h2{font-size:1.3em; color:#fff; font-weight:700; margin:1em 0 .45em}
+  .md h2.sec{border-top:1px solid var(--line); padding-top:1.15em; margin-top:1.5em}
+  .md h2 .sm{color:var(--gold); margin-right:.25em}
+  .md h3{font-size:1.06em; color:#fff; margin:.9em 0 .4em}
+  .md p{margin:.55em 0; line-height:1.85}
+  .md strong{color:#fff}
+  .md em{color:#fff; font-style:normal; background:#2a2d36; padding:1px 6px; border-radius:5px}
+  .md .good{color:var(--blue); font-weight:400}
+  .md .bad{color:var(--red); font-weight:400}
+  .md blockquote{margin:.7em 0; padding:.15em 0 .15em .95em; border-left:3px solid #3a3b42; color:var(--quote); line-height:1.85}
+  .md hr{display:none}
+  .md ul{margin:.5em 0; padding-left:1.3em} .md li{margin:.2em 0}
+  .illust{margin:.4em 0 .8em; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0e1118; color:var(--dim); font-size:.86rem; padding:0}
+  .illust.load{padding:14px; text-align:center}
+  .illust img{display:block; width:100%; height:auto}
+  .illust .cap{padding:6px 10px; color:var(--dim); font-size:.78rem; border-top:1px solid var(--line)}
+  .md table{border-collapse:collapse; width:100%; margin:.7em 0; font-size:.92em}
+  .md th,.md td{border:1px solid var(--line); padding:7px 10px; text-align:center}
+  .md th{background:#1d2029; color:#fff} .md tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+  .cursor{display:inline-block; width:7px; height:1.05em; background:var(--gold); vertical-align:-2px; animation:bk 1s steps(1) infinite; border-radius:1px}
+  @keyframes bk{50%{opacity:0}}
+
+  #choices{padding:2px 16px 12px; display:flex; flex-direction:column; gap:9px}
+  .crow{display:flex; gap:6px; align-items:flex-start}
+  .cedit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%; background:transparent; border:none; color:var(--dim); font-size:.95em; display:flex; align-items:center; justify-content:center}
+  .cedit:hover{color:var(--gold)}
+  .choice{flex:1; min-width:0; text-align:left; background:#101115; border:1px solid #24252b; color:var(--txt); border-radius:16px;
+    padding:13px 16px; font-size:1em; line-height:1.65; transition:.14s; display:flex; gap:10px; align-items:flex-start}
+  .choice:hover{border-color:var(--blue); background:#0f1620}
+  .choice .n{flex:0 0 auto; color:var(--blue); font-weight:800}
+  .gm-footer{display:flex; gap:8px; margin:10px 2px 2px}
+  .footbtn{background:#12151c; border:1px solid var(--line); color:var(--dim); border-radius:9px; padding:7px 12px; font-size:.84rem}
+  .footbtn:hover{color:#fff; border-color:#34415a}
+  .footbtn.cont{color:var(--gold)}
+
+  /* 하단 명령바 — 한 줄 고정(줄바꿈 금지) */
+  #cmd{display:flex; gap:7px; padding:9px 12px 14px; border-top:1px solid var(--line); background:var(--bg); flex-wrap:nowrap; overflow-x:auto}
+  .cmdb{flex:0 0 auto; white-space:nowrap; background:#101218; border:1px solid var(--line); color:#cdd4e0; border-radius:11px; padding:11px 15px; font-size:.92rem; font-weight:600}
+  .cmdb:hover{color:#fff; border-color:#34415a}
+  .cmdb.ham{font-size:1.1rem; padding:11px 14px}
+  #inputrow{display:flex; gap:8px; align-items:flex-end; padding:9px 12px 12px; border-top:1px solid var(--line); background:var(--bg)}
+  #inp{flex:1; resize:none; min-height:46px; max-height:150px; background:#0c0e13; border:1px solid var(--line); color:var(--txt); border-radius:12px; padding:12px 14px; font-size:.96rem; line-height:1.6}
+  #inp:focus{outline:none; border-color:#34415a}
+  .send{background:linear-gradient(135deg,#1b3a5a,#0e1d30); border:1px solid #36608f; color:#eaf3ff; border-radius:12px; padding:12px 18px; font-weight:800}
+  .mrow{padding:13px 14px; border-radius:10px; cursor:pointer; font-size:.98rem}
+  .mrow:hover{background:#15171d}
+  .busy{color:var(--blue); font-size:.9rem; padding:6px 18px}
+  .spin{display:inline-block; width:12px;height:12px;border:2px solid #2c3a4d;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .err{color:var(--red); padding:11px 14px; font-size:.9rem; white-space:pre-wrap; background:rgba(255,90,90,.07); border:1px solid rgba(255,90,90,.25); border-radius:10px; margin:0 0 12px}
+  .hidden{display:none !important}
+  .mini{font-size:.82rem; color:var(--dim)}
+  dialog{background:#0e1420; color:var(--txt); border:1px solid var(--line); border-radius:14px; width:92%; max-width:560px; padding:0}
+  dialog::backdrop{background:rgba(0,0,0,.65)}
+  dialog textarea{width:100%; height:165px; background:#10141c; border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:10px; font-size:.84rem}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top hidden" id="topbar">
+    <div class="brand"><span class="m">✦</span> Reign of Nations <span class="sub">· 권력의 길</span></div>
+    <div class="mini" id="costShow"></div>
+  </div>
+
+  <div id="welcome">
+    <h1 class="logo"><span class="m">✦</span> Reign of Nations</h1>
+    <div class="tag">권 력 의 길</div>
+    <div class="desc">1년차 국회의원으로 시작해 정상까지. 선택이 곧 권력이 된다.</div>
+    <div class="field"><label>드라마 톤</label>
+      <select class="sel" id="tone">
+        <option value="혼합(진지+막장)">혼합 (진지+막장) · 기본</option>
+        <option value="정치(하우스 오브 카드)">정치 (하우스 오브 카드)</option>
+        <option value="막장">막장</option>
+        <option value="코믹">코믹</option>
+        <option value="진지+코믹">진지+코믹</option>
+      </select></div>
+    <div class="field"><label>글꼴</label><select class="sel" id="fontWel"></select></div>
+    <button class="cta" id="ctaStart">시 작</button>
+    <button class="ghost" id="ctaLoad">저장본 불러오기</button>
+    <div class="mini" style="max-width:520px">Claude 아티팩트로 실행 — 당신의 Claude(Sonnet 4.6) 세션으로 진행됩니다. (삽화 없음)</div>
+  </div>
+
+  <div id="log" class="hidden"></div>
+  <div id="busy" class="busy hidden"><span class="spin"></span>게임 마스터가 쓰는 중…</div>
+  <div id="choices" class="hidden"></div>
+  <div id="inputrow" class="hidden">
+    <textarea id="inp" placeholder="직접 행동·대사를 입력하세요"></textarea>
+    <button class="send" id="btnSend">▶</button>
+    <button class="cmdb" id="btnInpCancel">✕</button>
+  </div>
+  <div id="cmd" class="hidden">
+    <button class="cmdb ham" id="btnMenu">☰</button>
+    <button class="cmdb" id="btnInput">✏ 입력</button>
+    <button class="cmdb" id="btnSitu">＋ 상황</button>
+    <button class="cmdb" id="btnToneCmd">🎭 톤</button>
+  </div>
+</div>
+
+<dialog id="menu"><div style="padding:8px">
+  <div class="mrow" data-act="상태">📊 상태 보기</div>
+  <div class="mrow" data-act="국정과제">📋 과제 보기</div>
+  <div class="mrow" id="mTone">🎭 톤 변경</div>
+  <div class="mrow" id="mImg">🎨 삽화 설정</div>
+  <div class="mrow" id="mFont">🔤 글꼴 변경</div>
+  <div class="mrow" id="mFsDn">가− 글자 작게</div>
+  <div class="mrow" id="mFsUp">가＋ 글자 크게</div>
+  <div class="mrow" id="mSave">💾 저장</div>
+  <div class="mrow" id="mLoad">📂 불러오기</div>
+  <div class="mrow" id="mNew">🆕 새 게임</div>
+  <div class="mrow" id="mClose" style="text-align:center; color:var(--dim)">닫기</div>
+</div></dialog>
+
+<dialog id="tonedlg"><div style="padding:14px">
+  <h3 style="margin:0 0 10px">🎭 드라마 톤 변경</h3>
+  <div style="display:flex; flex-direction:column; gap:7px">
+    <button class="cmdb" data-tone="혼합(진지+막장)">혼합 (진지+막장)</button>
+    <button class="cmdb" data-tone="정치(하우스 오브 카드)">정치 (하우스 오브 카드)</button>
+    <button class="cmdb" data-tone="막장">막장</button>
+    <button class="cmdb" data-tone="코믹">코믹</button>
+    <button class="cmdb" data-tone="진지+코믹">진지+코믹</button>
+  </div>
+  <div class="field" style="justify-content:flex-end; margin-top:10px"><button class="icon" id="toneClose">닫기</button></div>
+</div></dialog>
+
+<dialog id="imgdlg"><div style="padding:18px">
+  <h3 style="margin:0 0 8px">🎨 삽화 설정 (Google Gemini 이미지)</h3>
+  <p class="mini">아티팩트 안에서 당신의 <b>Google API 키</b>로 삽화를 생성합니다. 키는 이 브라우저에만 저장됩니다.<br>키 발급: aistudio.google.com/apikey</p>
+  <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px">
+    <input class="sel" id="imgKeyIn" placeholder="Google API 키 (AIza...)" style="width:100%">
+    <input class="sel" id="imgModelIn" placeholder="이미지 모델 (기본 gemini-2.5-flash-image)" style="width:100%">
+    <label class="mini">삽화 빈도 — <span id="imgFreqV">끔</span></label>
+    <input type="range" id="imgFreqIn" min="0" max="10" step="1" value="0">
+    <div class="mini">0=끔 · 1=매 턴 · N=N턴마다 1장</div>
+  </div>
+  <div class="field" style="justify-content:flex-end; margin-top:12px">
+    <button class="icon" id="imgTest">연결 테스트</button>
+    <button class="icon" id="imgSave">저장</button>
+    <button class="icon" id="imgClose">닫기</button>
+  </div>
+  <div class="mini" id="imgTestOut" style="margin-top:8px; white-space:pre-wrap"></div>
+</div></dialog>
+
+<dialog id="dlg"><div style="padding:18px">
+  <h3 id="dlgTitle" style="margin:0 0 8px">저장</h3>
+  <p class="mini" id="dlgDesc"></p>
+  <textarea id="dlgArea"></textarea>
+  <div class="field" style="justify-content:flex-end; margin-top:12px">
+    <button class="icon" id="dlgCopy">복사</button>
+    <button class="icon" id="dlgDoLoad">불러오기</button>
+    <button class="icon" id="dlgClose">닫기</button>
+  </div>
+</div></dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const LS='reign_artifact_v2';
+const MODEL='claude-sonnet-4-6';
+
+const SYSTEM = `너는 한국 정치 드라마 텍스트 게임 "권력의 길"의 게임 마스터(GM)다. 모든 출력은 자연스러운 한국어로만 한다. 아래 규칙을 절대 어기지 않는다.
+
+[게임] 플레이어는 대한민국 국회의원. 초선 의원에서 시작해 상임위·당직→장관/원내대표→당대표/대선후보→대선→대통령까지 오르는 정치 드라마. 정치 거래·스캔들·파벌 암투·배신·폭로·검찰 수사·언론 플레이를 활용한다.
+
+[기본 인물 — 별도 지정 없으면 이대로] 주인공: 지범근(남,35), 지역구 강남, 민주당, 성향 "실리주의 협상가"(검사 출신의 냉철함). 보좌관: 이채영(여) — 섹시한 말투의 매력적인, 일 잘하는 여비서(능청·은근한 매력).
+
+[시작 — 1년차 의원, 첫 턴부터 사건] "시작"이라고 하면 주인공은 이미 의정활동 중인 1년차 초선 의원이다. 등원·선서·사무실 배정 같은 도입은 전부 건너뛴다. 첫 턴부터 곧바로 사건·갈등·기회를 던진다(스캔들 제보·계파 견제·법안 충돌·폭로·은밀한 거래 제안 등, 활성 톤에 맞게). 배경(상임위·보좌진·지역구)은 사건 속에 한두 문장으로 녹여 알려준다. 잔잔한 행정 도입 금지 — 첫 문장부터 긴장·위트·복선.
+
+[삽화 프롬프트 — 맨 앞 1회(숨김)] 매 응답의 가장 첫 줄에, 그 장면의 이미지 생성용 영어 프롬프트를 [IMG] ... [/IMG] 한 줄로 먼저 출력한 뒤 줄바꿈하고 본문을 쓴다(이 줄은 화면에 표시되지 않는 내부용). 내용: 장소(실제 한국 배경)·등장인물을 역할로 지칭(lawmaker, aide)·각자의 행동/자세/시선·카메라 샷(close-up/medium/wide)·조명/분위기(시간대·긴장도에 맞춘 영화적 무드, 긴장 장면은 저조도)·핵심 소품. 인물 얼굴·외모 상세는 쓰지 않는다. 영어 60~90단어.
+
+[매 턴 출력 형식]
+1) 가장 첫 줄은 반드시 '# 제목'(단, 위 [IMG] 줄이 있으면 그 다음 줄이 제목). 형식: # **🇰🇷 대한민국 — {핵심 사건}**  다음 줄에 > {한 문장 요약}
+2) 상황 전개: 1~2개의 짧은 장면. 소제목(##)은 0~2개, '짧은 명사구'로만(문장형·해설형·감탄수식어·'오늘의~' 금지). 인물 발언은 > 인용. 장면이 바뀌면 소제목으로 구분.
+3) 본문 맨 끝에 선택지 정확히 3개:
+## **✦ 어떻게 하시겠습니까?**
+1. "{주인공 1인칭 대사 한 줄}"
+2. "{주인공 1인칭 대사 한 줄}"
+3. "{주인공 1인칭 대사 한 줄}"
+선택지는 실제 발화체(큰따옴표, 15~35자), 서로 다른 방향, 말투·수위도 활성 톤 반영. 선택지 없이 끝내지 말 것(엔딩 제외).
+[강조] 그 턴의 특히 긍정·유리한 핵심 문장은 <good>문장</good>, 부정·위험한 핵심 문장은 <bad>문장</bad>로 감싼다(각 0~2개만, 남용 금지). 그 외 HTML 태그 금지.
+
+[문체] 영화처럼 생생하되 간결하게(공백 포함 1,000~1,300자 안팎). 표정·눈빛·말투·긴장을 살아있는 대사 중심으로. ★찰진 입말: 대사는 실제 한국 사람들이 쓰는 살아있는 입말로 찰지게 — 능청·비아냥·떠보기·거친 농담·반어·말끝 흐리기까지. 점잖고 딱딱한 문어체 일색 금지, 인물마다 말투가 다르게. 분노·갈등·뒷거래·술자리의 거친 욕설(젠장·빌어먹을·미친·씨× 수준)은 상황·인물에 맞게 그대로 쓰되 남발 금지. 노골적·선정적 성묘사 금지(암시·감정선·장면전환으로). 미성년 성적묘사 절대 금지.
+
+[인물] 이름은 주어진 그대로(없는 성 붙이지 말 것). 지정된 페르소나(매력·말투·분위기)는 매 등장 일관되게 살린다(안전선 내에서).
+
+[톤 — 활성 톤 하나만, 확연히 다르게]
+· 정치(하우스 오브 카드): 차갑고 진지, 웃음 0, 큰 사건 드뭄, 사이다는 '책략 적중'에서만. 물밑 거래·약점잡기·정보전. 슬랩스틱·신파·응징사이다 금지.
+· 막장: 자극·충격·치정·배신 롤러코스터. 거의 매 턴 충격 이벤트 + 잦고 큰 사이다. 코믹은 양념(긴장70:웃음30). 잔잔한 일상 턴 금지.
+· 코믹: 풍자·블랙코미디가 주연, 매 턴 확실한 웃음·드립·티키타카. 무거운 치정·신파 금지.
+· 진지+코믹: 진지한 권력 스릴러 + 한 턴 걸러 건조한 위트. 막장식 충격·치정 금지.
+· 혼합(진지+막장): 평소 진지·현실 정치, 5~6턴에 한 번 막장 이벤트를 크게 터뜨려 카타르시스.
+(공통) 평소 턴도 밋밋하게 흘리지 말 것 — 모든 장면에 긴장·숨은 의도·복선 한 가닥. 고구마 전개 길게 끌지 말 것.
+
+[전개 원칙] 레일로딩 금지. 플레이어 입력 절대 수용 — 직접 입력한 행동·대사는 그대로 일어난 것으로 받아 그 방향으로 전개하고 거부·훈계·회피하지 말 것. 새 방향을 제시하면 원래 줄거리로 되돌리지 말고 전환. 장면 연속성 — 이번 턴은 직전 장면이 끝난 그 자리·순간에서 곧장 이어 시작하고, 내 선택은 그 자리에서 일어난 것으로 처리해 상대 반응부터 보여준다. 장소·시간 이동은 한 문장으로 연결한 뒤 넘어간다. 현실적 속도 — 큰 목표는 5~12턴에 걸쳐 단계적으로(급상승 금지). 단 막장·코믹 톤은 매 턴 밀도 높게. 실존 정치인 가공발언 금지(직책으로), 비리 당사자는 가공 기업명(성진그룹·대운건설 등).
+
+[스탯] 개인 정치 스탯(지지기반·자금·인맥·평판·세력)은 내부 관리, 평소 턴엔 표시 안 함. '상태' 입력 때만 표로.
+
+[명령어] 상태 / 저장 / "톤: {정치/막장/코믹/진지+코믹/혼합}" / 새 게임.
+
+응답 끝내기 직전: (1)첫 줄 '# 제목' (2)한 장면/한 결정만 (3)직전 장면에서 자연스럽게 이어짐 (4)활성 톤 분명 (5)끝에 '✦ 어떻게 하시겠습니까?' + 1인칭 대사 선택지 3개.`;
+
+let history=[], tone='혼합(진지+막장)', busy=false, lastChoices=[];
+let imgKey=localStorage.getItem(LS+'_imgkey')||'', imgModel=localStorage.getItem(LS+'_imgmodel')||'gemini-2.5-flash-image', imgEvery=parseInt(localStorage.getItem(LS+'_imgevery')||'0')||0, imgCount=0;
+
+/* 글꼴 */
+const FONTS=[
+  {k:'serif',name:'노토 세리프 KR (명조)', css:'"Noto Serif KR",serif'},
+  {k:'sans', name:'노토 산스 KR (고딕)', css:'"Noto Sans KR",sans-serif'},
+  {k:'gowun',name:'고운바탕 (부드러운 명조)', css:'"Gowun Batang","Noto Serif KR",serif'},
+  {k:'system',name:'시스템 기본', css:'-apple-system,"Apple SD Gothic Neo",sans-serif'}
+];
+let fontKey=localStorage.getItem(LS+'_font')||'serif';
+function applyFont(){ const f=FONTS.find(x=>x.k===fontKey)||FONTS[0]; document.documentElement.style.setProperty('--font',f.css);
+  try{localStorage.setItem(LS+'_font',fontKey);}catch(e){} ['#fontWel','#fontTop'].forEach(s=>{const el=$(s); if(el) el.value=fontKey;}); }
+function fillFontSelects(){ ['#fontWel','#fontTop'].forEach(s=>{ const el=$(s); if(!el) return;
+  el.innerHTML=FONTS.map(f=>'<option value="'+f.k+'">'+f.name+'</option>').join(''); el.value=fontKey;
+  el.onchange=()=>{ fontKey=el.value; applyFont(); }; }); }
+const FS=[13,14,15,16,18,20,22]; let fsi=parseInt(localStorage.getItem(LS+'_fs')); if(isNaN(fsi)) fsi=3;
+function applyFs(){ fsi=Math.max(0,Math.min(FS.length-1,fsi)); document.documentElement.style.setProperty('--fs',FS[fsi]+'px'); try{localStorage.setItem(LS+'_fs',String(fsi));}catch(e){} }
+
+/* 저장 */
+function persist(){ try{ localStorage.setItem(LS, JSON.stringify({history,tone})); }catch(e){} }
+function restore(){ try{ const d=JSON.parse(localStorage.getItem(LS)); if(d&&d.history&&d.history.length){ history=d.history; tone=d.tone||tone; return true; } }catch(e){} return false; }
+
+/* 마크다운 */
+function mdToHtml(src){
+  src=(src||'').replace(/\[IMG\][\s\S]*?\[\/IMG\]/gi,'').trim();
+  const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const inline=t=>esc(t)
+      .replace(/&lt;good&gt;([\s\S]*?)&lt;\/good&gt;/g,'<span class="good">$1</span>')
+      .replace(/&lt;bad&gt;([\s\S]*?)&lt;\/bad&gt;/g,'<span class="bad">$1</span>')
+      .replace(/\*\*([^*]+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*([^*]+?)\*/g,'<em>$1</em>');
+  const lines=src.split('\n'); let html='',i=0,m;
+  while(i<lines.length){
+    let t=lines[i].trim();
+    if(t===''){ i++; continue; }
+    if(/^-{3,}$/.test(t)){ i++; continue; }
+    if(m=t.match(/^#\s+(.+)$/)){ html+='<h1>'+inline(m[1].replace(/^\*\*|\*\*$/g,''))+'</h1>'; i++; continue; }
+    if(m=t.match(/^##\s+(.+)$/)){ let x=m[1].replace(/^\*\*|\*\*$/g,'').replace(/✦/g,'').trim(); html+='<h2 class="sec"><span class="sm">✦</span>'+inline(x)+'</h2>'; i++; continue; }
+    if(m=t.match(/^###\s+(.+)$/)){ html+='<h3>'+inline(m[1])+'</h3>'; i++; continue; }
+    if(t.startsWith('>')){ let buf=[]; while(i<lines.length&&lines[i].trim().startsWith('>')){ buf.push(lines[i].trim().replace(/^>\s?/,'')); i++; } html+='<blockquote>'+inline(buf.join('<br>'))+'</blockquote>'; continue; }
+    if(t.startsWith('|')&&lines[i+1]&&/^\|[\s:|-]+\|$/.test(lines[i+1].trim())){ let rows=[]; while(i<lines.length&&lines[i].trim().startsWith('|')){ rows.push(lines[i].trim()); i++; } html+=table(rows,inline); continue; }
+    if(m=t.match(/^[-*]\s+(.+)$/)){ let buf=[]; while(i<lines.length&&/^[-*]\s+/.test(lines[i].trim())){ buf.push('<li>'+inline(lines[i].trim().replace(/^[-*]\s+/,''))+'</li>'); i++; } html+='<ul>'+buf.join('')+'</ul>'; continue; }
+    html+='<p>'+inline(t)+'</p>'; i++;
+  }
+  return html;
+}
+function table(rows,inline){ const c=r=>r.split('|').slice(1,-1).map(x=>x.trim());
+  let h=c(rows[0]),b=rows.slice(2).map(c);
+  return '<table><thead><tr>'+h.map(x=>'<th>'+inline(x)+'</th>').join('')+'</tr></thead><tbody>'+b.map(r=>'<tr>'+r.map(x=>'<td>'+inline(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'; }
+
+/* 선택지 분리 */
+function splitChoices(text){
+  const idx=text.search(/##\s*\*{0,2}\s*✦?\s*어떻게/);
+  if(idx<0){ const tc=trailing(text); if(tc) return tc; return {body:text.trim(), choices:[]}; }
+  return {body:text.slice(0,idx).trim(), choices:collect(text.slice(idx))};
+}
+function trailing(text){ const lines=text.split('\n'); let start=lines.length,found=[];
+  for(let j=lines.length-1;j>=0;j--){ const s=lines[j].trim(); if(s===''){ if(found.length) break; else continue; } if(/^\d+[.)]/.test(s)){ found.unshift(s); start=j; } else break; }
+  if(found.length>=2){ const c=collect(found.join('\n')); if(c.length>=2) return {body:lines.slice(0,start).join('\n').trim(), choices:c}; } return null; }
+function collect(tail){ const out=[]; const re=/^\s*(\d+)[.)]\s*(.+)$/gm; let m,last=0;
+  while(m=re.exec(tail)){ const n=+m[1]; if(n<=last) break; let s=m[2].trim().replace(/^\*\*|\*\*$/g,'').replace(/^["“'']|["”'']$/g,''); out.push(s); last=n; if(out.length>=4) break; } return out; }
+
+/* 렌더 */
+const log=$('#log'), choicesEl=$('#choices');
+function addUser(c){ const d=document.createElement('div'); d.className='you'; d.textContent=c; log.appendChild(d); }
+function autoGrowInp(){ const t=$('#inp'); t.style.height='auto'; t.style.height=Math.min(150,t.scrollHeight)+'px'; }
+function renderChoices(cs){ choicesEl.innerHTML=''; cs.forEach((c,i)=>{
+  const row=document.createElement('div'); row.className='crow';
+  const ed=document.createElement('button'); ed.className='cedit'; ed.textContent='✎'; ed.title='수정해서 보내기';
+  ed.onclick=()=>{ $('#inp').value=c; $('#inp').focus(); autoGrowInp(); };
+  const b=document.createElement('button'); b.className='choice';
+  b.innerHTML='<span class="n">'+(i+1)+'</span><span>'+c.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>';
+  b.onclick=()=>{ if(busy) return; send('"'+c+'"', c); };
+  row.appendChild(ed); row.appendChild(b); choicesEl.appendChild(row); }); }
+function removeFooters(){ document.querySelectorAll('.gm-footer').forEach(f=>f.remove()); }
+function addFooter(turn){ removeFooters(); const f=document.createElement('div'); f.className='gm-footer';
+  const c=document.createElement('button'); c.className='footbtn cont'; c.textContent='⚡ 이어서 생성'; c.onclick=continueGen;
+  const r=document.createElement('button'); r.className='footbtn'; r.textContent='↻ 다시 생성'; r.onclick=regen;
+  f.appendChild(c); f.appendChild(r); turn.appendChild(f); }
+function lastGmIndex(){ for(let i=history.length-1;i>=0;i--) if(history[i].role==='gm') return i; return -1; }
+function scroll(){ if(log.scrollHeight-log.scrollTop-log.clientHeight<160) log.scrollTop=log.scrollHeight; }
+
+/* ---------- GM 호출 (스트리밍) ---------- */
+function buildMessages(userMsg){
+  const msgs=[]; for(const m of history) msgs.push({role:m.role==='user'?'user':'assistant', content:m.content});
+  msgs.push({role:'user', content:userMsg}); return msgs;
+}
+function sysText(){ return SYSTEM+'\n\n[활성 드라마 톤 = "'+tone+'"] 이 톤을 최우선으로(본문·선택지 모두).'; }
+async function streamGM(userMsg, onToken){
+  // 1) 표준 메시지 API 스트리밍 (claude-sonnet-4-6)
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+      headers:{'content-type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:MODEL, max_tokens:4096, stream:true, system:sysText(), messages:buildMessages(userMsg) }) });
+    if(!res.ok || !res.body) throw new Error('HTTP '+res.status);
+    const rd=res.body.getReader(), dec=new TextDecoder(); let buf='';
+    while(true){ const {value,done}=await rd.read(); if(done) break; buf+=dec.decode(value,{stream:true});
+      let parts=buf.split('\n\n'); buf=parts.pop();
+      for(const p of parts) for(const ln of p.split('\n')){ const t=ln.trim(); if(t.startsWith('data:')){ try{ const j=JSON.parse(t.slice(5).trim()); if(j.type==='content_block_delta'&&j.delta&&j.delta.text) onToken(j.delta.text); }catch(e){} } } }
+    return;
+  }catch(apiErr){
+    // 2) 폴백: window.claude.complete (스트리밍 미지원 → 타자기 시뮬레이션)
+    if(window.claude && typeof window.claude.complete==='function'){
+      const prompt=sysText()+(history.length?('\n\n[지금까지의 진행]\n'+history.map(m=>(m.role==='user'?'[플레이어] ':'[GM] ')+m.content).join('\n\n')):'')+'\n\n[플레이어 입력]\n'+userMsg+'\n\n위 형식대로 다음 턴을 출력하라.';
+      const full=await window.claude.complete(prompt);
+      if(!full||!full.trim()) throw new Error('빈 응답');
+      for(let i=0;i<full.length;i+=3){ onToken(full.slice(i,i+3)); await new Promise(r=>setTimeout(r,10)); }
+      return;
+    }
+    throw apiErr;
+  }
+}
+
+/* ---------- 삽화 (Google Gemini 이미지) ---------- */
+async function geminiImage(prompt){
+  const model=imgModel||'gemini-2.5-flash-image';
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(imgKey),{
+    method:'POST', headers:{'content-type':'application/json'},
+    body:JSON.stringify({ contents:[{role:'user', parts:[{text:prompt}]}], generationConfig:{responseModalities:['IMAGE','TEXT']} })
+  });
+  if(!res.ok) throw new Error('이미지 HTTP '+res.status+': '+(await res.text()).slice(0,160));
+  const j=await res.json();
+  const parts=(((j.candidates||[])[0]||{}).content||{}).parts||[];
+  const p=parts.find(x=>x.inlineData||x.inline_data); const d=p&&(p.inlineData||p.inline_data);
+  if(!d||!d.data) throw new Error('이미지를 받지 못했습니다(이 모델이 이미지 출력 모델이 아닐 수 있음).');
+  return 'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data;
+}
+function stripImg(s){ s=(s||'').replace(/\[IMG\][\s\S]*?\[\/IMG\]/gi,''); const i=s.indexOf('[IMG]'); if(i>=0) s=s.slice(0,i); return s.replace(/^\s+/,''); }
+
+async function send(promptMsg, displayMsg){
+  if(busy) return;
+  const shown=displayMsg||promptMsg;
+  const tm=shown.match(/^톤\s*[:：]\s*(.+)$/);
+  if(tm){ const map={'정치':'정치(하우스 오브 카드)','막장':'막장','코믹':'코믹','진지+코믹':'진지+코믹','혼합':'혼합(진지+막장)'};
+    tone=map[tm[1].trim()]||tm[1].trim(); persist(); addUser('톤 변경 → '+tone); renderChoices(lastChoices); scroll(); return; }
+  addUser(shown); history.push({role:'user', content:promptMsg});
+  await runStream(promptMsg, {});
+}
+// 새 턴 / 다시 생성 / 이어서 생성 공통 스트리밍
+async function runStream(userMsg, opt){
+  opt=opt||{}; busy=true; $('#btnSend').disabled=true; choicesEl.innerHTML=''; removeFooters();
+  let turn, bodyEl, acc;
+  if(opt.cont){ const li=lastGmIndex(); const ts=log.querySelectorAll('.turn'); turn=ts[ts.length-1]; bodyEl=turn?turn.querySelector('.md'):null; acc=history[li]?history[li].content:''; }
+  if(!turn){ turn=document.createElement('div'); turn.className='turn'; bodyEl=document.createElement('div'); bodyEl.className='md'; turn.appendChild(bodyEl); log.appendChild(turn); acc=opt.cont?acc:''; }
+  $('#busy').classList.remove('hidden'); scroll();
+  const gmCount=history.filter(m=>m.role==='gm').length;
+  const wantImg = !opt.cont && !!imgKey && imgEvery>0 && ((gmCount+1)%imgEvery===0);
+  let imgStarted=false, imgBox=null, raw=opt.cont?'':'';
+  const startImg=()=>{ if(imgStarted||!wantImg) return; const m=raw.match(/\[IMG\]([\s\S]*?)\[\/IMG\]/i); if(!m) return;
+    imgStarted=true; imgBox=document.createElement('div'); imgBox.className='illust load'; imgBox.textContent='🎨 삽화 생성 중…';
+    turn.appendChild(imgBox); scroll();
+    geminiImage(m[1].trim()).then(src=>{ imgBox.className='illust'; imgBox.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">'+(imgModel||'gemini-2.5-flash-image')+'</div>'; scroll(); })
+      .catch(e=>{ imgBox.className='illust load'; imgBox.textContent='⚠️ 삽화 실패: '+e.message; }); };
+  const paint=()=>{ const {body}=splitChoices(stripImg(acc)); bodyEl.innerHTML=mdToHtml(body)+'<span class="cursor"></span>'; startImg(); scroll(); };
+  try{
+    await streamGM(opt.cont?'직전 응답이 중간에 끊겼다. 처음부터 다시 쓰지 말고 끊긴 부분 바로 다음부터 자연스럽게 이어서 계속 써라. (반드시 끝에 ✦ 선택지 3개)':userMsg,
+      (tok)=>{ acc+=tok; raw+=tok; paint(); });
+    const clean=stripImg(acc);
+    if(!clean.trim()) throw new Error('빈 응답이 왔습니다.');
+    const {body, choices}=splitChoices(clean);
+    bodyEl.innerHTML=mdToHtml(body); startImg();
+    const li=lastGmIndex();
+    if(opt.cont && li>=0) history[li].content=clean; else history.push({role:'gm', content:clean});
+    lastChoices=choices.length?choices:lastChoices;
+    renderChoices(lastChoices); addFooter(turn); persist();
+  }catch(e){
+    if(!opt.cont){ if(history.length&&history[history.length-1].role==='user') history.pop(); turn.remove(); }
+    const er=document.createElement('div'); er.className='err'; er.textContent='⚠️ '+e.message+'\n(아티팩트가 API 호출을 막으면 GitHub Pages 앱이나 Claude 프로젝트에서 사용하세요.)'; log.appendChild(er);
+    renderChoices(lastChoices);
+  }finally{ busy=false; $('#btnSend').disabled=false; $('#busy').classList.add('hidden'); scroll(); }
+}
+async function regen(){
+  if(busy) return; const li=lastGmIndex(); if(li<0) return;
+  history.splice(li,1);                       // 마지막 GM 제거(직전 user는 유지)
+  const ts=log.querySelectorAll('.turn'); if(ts.length) ts[ts.length-1].remove(); removeFooters();
+  const lastUser=[...history].reverse().find(m=>m.role==='user');
+  await runStream(lastUser?lastUser.content:'다음 전개를 진행해줘', {});
+}
+async function continueGen(){
+  if(busy) return; if(lastGmIndex()<0) return;
+  await runStream('', {cont:true});
+}
+
+/* 화면 */
+function showGame(){ $('#welcome').classList.add('hidden'); ['#topbar','#log','#choices','#cmd'].forEach(s=>$(s).classList.remove('hidden')); $('#inputrow').classList.add('hidden'); }
+function startNew(){ history=[]; lastChoices=[]; log.innerHTML=''; tone=$('#tone').value; persist(); showGame(); send('시작','시작'); }
+function renderAll(){ log.innerHTML=''; lastChoices=[]; let lastTurn=null;
+  for(const m of history){ if(m.role==='user'){ if(m.content!=='시작'&&!/^톤\s*[:：]/.test(m.content)) addUser(m.content.replace(/^"|"$/g,'')); }
+    else { const {body,choices}=splitChoices(m.content); lastChoices=choices.length?choices:lastChoices;
+      const t=document.createElement('div'); t.className='turn'; const b=document.createElement('div'); b.className='md'; b.innerHTML=mdToHtml(body); t.appendChild(b); log.appendChild(t); lastTurn=t; } }
+  renderChoices(lastChoices); if(lastTurn) addFooter(lastTurn); log.scrollTop=log.scrollHeight; }
+
+/* 이벤트 */
+$('#ctaStart').onclick=startNew;
+$('#btnSend').onclick=()=>{ const v=$('#inp').value.trim(); if(!v){ return; } const md=inputMode; $('#inp').value=''; $('#inp').style.height='auto'; hideInput();
+  if(md==='situ') send('다음 상황을 지금 국면에 자연스럽게 전개해줘: '+v, '상황 추가: '+v); else send(v,v); };
+$('#inp').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); $('#btnSend').click(); } });
+$('#inp').addEventListener('input',autoGrowInp);
+
+/* 입력창 토글(입력/상황 누를 때만 등장) */
+let inputMode='free';
+function showInput(mode,ph){ inputMode=mode; $('#inp').placeholder=ph||'직접 행동·대사를 입력하세요'; $('#cmd').classList.add('hidden'); $('#inputrow').classList.remove('hidden'); $('#inp').focus(); }
+function hideInput(){ $('#inputrow').classList.add('hidden'); $('#cmd').classList.remove('hidden'); }
+$('#btnInput').onclick=()=>showInput('free','직접 행동·대사를 입력하세요');
+$('#btnSitu').onclick=()=>showInput('situ','추가할 상황을 입력 (예: 갑자기 기자가 들이닥친다)');
+$('#btnInpCancel').onclick=hideInput;
+$('#btnToneCmd').onclick=openTone;
+
+/* 햄버거 메뉴 */
+const menu=$('#menu');
+$('#btnMenu').onclick=()=>menu.showModal();
+$('#mClose').onclick=()=>menu.close();
+menu.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>{ menu.close(); send(el.dataset.act, el.dataset.act); });
+$('#mTone').onclick=()=>{ menu.close(); openTone(); };
+$('#mImg').onclick=()=>{ menu.close(); openImg(); };
+$('#mFont').onclick=()=>{ menu.close(); cycleFont(); };
+$('#mFsDn').onclick=()=>{ fsi--; applyFs(); };
+$('#mFsUp').onclick=()=>{ fsi++; applyFs(); };
+$('#mSave').onclick=()=>{ menu.close(); openSave(); };
+$('#mLoad').onclick=()=>{ menu.close(); openLoad(); };
+$('#mNew').onclick=()=>{ menu.close(); if(confirm('새 게임을 시작할까요? 현재 진행은 사라집니다(저장본은 남음).')) startNew(); };
+
+/* 톤 변경 */
+const tonedlg=$('#tonedlg');
+function openTone(){ tonedlg.showModal(); }
+$('#toneClose').onclick=()=>tonedlg.close();
+tonedlg.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{ tone=b.dataset.tone; persist(); tonedlg.close(); addUser('톤 변경 → '+tone); scroll(); });
+
+/* 글꼴 순환 */
+function cycleFont(){ const i=FONTS.findIndex(f=>f.k===fontKey); fontKey=FONTS[(i+1)%FONTS.length].k; applyFont(); }
+
+/* 삽화 설정 */
+const imgdlg=$('#imgdlg');
+function imgFreqLabel(v){ return v==0?'끔':(v==1?'매 턴':v+'턴마다 1장'); }
+function openImg(){ $('#imgKeyIn').value=imgKey; $('#imgModelIn').value=imgModel; $('#imgFreqIn').value=imgEvery; $('#imgFreqV').textContent=imgFreqLabel(imgEvery); $('#imgTestOut').textContent=''; imgdlg.showModal(); }
+$('#imgFreqIn').oninput=function(){ $('#imgFreqV').textContent=imgFreqLabel(+this.value); };
+$('#imgSave').onclick=()=>{ imgKey=$('#imgKeyIn').value.trim(); imgModel=$('#imgModelIn').value.trim()||'gemini-2.5-flash-image'; imgEvery=+$('#imgFreqIn').value||0;
+  try{ localStorage.setItem(LS+'_imgkey',imgKey); localStorage.setItem(LS+'_imgmodel',imgModel); localStorage.setItem(LS+'_imgevery',String(imgEvery)); }catch(e){}
+  imgdlg.close(); };
+$('#imgClose').onclick=()=>imgdlg.close();
+$('#imgTest').onclick=async()=>{
+  const k=$('#imgKeyIn').value.trim(), mo=$('#imgModelIn').value.trim()||'gemini-2.5-flash-image', out=$('#imgTestOut');
+  if(!k){ out.textContent='먼저 API 키를 입력하세요.'; return; }
+  $('#imgTest').disabled=true; out.textContent='테스트 중…';
+  try{
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+mo+':generateContent?key='+encodeURIComponent(k),{
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:'A small red apple on a white table.'}]}],generationConfig:{responseModalities:['IMAGE','TEXT']}})});
+    const txt=await r.text();
+    if(!r.ok){ out.textContent='❌ 실패 (HTTP '+r.status+')\n'+txt.slice(0,260); }
+    else{ let ok=false; try{ const j=JSON.parse(txt); const p=(((j.candidates||[])[0]||{}).content||{}).parts||[]; ok=p.some(x=>x.inlineData||x.inline_data);}catch(e){}
+      out.textContent= ok ? '✅ 성공! 이 키·모델로 삽화가 정상 생성됩니다.' : '⚠️ 응답은 왔으나 이미지 데이터가 없습니다.\n모델명을 이미지 출력 모델(gemini-2.5-flash-image)로 바꿔보세요.\n'+txt.slice(0,180); }
+  }catch(e){ out.textContent='❌ 네트워크/CORS 차단으로 보입니다:\n'+e.message+'\n→ 이 아티팩트 환경이 구글 API 도메인을 막는 경우입니다. 그러면 아티팩트에선 삽화가 불가하고 GitHub Pages 앱에서만 됩니다.'; }
+  finally{ $('#imgTest').disabled=false; }
+};
+
+const dlg=$('#dlg');
+function openSave(){ persist(); $('#dlgTitle').textContent='저장 (백업)'; $('#dlgDesc').textContent='아래 전체를 복사해 보관하세요. [불러오기]에 붙여넣으면 이어집니다.'; $('#dlgArea').value=JSON.stringify({history,tone}); $('#dlgDoLoad').classList.add('hidden'); dlg.showModal(); }
+function openLoad(){ $('#dlgTitle').textContent='저장본 불러오기'; $('#dlgDesc').textContent='저장한 텍스트를 붙여넣고 [불러오기].'; $('#dlgArea').value=''; $('#dlgDoLoad').classList.remove('hidden'); dlg.showModal(); }
+$('#ctaLoad').onclick=openLoad;
+$('#dlgCopy').onclick=()=>{ $('#dlgArea').select(); try{document.execCommand('copy');}catch(e){} };
+$('#dlgClose').onclick=()=>dlg.close();
+$('#dlgDoLoad').onclick=()=>{ try{ const d=JSON.parse($('#dlgArea').value); if(!d.history) throw 0; history=d.history; tone=d.tone||tone; persist(); dlg.close(); showGame(); renderAll(); }catch(e){ alert('형식이 올바르지 않습니다.'); } };
+
+/* 초기화 */
+fillFontSelects(); applyFont(); applyFs();
+if(restore()){ showGame(); renderAll(); }
+</script>
+</body>
+</html>
