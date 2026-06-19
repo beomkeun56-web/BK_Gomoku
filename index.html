@@ -324,7 +324,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.39</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.40</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1828,6 +1828,14 @@ async function runAssistant(){
       parseStats(clean); renderChoices(choices);
       addGmFooter(mdEl.closest('.msg'));
       if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
+      // GM이 [IMG] 프롬프트를 안 준 턴(예: 일부 모델)에도, 자동 삽화 차례면 본문으로 생성(폴백)
+      if(wantImg && !imgStarted){
+        imgStarted=true;
+        imgBox=document.createElement('div'); imgBox.className='illust loading'; imgBox.textContent='🎨 삽화 생성 중…';
+        const bub=mdEl.parentElement; if(bub) bub.appendChild(imgBox); else mdEl.appendChild(imgBox); maybeScroll();
+        imgP=fetchIllust(sanitizeBody(body)).then(r=>r).catch(e=>({err:e.message}));
+        imgP.then(fillImgBox);
+      }
       // 표시는 fillImgBox가 준비 즉시 처리. 여기선 카운터 + 저장(턴 인덱스 확정 후)만
       if(imgP){
         imgSinceLast=0;
