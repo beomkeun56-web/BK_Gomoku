@@ -324,7 +324,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.36</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.37</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1637,14 +1637,18 @@ function orSystemMsg(model){
 }
 
 async function streamOpenAI(model,key,onToken,msgs){
-  const orBody={model, stream:true, max_tokens:lenSpec().max, temperature:0.9,
+  const isGemini=/gemini|google\//i.test(model);
+  // Gemini는 추론(thinking) 모델 — 기본 상태에선 thinking이 max_tokens를 다 먹어 본문이 중간에 잘림.
+  // → Gemini는 출력 상한을 넉넉히 주고(잘림 방지), thinking 예산을 작게 제한(토큰 절감).
+  const maxTok = isGemini ? Math.max(lenSpec().max, 8192) : lenSpec().max;
+  const orBody={model, stream:true, max_tokens:maxTok, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
-  // 사고 모드를 끌 수 있는 모델(DeepSeek·GLM 등)은 끄고, 그 외(Claude·Gemini 등)는 effort로 사고량 조절.
-  // (Gemini는 추론 완전 비활성화 불가 — 끄면 400. 대신 effort low로 추론 토큰을 줄임)
   if(/deepseek|glm|z-ai|qwen|kimi|moonshot|minimax/i.test(model)){
-    orBody.reasoning={enabled:false};
+    orBody.reasoning={enabled:false};                 // 사고 끌 수 있는 모델은 끔
+  } else if(isGemini){
+    orBody.reasoning={max_tokens:1024};               // Gemini: 완전 비활성화는 400 → 생각 예산만 제한(잘림 방지·토큰↓). effort 문자열은 에러나서 안 씀.
   } else if(cfg.effort){
-    orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter low/medium/high — Claude·Gemini 등에 적용
+    orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // Claude 등: effort
   }
   // GLM(z-ai/*)은 Z.ai 프로바이더를 우선 사용하도록 고정 — Z.ai는 자동 프롬프트 캐싱 지원(반복 입력 대폭 할인).
   // 로드밸런싱으로 NovitaAI 등 비-캐싱 프로바이더로 새는 것 방지. (Z.ai 장애 시엔 fallback 허용해 멈추지 않게)
