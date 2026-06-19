@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+KR:wght@400;500;600;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0b0e14; --line:#23262f; --txt:#e7ebf2; --dim:#8a93a3; --gold:#e8c06a;
+    --bg:#0b0c0e; --line:#23262f; --txt:#e7ebf2; --dim:#8a93a3; --gold:#e8c06a;
     --blue:#5aa0ff; --blue2:#2b4a6b; --red:#ff5a5a; --quote:#8c8c8c;
     --font:"Noto Serif KR",serif; --fs:16px;
   }
@@ -100,7 +100,8 @@
     <div class="brand"><span class="m">✦</span> Reign of Nations <span class="sub">· 권력의 길</span></div>
     <div class="tools">
       <select class="icon" id="fontTop" title="글꼴"></select>
-      <button class="icon" id="btnFont">가±</button>
+      <button class="icon" id="btnFontDn">가−</button>
+      <button class="icon" id="btnFontUp">가＋</button>
       <button class="icon" id="btnImg">🎨 삽화</button>
       <button class="icon" data-cmd="상태">상태</button>
       <button class="icon" id="btnSave">저장</button>
@@ -148,9 +149,11 @@
     <div class="mini">0=끔 · 1=매 턴 · N=N턴마다 1장</div>
   </div>
   <div class="field" style="justify-content:flex-end; margin-top:12px">
+    <button class="icon" id="imgTest">연결 테스트</button>
     <button class="icon" id="imgSave">저장</button>
     <button class="icon" id="imgClose">닫기</button>
   </div>
+  <div class="mini" id="imgTestOut" style="margin-top:8px; white-space:pre-wrap"></div>
 </div></dialog>
 
 <dialog id="dlg"><div style="padding:18px">
@@ -226,8 +229,8 @@ function applyFont(){ const f=FONTS.find(x=>x.k===fontKey)||FONTS[0]; document.d
 function fillFontSelects(){ ['#fontWel','#fontTop'].forEach(s=>{ const el=$(s); if(!el) return;
   el.innerHTML=FONTS.map(f=>'<option value="'+f.k+'">'+f.name+'</option>').join(''); el.value=fontKey;
   el.onchange=()=>{ fontKey=el.value; applyFont(); }; }); }
-const FS=[15,17,19,21]; let fsi=parseInt(localStorage.getItem(LS+'_fs')||'1')||1;
-function applyFs(){ document.documentElement.style.setProperty('--fs',FS[fsi]+'px'); try{localStorage.setItem(LS+'_fs',String(fsi));}catch(e){} }
+const FS=[13,14,15,16,18,20,22]; let fsi=parseInt(localStorage.getItem(LS+'_fs')); if(isNaN(fsi)) fsi=3;
+function applyFs(){ fsi=Math.max(0,Math.min(FS.length-1,fsi)); document.documentElement.style.setProperty('--fs',FS[fsi]+'px'); try{localStorage.setItem(LS+'_fs',String(fsi));}catch(e){} }
 
 /* 저장 */
 function persist(){ try{ localStorage.setItem(LS, JSON.stringify({history,tone})); }catch(e){} }
@@ -326,16 +329,7 @@ async function geminiImage(prompt){
   if(!d||!d.data) throw new Error('이미지를 받지 못했습니다(이 모델이 이미지 출력 모델이 아닐 수 있음).');
   return 'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data;
 }
-function maybeIllust(turn, acc, body){
-  if(!imgKey || imgEvery<=0) return;
-  imgCount++; if(imgCount % imgEvery !== 0) return;
-  const ip=(acc.match(/\[IMG\]([\s\S]*?)\[\/IMG\]/i)||[])[1];
-  const prompt=(ip&&ip.trim()) || ('Cinematic still, Korean political drama scene. '+body.replace(/[#>*`|]/g,' ').slice(0,500));
-  const box=document.createElement('div'); box.className='illust load'; box.textContent='🎨 삽화 생성 중…';
-  const h=turn.querySelector('h1'); if(h&&h.parentNode===turn) h.after(box); else turn.prepend(box);
-  geminiImage(prompt).then(src=>{ box.className='illust'; box.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">'+ (imgModel||'gemini-2.5-flash-image') +'</div>'; scroll(); })
-    .catch(e=>{ box.className='illust load'; box.textContent='⚠️ 삽화 실패: '+e.message; });
-}
+function stripImg(s){ s=(s||'').replace(/\[IMG\][\s\S]*?\[\/IMG\]/gi,''); const i=s.indexOf('[IMG]'); if(i>=0) s=s.slice(0,i); return s.replace(/^\s+/,''); }
 
 async function send(promptMsg, displayMsg){
   if(busy) return;
@@ -345,22 +339,32 @@ async function send(promptMsg, displayMsg){
     tone=map[tm[1].trim()]||tm[1].trim(); persist(); addUser('톤 변경 → '+tone); renderChoices(lastChoices); scroll(); return; }
   busy=true; $('#btnSend').disabled=true; choicesEl.innerHTML='';
   addUser(shown);
-  const turn=document.createElement('div'); turn.className='turn md'; log.appendChild(turn);
+  const turn=document.createElement('div'); turn.className='turn';
+  const bodyEl=document.createElement('div'); bodyEl.className='md'; turn.appendChild(bodyEl);
+  log.appendChild(turn);
   $('#busy').classList.remove('hidden'); scroll();
   history.push({role:'user', content:promptMsg});
-  let acc='';
-  const paint=()=>{ const {body}=splitChoices(acc); turn.innerHTML=mdToHtml(body)+'<span class="cursor"></span>'; scroll(); };
+  const gmCount=history.filter(m=>m.role==='gm').length;
+  const wantImg = !!imgKey && imgEvery>0 && ((gmCount+1)%imgEvery===0);
+  let acc='', imgStarted=false, imgBox=null;
+  const startImg=()=>{ if(imgStarted||!wantImg) return; const m=acc.match(/\[IMG\]([\s\S]*?)\[\/IMG\]/i); if(!m) return;
+    imgStarted=true; imgBox=document.createElement('div'); imgBox.className='illust load'; imgBox.textContent='🎨 삽화 생성 중…';
+    turn.appendChild(imgBox); scroll();   // 본문 아래 = 선택지 바로 위
+    geminiImage(m[1].trim()).then(src=>{ imgBox.className='illust'; imgBox.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">'+(imgModel||'gemini-2.5-flash-image')+'</div>'; scroll(); })
+      .catch(e=>{ imgBox.className='illust load'; imgBox.textContent='⚠️ 삽화 실패: '+e.message; }); };
+  const paint=()=>{ const {body}=splitChoices(stripImg(acc)); bodyEl.innerHTML=mdToHtml(body)+'<span class="cursor"></span>'; startImg(); scroll(); };
   try{
     await streamGM(promptMsg, (tok)=>{ acc+=tok; paint(); });
-    if(!acc.trim()) throw new Error('빈 응답이 왔습니다.');
-    const {body, choices}=splitChoices(acc);
-    turn.innerHTML=mdToHtml(body);
-    history.push({role:'gm', content:acc}); lastChoices=choices.length?choices:lastChoices;
+    const clean=stripImg(acc);
+    if(!clean.trim()) throw new Error('빈 응답이 왔습니다.');
+    const {body, choices}=splitChoices(clean);
+    bodyEl.innerHTML=mdToHtml(body);
+    startImg();
+    history.push({role:'gm', content:clean}); lastChoices=choices.length?choices:lastChoices;
     renderChoices(lastChoices); persist();
-    maybeIllust(turn, acc, body);
   }catch(e){
     history.pop(); turn.remove();
-    const er=document.createElement('div'); er.className='err'; er.textContent='⚠️ '+e.message+'\n(아티팩트가 API 호출을 허용하지 않으면, 이 게임은 GitHub Pages 앱이나 Claude 프로젝트에서 사용하세요.)'; log.appendChild(er);
+    const er=document.createElement('div'); er.className='err'; er.textContent='⚠️ '+e.message+'\n(아티팩트가 API 호출을 막으면 GitHub Pages 앱이나 Claude 프로젝트에서 사용하세요.)'; log.appendChild(er);
     renderChoices(lastChoices);
   }finally{ busy=false; $('#btnSend').disabled=false; $('#busy').classList.add('hidden'); scroll(); }
 }
@@ -377,7 +381,8 @@ $('#btnSend').onclick=()=>{ const v=$('#inp').value.trim(); if(!v) return; $('#i
 $('#inp').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); $('#btnSend').click(); } });
 $('#inp').addEventListener('input',function(){ this.style.height='auto'; this.style.height=Math.min(150,this.scrollHeight)+'px'; });
 document.querySelectorAll('[data-cmd]').forEach(b=>b.onclick=()=>send(b.dataset.cmd,b.dataset.cmd));
-$('#btnFont').onclick=()=>{ fsi=(fsi+1)%FS.length; applyFs(); };
+$('#btnFontDn').onclick=()=>{ fsi--; applyFs(); };
+$('#btnFontUp').onclick=()=>{ fsi++; applyFs(); };
 
 /* 삽화 설정 */
 const imgdlg=$('#imgdlg');
@@ -388,6 +393,21 @@ $('#imgSave').onclick=()=>{ imgKey=$('#imgKeyIn').value.trim(); imgModel=$('#img
   try{ localStorage.setItem(LS+'_imgkey',imgKey); localStorage.setItem(LS+'_imgmodel',imgModel); localStorage.setItem(LS+'_imgevery',String(imgEvery)); }catch(e){}
   imgdlg.close(); };
 $('#imgClose').onclick=()=>imgdlg.close();
+$('#imgTest').onclick=async()=>{
+  const k=$('#imgKeyIn').value.trim(), mo=$('#imgModelIn').value.trim()||'gemini-2.5-flash-image', out=$('#imgTestOut');
+  if(!k){ out.textContent='먼저 API 키를 입력하세요.'; return; }
+  $('#imgTest').disabled=true; out.textContent='테스트 중…';
+  try{
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+mo+':generateContent?key='+encodeURIComponent(k),{
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:'A small red apple on a white table.'}]}],generationConfig:{responseModalities:['IMAGE','TEXT']}})});
+    const txt=await r.text();
+    if(!r.ok){ out.textContent='❌ 실패 (HTTP '+r.status+')\n'+txt.slice(0,260); }
+    else{ let ok=false; try{ const j=JSON.parse(txt); const p=(((j.candidates||[])[0]||{}).content||{}).parts||[]; ok=p.some(x=>x.inlineData||x.inline_data);}catch(e){}
+      out.textContent= ok ? '✅ 성공! 이 키·모델로 삽화가 정상 생성됩니다.' : '⚠️ 응답은 왔으나 이미지 데이터가 없습니다.\n모델명을 이미지 출력 모델(gemini-2.5-flash-image)로 바꿔보세요.\n'+txt.slice(0,180); }
+  }catch(e){ out.textContent='❌ 네트워크/CORS 차단으로 보입니다:\n'+e.message+'\n→ 이 아티팩트 환경이 구글 API 도메인을 막는 경우입니다. 그러면 아티팩트에선 삽화가 불가하고 GitHub Pages 앱에서만 됩니다.'; }
+  finally{ $('#imgTest').disabled=false; }
+};
 
 const dlg=$('#dlg');
 $('#btnSave').onclick=()=>{ persist(); $('#dlgTitle').textContent='저장 (백업)'; $('#dlgDesc').textContent='아래 전체를 복사해 보관하세요. [불러오기]에 붙여넣으면 이어집니다.'; $('#dlgArea').value=JSON.stringify({history,tone}); $('#dlgDoLoad').classList.add('hidden'); dlg.showModal(); };
