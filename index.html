@@ -324,7 +324,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.40</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.41</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1628,17 +1628,23 @@ function orModelSupportsCache(model){ return /claude|anthropic/i.test(model); }
 async function readSSE(res, onEvent){
   if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t.slice(0,300)}`); }
   const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='';
-  while(true){
-    const {value,done}=await reader.read(); if(done) break;
-    buf+=dec.decode(value,{stream:true});
-    let parts=buf.split('\n\n'); buf=parts.pop();
-    for(const p of parts){
-      for(const line of p.split('\n')){
-        const t=line.trim();
-        if(t.startsWith('data:')) onEvent(t.slice(5).trim());
+  try{
+    while(true){
+      const {value,done}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      let parts=buf.split('\n\n'); buf=parts.pop();
+      for(const p of parts){
+        for(const line of p.split('\n')){
+          const t=line.trim();
+          if(t.startsWith('data:')){
+            const d=t.slice(5).trim();
+            if(d==='[DONE]'){ try{ await reader.cancel(); }catch(e){} return; }   // 종료 신호 → 즉시 종료(연결이 안 닫혀 다음 턴이 막히는 것 방지)
+            onEvent(d);
+          }
+        }
       }
     }
-  }
+  } finally { try{ reader.releaseLock(); }catch(e){} }
 }
 
 // OpenRouter system 메시지: 캐싱 지원 모델이면 cache_control 멀티파트로
