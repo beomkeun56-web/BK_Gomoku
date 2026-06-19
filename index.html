@@ -1637,15 +1637,18 @@ function orSystemMsg(model){
 }
 
 async function streamOpenAI(model,key,onToken,msgs){
-  const orBody={model, stream:true, max_tokens:lenSpec().max, temperature:0.9,
+  const isGemini=/gemini|google\//i.test(model);
+  // Gemini는 추론(thinking) 모델 — 기본 상태에선 thinking이 max_tokens를 다 먹어 본문이 중간에 잘림.
+  // → Gemini는 출력 상한을 넉넉히 주고(잘림 방지), thinking 예산을 작게 제한(토큰 절감).
+  const maxTok = isGemini ? Math.max(lenSpec().max, 8192) : lenSpec().max;
+  const orBody={model, stream:true, max_tokens:maxTok, temperature:0.9,
       usage:{include:true}, messages:[orSystemMsg(model),...msgs]};
-  // 사고 모드를 끌 수 있는 모델(DeepSeek·GLM 등)은 끈다.
   if(/deepseek|glm|z-ai|qwen|kimi|moonshot|minimax/i.test(model)){
-    orBody.reasoning={enabled:false};
-  }
-  // effort(reasoning)는 Claude 계열에만 보낸다. Gemini는 OpenRouter에서 effort 파라미터를 받으면 에러나므로 절대 보내지 않음(기본 동작 유지).
-  else if(cfg.effort && !/gemini|google\//i.test(model)){
-    orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // OpenRouter low/medium/high
+    orBody.reasoning={enabled:false};                 // 사고 끌 수 있는 모델은 끔
+  } else if(isGemini){
+    orBody.reasoning={max_tokens:1024};               // Gemini: 완전 비활성화는 400 → 생각 예산만 제한(잘림 방지·토큰↓). effort 문자열은 에러나서 안 씀.
+  } else if(cfg.effort){
+    orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // Claude 등: effort
   }
   // GLM(z-ai/*)은 Z.ai 프로바이더를 우선 사용하도록 고정 — Z.ai는 자동 프롬프트 캐싱 지원(반복 입력 대폭 할인).
   // 로드밸런싱으로 NovitaAI 등 비-캐싱 프로바이더로 새는 것 방지. (Z.ai 장애 시엔 fallback 허용해 멈추지 않게)
