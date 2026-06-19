@@ -319,7 +319,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.32</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.33</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1066,7 +1066,8 @@ function activeToneReminder(){
     : '\n\n[★현재 활성 드라마 톤 = "'+t+'"] 이번 게임은 이 톤을 최우선으로 유지한다(다른 톤처럼 밋밋하게 흐르지 말 것). '+presetMandate(t)+'위 [톤 연출]에서 이 톤 항목대로, 본문·선택지 모두 이 톤이 분명히 드러나게 써라. 톤은 다시 묻지 말 것.';
   return base + lenMandate()
     + '\n\n[★장면 연속성] 직전 턴이 끝난 바로 그 장소·순간에서 곧장 이어서 시작하라. 내 직전 선택(대사·행동)은 그 자리에서 실제로 일어난 것으로 처리하고 상대의 즉각 반응부터 보여라. 다른 장소·시간으로 점프하지 말 것 — 옮겨야 하면 이동·전환을 한 문장으로 연결한 뒤 넘어가라.'
-    + '\n\n[★찰진 입말] 대사는 딱딱한 문어체 말고 실제 한국 사람처럼 찰지고 생동감 있게 — 능청·비아냥·떠보기·거친 농담·반어를 상황·인물에 맞게 살리고, 인물마다 말투를 다르게.';
+    + '\n\n[★찰진 입말] 대사는 딱딱한 문어체 말고 실제 한국 사람처럼 찰지고 생동감 있게 — 능청·비아냥·떠보기·거친 농담·반어를 상황·인물에 맞게 살리고, 인물마다 말투를 다르게.'
+    + '\n\n[★대사 형식] 모든 인물 발언은 한 줄씩 \'> 이름 "대사"\' 형식으로 — 화자 이름을 한 칸 띄우고 따옴표 앞에 꼭 붙여라(예: > 지범근 "판부터 봅시다."). 이름 없이 따옴표만 쓰지 말 것.';
 }
 function sysText(){ return activeToneReminder() + '\n\n' + SYSTEM_PROMPT; }
 let cfg = loadCfg();
