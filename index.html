@@ -324,7 +324,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.37</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.38</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1646,7 +1646,7 @@ async function streamOpenAI(model,key,onToken,msgs){
   if(/deepseek|glm|z-ai|qwen|kimi|moonshot|minimax/i.test(model)){
     orBody.reasoning={enabled:false};                 // 사고 끌 수 있는 모델은 끔
   } else if(isGemini){
-    orBody.reasoning={max_tokens:1024};               // Gemini: 완전 비활성화는 400 → 생각 예산만 제한(잘림 방지·토큰↓). effort 문자열은 에러나서 안 씀.
+    orBody.reasoning={max_tokens:512};                // Gemini: 완전 비활성화는 400 → 생각 예산만 제한(잘림 방지·토큰↓). effort 문자열은 에러나서 안 씀.
   } else if(cfg.effort){
     orBody.reasoning={effort:(cfg.effort==='max'?'high':cfg.effort)};   // Claude 등: effort
   }
