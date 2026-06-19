@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+KR:wght@400;500;600;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0b0c0e; --line:#23262f; --txt:#e7ebf2; --dim:#8a93a3; --gold:#e8c06a;
+    --bg:#000000; --line:#22242b; --txt:#e7ebf2; --dim:#8a93a3; --gold:#e8c06a;
     --blue:#5aa0ff; --blue2:#2b4a6b; --red:#ff5a5a; --quote:#8c8c8c;
     --font:"Noto Serif KR",serif; --fs:16px;
   }
@@ -72,17 +72,30 @@
   .cursor{display:inline-block; width:7px; height:1.05em; background:var(--gold); vertical-align:-2px; animation:bk 1s steps(1) infinite; border-radius:1px}
   @keyframes bk{50%{opacity:0}}
 
-  #choices{padding:2px 16px 12px; display:flex; flex-direction:column; gap:8px}
-  .choice{text-align:left; background:#101115; border:1px solid #24252b; color:var(--txt); border-radius:16px;
+  #choices{padding:2px 16px 12px; display:flex; flex-direction:column; gap:9px}
+  .crow{display:flex; gap:6px; align-items:flex-start}
+  .cedit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%; background:transparent; border:none; color:var(--dim); font-size:.95em; display:flex; align-items:center; justify-content:center}
+  .cedit:hover{color:var(--gold)}
+  .choice{flex:1; min-width:0; text-align:left; background:#101115; border:1px solid #24252b; color:var(--txt); border-radius:16px;
     padding:13px 16px; font-size:1em; line-height:1.65; transition:.14s; display:flex; gap:10px; align-items:flex-start}
   .choice:hover{border-color:var(--blue); background:#0f1620}
   .choice .n{flex:0 0 auto; color:var(--blue); font-weight:800}
+  .gm-footer{display:flex; gap:8px; margin:10px 2px 2px}
+  .footbtn{background:#12151c; border:1px solid var(--line); color:var(--dim); border-radius:9px; padding:7px 12px; font-size:.84rem}
+  .footbtn:hover{color:#fff; border-color:#34415a}
+  .footbtn.cont{color:var(--gold)}
 
-  #bar{padding:9px 16px 14px; border-top:1px solid var(--line); display:flex; gap:8px; align-items:flex-end; background:var(--bg)}
-  #inp{flex:1; resize:none; min-height:46px; max-height:150px; background:#10141c; border:1px solid var(--line); color:var(--txt); border-radius:12px; padding:12px 14px; font-size:.96rem; line-height:1.6}
+  /* 하단 명령바 — 한 줄 고정(줄바꿈 금지) */
+  #cmd{display:flex; gap:7px; padding:9px 12px 14px; border-top:1px solid var(--line); background:var(--bg); flex-wrap:nowrap; overflow-x:auto}
+  .cmdb{flex:0 0 auto; white-space:nowrap; background:#101218; border:1px solid var(--line); color:#cdd4e0; border-radius:11px; padding:11px 15px; font-size:.92rem; font-weight:600}
+  .cmdb:hover{color:#fff; border-color:#34415a}
+  .cmdb.ham{font-size:1.1rem; padding:11px 14px}
+  #inputrow{display:flex; gap:8px; align-items:flex-end; padding:9px 12px 12px; border-top:1px solid var(--line); background:var(--bg)}
+  #inp{flex:1; resize:none; min-height:46px; max-height:150px; background:#0c0e13; border:1px solid var(--line); color:var(--txt); border-radius:12px; padding:12px 14px; font-size:.96rem; line-height:1.6}
   #inp:focus{outline:none; border-color:#34415a}
   .send{background:linear-gradient(135deg,#1b3a5a,#0e1d30); border:1px solid #36608f; color:#eaf3ff; border-radius:12px; padding:12px 18px; font-weight:800}
-  .hint{color:var(--dim); font-size:.8rem; text-align:center; padding:0 16px 10px}
+  .mrow{padding:13px 14px; border-radius:10px; cursor:pointer; font-size:.98rem}
+  .mrow:hover{background:#15171d}
   .busy{color:var(--blue); font-size:.9rem; padding:6px 18px}
   .spin{display:inline-block; width:12px;height:12px;border:2px solid #2c3a4d;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -98,16 +111,7 @@
 <div id="app">
   <div class="top hidden" id="topbar">
     <div class="brand"><span class="m">✦</span> Reign of Nations <span class="sub">· 권력의 길</span></div>
-    <div class="tools">
-      <select class="icon" id="fontTop" title="글꼴"></select>
-      <button class="icon" id="btnFontDn">가−</button>
-      <button class="icon" id="btnFontUp">가＋</button>
-      <button class="icon" id="btnImg">🎨 삽화</button>
-      <button class="icon" data-cmd="상태">상태</button>
-      <button class="icon" id="btnSave">저장</button>
-      <button class="icon" id="btnLoad">불러오기</button>
-      <button class="icon" id="btnNew">새 게임</button>
-    </div>
+    <div class="mini" id="costShow"></div>
   </div>
 
   <div id="welcome">
@@ -131,12 +135,44 @@
   <div id="log" class="hidden"></div>
   <div id="busy" class="busy hidden"><span class="spin"></span>게임 마스터가 쓰는 중…</div>
   <div id="choices" class="hidden"></div>
-  <div id="bar" class="hidden">
-    <textarea id="inp" placeholder="직접 행동·대사 입력 또는 위 선택지 클릭 (상태 / 저장 / 톤:막장)"></textarea>
+  <div id="inputrow" class="hidden">
+    <textarea id="inp" placeholder="직접 행동·대사를 입력하세요"></textarea>
     <button class="send" id="btnSend">▶</button>
+    <button class="cmdb" id="btnInpCancel">✕</button>
   </div>
-  <div class="hint hidden" id="hint">선택지 클릭 또는 직접 입력 · 명령어: 상태 · 저장 · 톤:막장</div>
+  <div id="cmd" class="hidden">
+    <button class="cmdb ham" id="btnMenu">☰</button>
+    <button class="cmdb" id="btnInput">✏ 입력</button>
+    <button class="cmdb" id="btnSitu">＋ 상황</button>
+    <button class="cmdb" id="btnToneCmd">🎭 톤</button>
+  </div>
 </div>
+
+<dialog id="menu"><div style="padding:8px">
+  <div class="mrow" data-act="상태">📊 상태 보기</div>
+  <div class="mrow" data-act="국정과제">📋 과제 보기</div>
+  <div class="mrow" id="mTone">🎭 톤 변경</div>
+  <div class="mrow" id="mImg">🎨 삽화 설정</div>
+  <div class="mrow" id="mFont">🔤 글꼴 변경</div>
+  <div class="mrow" id="mFsDn">가− 글자 작게</div>
+  <div class="mrow" id="mFsUp">가＋ 글자 크게</div>
+  <div class="mrow" id="mSave">💾 저장</div>
+  <div class="mrow" id="mLoad">📂 불러오기</div>
+  <div class="mrow" id="mNew">🆕 새 게임</div>
+  <div class="mrow" id="mClose" style="text-align:center; color:var(--dim)">닫기</div>
+</div></dialog>
+
+<dialog id="tonedlg"><div style="padding:14px">
+  <h3 style="margin:0 0 10px">🎭 드라마 톤 변경</h3>
+  <div style="display:flex; flex-direction:column; gap:7px">
+    <button class="cmdb" data-tone="혼합(진지+막장)">혼합 (진지+막장)</button>
+    <button class="cmdb" data-tone="정치(하우스 오브 카드)">정치 (하우스 오브 카드)</button>
+    <button class="cmdb" data-tone="막장">막장</button>
+    <button class="cmdb" data-tone="코믹">코믹</button>
+    <button class="cmdb" data-tone="진지+코믹">진지+코믹</button>
+  </div>
+  <div class="field" style="justify-content:flex-end; margin-top:10px"><button class="icon" id="toneClose">닫기</button></div>
+</div></dialog>
 
 <dialog id="imgdlg"><div style="padding:18px">
   <h3 style="margin:0 0 8px">🎨 삽화 설정 (Google Gemini 이미지)</h3>
@@ -279,9 +315,21 @@ function collect(tail){ const out=[]; const re=/^\s*(\d+)[.)]\s*(.+)$/gm; let m,
 /* 렌더 */
 const log=$('#log'), choicesEl=$('#choices');
 function addUser(c){ const d=document.createElement('div'); d.className='you'; d.textContent=c; log.appendChild(d); }
-function renderChoices(cs){ choicesEl.innerHTML=''; cs.forEach((c,i)=>{ const b=document.createElement('button'); b.className='choice';
+function autoGrowInp(){ const t=$('#inp'); t.style.height='auto'; t.style.height=Math.min(150,t.scrollHeight)+'px'; }
+function renderChoices(cs){ choicesEl.innerHTML=''; cs.forEach((c,i)=>{
+  const row=document.createElement('div'); row.className='crow';
+  const ed=document.createElement('button'); ed.className='cedit'; ed.textContent='✎'; ed.title='수정해서 보내기';
+  ed.onclick=()=>{ $('#inp').value=c; $('#inp').focus(); autoGrowInp(); };
+  const b=document.createElement('button'); b.className='choice';
   b.innerHTML='<span class="n">'+(i+1)+'</span><span>'+c.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>';
-  b.onclick=()=>{ if(busy) return; send('"'+c+'"', c); }; choicesEl.appendChild(b); }); }
+  b.onclick=()=>{ if(busy) return; send('"'+c+'"', c); };
+  row.appendChild(ed); row.appendChild(b); choicesEl.appendChild(row); }); }
+function removeFooters(){ document.querySelectorAll('.gm-footer').forEach(f=>f.remove()); }
+function addFooter(turn){ removeFooters(); const f=document.createElement('div'); f.className='gm-footer';
+  const c=document.createElement('button'); c.className='footbtn cont'; c.textContent='⚡ 이어서 생성'; c.onclick=continueGen;
+  const r=document.createElement('button'); r.className='footbtn'; r.textContent='↻ 다시 생성'; r.onclick=regen;
+  f.appendChild(c); f.appendChild(r); turn.appendChild(f); }
+function lastGmIndex(){ for(let i=history.length-1;i>=0;i--) if(history[i].role==='gm') return i; return -1; }
 function scroll(){ if(log.scrollHeight-log.scrollTop-log.clientHeight<160) log.scrollTop=log.scrollHeight; }
 
 /* ---------- GM 호출 (스트리밍) ---------- */
@@ -337,57 +385,106 @@ async function send(promptMsg, displayMsg){
   const tm=shown.match(/^톤\s*[:：]\s*(.+)$/);
   if(tm){ const map={'정치':'정치(하우스 오브 카드)','막장':'막장','코믹':'코믹','진지+코믹':'진지+코믹','혼합':'혼합(진지+막장)'};
     tone=map[tm[1].trim()]||tm[1].trim(); persist(); addUser('톤 변경 → '+tone); renderChoices(lastChoices); scroll(); return; }
-  busy=true; $('#btnSend').disabled=true; choicesEl.innerHTML='';
-  addUser(shown);
-  const turn=document.createElement('div'); turn.className='turn';
-  const bodyEl=document.createElement('div'); bodyEl.className='md'; turn.appendChild(bodyEl);
-  log.appendChild(turn);
+  addUser(shown); history.push({role:'user', content:promptMsg});
+  await runStream(promptMsg, {});
+}
+// 새 턴 / 다시 생성 / 이어서 생성 공통 스트리밍
+async function runStream(userMsg, opt){
+  opt=opt||{}; busy=true; $('#btnSend').disabled=true; choicesEl.innerHTML=''; removeFooters();
+  let turn, bodyEl, acc;
+  if(opt.cont){ const li=lastGmIndex(); const ts=log.querySelectorAll('.turn'); turn=ts[ts.length-1]; bodyEl=turn?turn.querySelector('.md'):null; acc=history[li]?history[li].content:''; }
+  if(!turn){ turn=document.createElement('div'); turn.className='turn'; bodyEl=document.createElement('div'); bodyEl.className='md'; turn.appendChild(bodyEl); log.appendChild(turn); acc=opt.cont?acc:''; }
   $('#busy').classList.remove('hidden'); scroll();
-  history.push({role:'user', content:promptMsg});
   const gmCount=history.filter(m=>m.role==='gm').length;
-  const wantImg = !!imgKey && imgEvery>0 && ((gmCount+1)%imgEvery===0);
-  let acc='', imgStarted=false, imgBox=null;
-  const startImg=()=>{ if(imgStarted||!wantImg) return; const m=acc.match(/\[IMG\]([\s\S]*?)\[\/IMG\]/i); if(!m) return;
+  const wantImg = !opt.cont && !!imgKey && imgEvery>0 && ((gmCount+1)%imgEvery===0);
+  let imgStarted=false, imgBox=null, raw=opt.cont?'':'';
+  const startImg=()=>{ if(imgStarted||!wantImg) return; const m=raw.match(/\[IMG\]([\s\S]*?)\[\/IMG\]/i); if(!m) return;
     imgStarted=true; imgBox=document.createElement('div'); imgBox.className='illust load'; imgBox.textContent='🎨 삽화 생성 중…';
-    turn.appendChild(imgBox); scroll();   // 본문 아래 = 선택지 바로 위
+    turn.appendChild(imgBox); scroll();
     geminiImage(m[1].trim()).then(src=>{ imgBox.className='illust'; imgBox.innerHTML='<img alt="삽화" src="'+src+'"><div class="cap">'+(imgModel||'gemini-2.5-flash-image')+'</div>'; scroll(); })
       .catch(e=>{ imgBox.className='illust load'; imgBox.textContent='⚠️ 삽화 실패: '+e.message; }); };
   const paint=()=>{ const {body}=splitChoices(stripImg(acc)); bodyEl.innerHTML=mdToHtml(body)+'<span class="cursor"></span>'; startImg(); scroll(); };
   try{
-    await streamGM(promptMsg, (tok)=>{ acc+=tok; paint(); });
+    await streamGM(opt.cont?'직전 응답이 중간에 끊겼다. 처음부터 다시 쓰지 말고 끊긴 부분 바로 다음부터 자연스럽게 이어서 계속 써라. (반드시 끝에 ✦ 선택지 3개)':userMsg,
+      (tok)=>{ acc+=tok; raw+=tok; paint(); });
     const clean=stripImg(acc);
     if(!clean.trim()) throw new Error('빈 응답이 왔습니다.');
     const {body, choices}=splitChoices(clean);
-    bodyEl.innerHTML=mdToHtml(body);
-    startImg();
-    history.push({role:'gm', content:clean}); lastChoices=choices.length?choices:lastChoices;
-    renderChoices(lastChoices); persist();
+    bodyEl.innerHTML=mdToHtml(body); startImg();
+    const li=lastGmIndex();
+    if(opt.cont && li>=0) history[li].content=clean; else history.push({role:'gm', content:clean});
+    lastChoices=choices.length?choices:lastChoices;
+    renderChoices(lastChoices); addFooter(turn); persist();
   }catch(e){
-    history.pop(); turn.remove();
+    if(!opt.cont){ if(history.length&&history[history.length-1].role==='user') history.pop(); turn.remove(); }
     const er=document.createElement('div'); er.className='err'; er.textContent='⚠️ '+e.message+'\n(아티팩트가 API 호출을 막으면 GitHub Pages 앱이나 Claude 프로젝트에서 사용하세요.)'; log.appendChild(er);
     renderChoices(lastChoices);
   }finally{ busy=false; $('#btnSend').disabled=false; $('#busy').classList.add('hidden'); scroll(); }
 }
+async function regen(){
+  if(busy) return; const li=lastGmIndex(); if(li<0) return;
+  history.splice(li,1);                       // 마지막 GM 제거(직전 user는 유지)
+  const ts=log.querySelectorAll('.turn'); if(ts.length) ts[ts.length-1].remove(); removeFooters();
+  const lastUser=[...history].reverse().find(m=>m.role==='user');
+  await runStream(lastUser?lastUser.content:'다음 전개를 진행해줘', {});
+}
+async function continueGen(){
+  if(busy) return; if(lastGmIndex()<0) return;
+  await runStream('', {cont:true});
+}
 
 /* 화면 */
-function showGame(){ $('#welcome').classList.add('hidden'); ['#topbar','#log','#choices','#bar','#hint'].forEach(s=>$(s).classList.remove('hidden')); }
+function showGame(){ $('#welcome').classList.add('hidden'); ['#topbar','#log','#choices','#cmd'].forEach(s=>$(s).classList.remove('hidden')); $('#inputrow').classList.add('hidden'); }
 function startNew(){ history=[]; lastChoices=[]; log.innerHTML=''; tone=$('#tone').value; persist(); showGame(); send('시작','시작'); }
-function renderAll(){ log.innerHTML=''; lastChoices=[]; for(const m of history){ if(m.role==='user'){ if(m.content!=='시작'&&!/^톤\s*[:：]/.test(m.content)) addUser(m.content.replace(/^"|"$/g,'')); } else { const {body,choices}=splitChoices(m.content); lastChoices=choices.length?choices:lastChoices; const w=document.createElement('div'); w.className='turn md'; w.innerHTML=mdToHtml(body); log.appendChild(w); } } renderChoices(lastChoices); log.scrollTop=log.scrollHeight; }
+function renderAll(){ log.innerHTML=''; lastChoices=[]; let lastTurn=null;
+  for(const m of history){ if(m.role==='user'){ if(m.content!=='시작'&&!/^톤\s*[:：]/.test(m.content)) addUser(m.content.replace(/^"|"$/g,'')); }
+    else { const {body,choices}=splitChoices(m.content); lastChoices=choices.length?choices:lastChoices;
+      const t=document.createElement('div'); t.className='turn'; const b=document.createElement('div'); b.className='md'; b.innerHTML=mdToHtml(body); t.appendChild(b); log.appendChild(t); lastTurn=t; } }
+  renderChoices(lastChoices); if(lastTurn) addFooter(lastTurn); log.scrollTop=log.scrollHeight; }
 
 /* 이벤트 */
 $('#ctaStart').onclick=startNew;
-$('#btnNew').onclick=()=>{ if(confirm('새 게임을 시작할까요? 현재 진행은 사라집니다(저장본은 남음).')) startNew(); };
-$('#btnSend').onclick=()=>{ const v=$('#inp').value.trim(); if(!v) return; $('#inp').value=''; $('#inp').style.height='auto'; send(v,v); };
+$('#btnSend').onclick=()=>{ const v=$('#inp').value.trim(); if(!v){ return; } const md=inputMode; $('#inp').value=''; $('#inp').style.height='auto'; hideInput();
+  if(md==='situ') send('다음 상황을 지금 국면에 자연스럽게 전개해줘: '+v, '상황 추가: '+v); else send(v,v); };
 $('#inp').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); $('#btnSend').click(); } });
-$('#inp').addEventListener('input',function(){ this.style.height='auto'; this.style.height=Math.min(150,this.scrollHeight)+'px'; });
-document.querySelectorAll('[data-cmd]').forEach(b=>b.onclick=()=>send(b.dataset.cmd,b.dataset.cmd));
-$('#btnFontDn').onclick=()=>{ fsi--; applyFs(); };
-$('#btnFontUp').onclick=()=>{ fsi++; applyFs(); };
+$('#inp').addEventListener('input',autoGrowInp);
+
+/* 입력창 토글(입력/상황 누를 때만 등장) */
+let inputMode='free';
+function showInput(mode,ph){ inputMode=mode; $('#inp').placeholder=ph||'직접 행동·대사를 입력하세요'; $('#cmd').classList.add('hidden'); $('#inputrow').classList.remove('hidden'); $('#inp').focus(); }
+function hideInput(){ $('#inputrow').classList.add('hidden'); $('#cmd').classList.remove('hidden'); }
+$('#btnInput').onclick=()=>showInput('free','직접 행동·대사를 입력하세요');
+$('#btnSitu').onclick=()=>showInput('situ','추가할 상황을 입력 (예: 갑자기 기자가 들이닥친다)');
+$('#btnInpCancel').onclick=hideInput;
+$('#btnToneCmd').onclick=openTone;
+
+/* 햄버거 메뉴 */
+const menu=$('#menu');
+$('#btnMenu').onclick=()=>menu.showModal();
+$('#mClose').onclick=()=>menu.close();
+menu.querySelectorAll('[data-act]').forEach(el=>el.onclick=()=>{ menu.close(); send(el.dataset.act, el.dataset.act); });
+$('#mTone').onclick=()=>{ menu.close(); openTone(); };
+$('#mImg').onclick=()=>{ menu.close(); openImg(); };
+$('#mFont').onclick=()=>{ menu.close(); cycleFont(); };
+$('#mFsDn').onclick=()=>{ fsi--; applyFs(); };
+$('#mFsUp').onclick=()=>{ fsi++; applyFs(); };
+$('#mSave').onclick=()=>{ menu.close(); openSave(); };
+$('#mLoad').onclick=()=>{ menu.close(); openLoad(); };
+$('#mNew').onclick=()=>{ menu.close(); if(confirm('새 게임을 시작할까요? 현재 진행은 사라집니다(저장본은 남음).')) startNew(); };
+
+/* 톤 변경 */
+const tonedlg=$('#tonedlg');
+function openTone(){ tonedlg.showModal(); }
+$('#toneClose').onclick=()=>tonedlg.close();
+tonedlg.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{ tone=b.dataset.tone; persist(); tonedlg.close(); addUser('톤 변경 → '+tone); scroll(); });
+
+/* 글꼴 순환 */
+function cycleFont(){ const i=FONTS.findIndex(f=>f.k===fontKey); fontKey=FONTS[(i+1)%FONTS.length].k; applyFont(); }
 
 /* 삽화 설정 */
 const imgdlg=$('#imgdlg');
 function imgFreqLabel(v){ return v==0?'끔':(v==1?'매 턴':v+'턴마다 1장'); }
-$('#btnImg').onclick=()=>{ $('#imgKeyIn').value=imgKey; $('#imgModelIn').value=imgModel; $('#imgFreqIn').value=imgEvery; $('#imgFreqV').textContent=imgFreqLabel(imgEvery); imgdlg.showModal(); };
+function openImg(){ $('#imgKeyIn').value=imgKey; $('#imgModelIn').value=imgModel; $('#imgFreqIn').value=imgEvery; $('#imgFreqV').textContent=imgFreqLabel(imgEvery); $('#imgTestOut').textContent=''; imgdlg.showModal(); }
 $('#imgFreqIn').oninput=function(){ $('#imgFreqV').textContent=imgFreqLabel(+this.value); };
 $('#imgSave').onclick=()=>{ imgKey=$('#imgKeyIn').value.trim(); imgModel=$('#imgModelIn').value.trim()||'gemini-2.5-flash-image'; imgEvery=+$('#imgFreqIn').value||0;
   try{ localStorage.setItem(LS+'_imgkey',imgKey); localStorage.setItem(LS+'_imgmodel',imgModel); localStorage.setItem(LS+'_imgevery',String(imgEvery)); }catch(e){}
@@ -410,9 +507,9 @@ $('#imgTest').onclick=async()=>{
 };
 
 const dlg=$('#dlg');
-$('#btnSave').onclick=()=>{ persist(); $('#dlgTitle').textContent='저장 (백업)'; $('#dlgDesc').textContent='아래 전체를 복사해 보관하세요. [불러오기]에 붙여넣으면 이어집니다.'; $('#dlgArea').value=JSON.stringify({history,tone}); $('#dlgDoLoad').classList.add('hidden'); dlg.showModal(); };
+function openSave(){ persist(); $('#dlgTitle').textContent='저장 (백업)'; $('#dlgDesc').textContent='아래 전체를 복사해 보관하세요. [불러오기]에 붙여넣으면 이어집니다.'; $('#dlgArea').value=JSON.stringify({history,tone}); $('#dlgDoLoad').classList.add('hidden'); dlg.showModal(); }
 function openLoad(){ $('#dlgTitle').textContent='저장본 불러오기'; $('#dlgDesc').textContent='저장한 텍스트를 붙여넣고 [불러오기].'; $('#dlgArea').value=''; $('#dlgDoLoad').classList.remove('hidden'); dlg.showModal(); }
-$('#btnLoad').onclick=openLoad; $('#ctaLoad').onclick=openLoad;
+$('#ctaLoad').onclick=openLoad;
 $('#dlgCopy').onclick=()=>{ $('#dlgArea').select(); try{document.execCommand('copy');}catch(e){} };
 $('#dlgClose').onclick=()=>dlg.close();
 $('#dlgDoLoad').onclick=()=>{ try{ const d=JSON.parse($('#dlgArea').value); if(!d.history) throw 0; history=d.history; tone=d.tone||tone; persist(); dlg.close(); showGame(); renderAll(); }catch(e){ alert('형식이 올바르지 않습니다.'); } };
