@@ -68,6 +68,7 @@
     <div class="brand"><span class="m">✦</span> Reign of Nations <span class="mini" id="ver">· 권력의 길</span></div>
     <div class="tools">
       <button class="icon" id="btnFont">가±</button>
+      <button class="icon" id="btnModel">모델?</button>
       <button class="icon" data-cmd="상태">상태</button>
       <button class="icon" id="btnSave">저장</button>
       <button class="icon" id="btnLoad">불러오기</button>
@@ -321,6 +322,17 @@ $('#dlgDoLoad').onclick=()=>{ try{ const d=JSON.parse($('#dlgArea').value); if(!
   renderChoices(lastChoices);
  }catch(e){ alert('형식이 올바르지 않습니다.'); } };
 function lastGmIndex(){ for(let i=history.length-1;i>=0;i--) if(history[i].role==='gm') return i; return -1; }
+
+/* 실행 중인 모델 확인 (아티팩트 런타임이 어떤 모델을 쓰는지 가늠용) */
+$('#btnModel').onclick=async()=>{
+  if(busy) return; busy=true; $('#busy').classList.remove('hidden');
+  try{
+    if(!(window.claude&&window.claude.complete)) throw new Error('아티팩트 환경이 아닙니다.');
+    const r=await window.claude.complete('너는 어떤 AI 모델이야? 제조사와 정확한 모델 이름·버전만 한 줄로 답해. 추측이라도 가장 정확히. 예: "Anthropic Claude Sonnet 4.6"');
+    alert('이 아티팩트가 쓰는 모델(자가 보고):\n\n'+(r||'(응답 없음)')+'\n\n※ 모델이 자기 버전을 부정확하게 말할 수 있어 참고용입니다.');
+  }catch(e){ alert('확인 실패: '+e.message); }
+  finally{ busy=false; $('#busy').classList.add('hidden'); }
+};
 
 /* 폰트 크기 조절 (4단계 순환) */
 const FS=[15,17,19,21]; let fsi=parseInt(localStorage.getItem(LS+'_fs')||'1')||1;
