@@ -150,7 +150,8 @@
   .cost-sum{background:#16171c; border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:.9rem; color:#cfd4dc; line-height:1.6}
   .cost-tbl{width:100%; border-collapse:collapse; margin:14px 0 6px; font-size:.84rem}
   .cost-tbl th,.cost-tbl td{padding:7px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap}
-  .cost-tbl th:first-child,.cost-tbl td:first-child{text-align:left; white-space:normal}
+  .cost-tbl th:first-child,.cost-tbl td:first-child{text-align:left; white-space:nowrap}
+  .persona-tbl td:first-child{white-space:normal!important}
   .cost-tbl th{color:var(--dim); font-weight:600}
   .cost-tbl td{color:#dfe3ea}
   .cost-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; font-size:.8rem; color:var(--dim); flex-wrap:wrap}
@@ -383,7 +384,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.70</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.71</span></div>
 </div>
 
 <div id="hud">
@@ -700,7 +701,7 @@
 
 <!-- ===== Illustration timing modal ===== -->
 <div class="overlay" id="costOverlay">
-  <div class="modal" style="max-width:520px">
+  <div class="modal" style="max-width:680px">
     <div style="display:flex; align-items:center">
       <h2><span class="mark">✦</span> 사용 비용</h2>
       <button class="modal-x" id="costClose">✕</button>
