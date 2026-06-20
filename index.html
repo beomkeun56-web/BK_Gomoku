@@ -341,7 +341,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.54</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.55</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -401,8 +401,8 @@
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
     <span id="costBadge" class="cost-badge" title="추정 비용" style="display:none"></span>
     <div class="spacer"></div>
-    <button class="pill" id="btnCont2" title="직전 응답을 이어서 생성" disabled>Continue</button>
-    <button class="pill" id="btnRegen2" title="이번 턴 다시 생성" disabled>Retry</button>
+    <button class="pill" id="btnCont2" title="직전 응답을 이어서 생성" disabled>이어서</button>
+    <button class="pill" id="btnRegen2" title="이번 턴 다시 생성" disabled>다시</button>
   </div>
 </div>
 
@@ -1300,6 +1300,11 @@ function setGuide(text){
   else { guideBarEl.innerHTML=''; guideBarEl.classList.add('hidden'); }
 }
 function clearGuide(){ curGuide=''; setGuide(''); }   // 새 게임/불러오기 때만 비움
+// 가이드 줄과 선택지를 항상 메시지들 아래(맨 밑, 가이드가 선택지 바로 위)로 고정
+function pinBottom(){
+  if(guideBarEl && guideBarEl.parentElement===logEl) logEl.appendChild(guideBarEl);
+  if(choicesEl && choicesEl.parentElement===logEl) logEl.appendChild(choicesEl);
+}
 // 히스토리에서 가장 최근 <guide>를 찾아 표시(새로고침/복원 후 가이드 복구)
 function refreshGuideFromHistory(){
   for(let i=history.length-1;i>=0;i--){
@@ -1587,7 +1592,7 @@ function addMessage(role, text, streaming){
   wrap.className='msg '+(role==='user'?'user':'gm');
   wrap.innerHTML=`<div class="role">${role==='user'?'당신':'게임 마스터'}</div><div class="bubble"><div class="md"></div></div>`;
   logEl.appendChild(wrap);
-  if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); // 선택지는 항상 맨 아래
+  pinBottom(); // 가이드 줄 + 선택지는 항상 메시지 아래(맨 밑)로
   const mdEl=wrap.querySelector('.md');
   if(!streaming){ mdEl.innerHTML = role==='user' ? esc(text).replace(/\n/g,'<br>') : mdToHtml(text); }
   scrollDown();
@@ -1944,9 +1949,14 @@ function removeFooters(){ logEl.querySelectorAll('.gm-footer').forEach(f=>f.remo
 function extractGuide(text){
   const m=(text||'').match(/<guide>([\s\S]*?)<\/guide>/i);
   if(m){ const g=m[1].replace(/\s+/g,' ').trim(); if(g) return g; }
-  // 폴백: 진행줄(<prog>)의 '다음 ▷ {일정} D-NN'을 가이드로 변환(모델이 <guide>를 빠뜨려도 줄이 비지 않게)
+  // 폴백: 진행줄(<prog>)에서 가이드 만들기(모델이 <guide>를 빠뜨려도 줄이 비지 않게)
   const pm=(text||'').match(/<prog>([\s\S]*?)<\/prog>/i);
-  if(pm){ const nm=pm[1].match(/다음\s*▷?\s*([^│\n<]+)/); if(nm){ const n=nm[1].trim(); if(n) return n+' 준비에 집중할 때.'; } }
+  if(pm){
+    const nm=pm[1].match(/다음\s*▷?\s*([^│\n<]+)/);   // '다음 ▷ {일정}' 우선
+    if(nm){ const n=nm[1].trim(); if(n) return n+' 준비에 집중할 때.'; }
+    const parts=pm[1].split('│').map(x=>x.replace(/<[^>]*>/g,'').trim()).filter(Boolean);  // 없으면 마지막 칸
+    if(parts.length){ const last=parts[parts.length-1].replace(/^다음\s*▷?\s*/,'').trim(); if(last) return last+' 국면에 집중할 때.'; }
+  }
   return '';
 }
 // 턴 종료 UI: 가이드 갱신 + 하단바의 이어서/다시 버튼 상태 갱신(메시지 안에 버튼을 더 만들지 않는다)
@@ -2227,7 +2237,7 @@ async function genIllustNow(){
   illustBusy=true;
   const idx=lastAssistantIndex();
   const box=document.createElement('div'); box.className='illust loading'; box.textContent='🎨 삽화 생성 중…';
-  logEl.appendChild(box); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
+  logEl.appendChild(box); pinBottom(); scrollDown();
   try{ await renderIllustInto(box, story, idx, 'end'); } finally { illustBusy=false; }
   scrollDown();
 }
@@ -2239,7 +2249,7 @@ function reserveNextIllust(){
   if(pendingNote) pendingNote.remove();
   pendingNote=document.createElement('div'); pendingNote.className='illust loading';
   pendingNote.textContent='🎨 다음 턴 시작 시 제목 아래에 삽화가 생성됩니다.';
-  logEl.appendChild(pendingNote); if(choicesEl.parentElement===logEl) logEl.appendChild(choicesEl); scrollDown();
+  logEl.appendChild(pendingNote); pinBottom(); scrollDown();
 }
 // 메시지의 제목(첫 헤딩) 아래에 삽화 삽입
 async function insertIllustUnderTitle(mdEl, story, idx){
