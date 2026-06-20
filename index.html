@@ -409,7 +409,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.24</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.25</span></div>
 </div>
 
 <div id="hud">
@@ -1653,9 +1653,11 @@ function sanitizeBody(t){
   if(!t) return t;
   t=t.replace(/<(guide|prog|goal|now|step|stat|loose|stepidx)>[\s\S]*?<\/\1>\s*/gi,'');   // 상태판 태그들은 본문에 안 보이고 상태판에서만 표시
   t=t.replace(/<loose[+\-]>[\s\S]*?<\/loose[+\-]>\s*/gi,'');                       // 누락 델타 태그도 본문에서 제거
-  // 실존 연예인·정치인 빗댄 비유 제거('OO를 닮은/같은/처럼' 류 — 몰입 깨짐)
-  const CELEB=/이정재|정우성|이병헌|현빈|공유|김수현|이종석|박서준|손석구|마동석|조인성|장동건|원빈|소지섭|송강호|하정우|황정민|유아인|차은우|박보검|김우빈|강동원/;
-  t=t.replace(/(서늘한\s*)?[가-힣]{2,5}(을|를|와|과|랑|이랑)?\s*(닮은|닮아|같은|처럼|스러운|풍의)\s*/g, m=> CELEB.test(m)?'':m);
+  // 실존 연예인·유명인 빗댄 비유 제거('OO 닮은/같은/처럼' 류 — 몰입 깨짐)
+  const CELEB=/이정재|정우성|이병헌|현빈|공유|김수현|이종석|박서준|손석구|마동석|조인성|장동건|원빈|소지섭|송강호|하정우|황정민|유아인|차은우|박보검|김우빈|강동원|장원영|아이유|카리나|한소희|김태희|전지현|수지|손예진|윈터|제니|아이브|블랙핑크|뉴진스/;
+  t=t.replace(/(서늘한\s*)?[가-힣]{2,5}(을|를|와|과|랑|이랑)?\s*(슬쩍\s*)?(닮은|닮아|같은|빼닮은|처럼|스러운|풍의)\s*/g, m=> CELEB.test(m)?'':m);
+  // 반복되는 외모 치장 구절 제거(강한 화장적 키워드 + 연결어미로 끝나는 짧은 절만 — 액션은 보존)
+  t=t.replace(/(^|[,.!?…”")\]]\s*)([^,.!?\n]*?(?:C컵|D컵|글래머|미니스커트|가슴선|볼륨감|각선미|풍만|늘씬|타이트한)[^,.!?\n]*?(?:며|면서|은 채|채|고))\s*/g, (m,b)=> b);
   return t.split('\n').filter(line=>{
     const s=line.trim();
     if(/^[가-힣·]{2,7}\s*\d{1,3}\s*[▲▼]/.test(s)) return false;        // "평판 100 ▲2 · 원인: …"
