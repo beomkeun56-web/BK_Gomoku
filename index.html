@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.07</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.08</span></div>
 </div>
 
 <div id="hud">
@@ -1947,9 +1947,9 @@ async function readSSE(res, onEvent){
       const {value,done}=await reader.read(); if(done) break;
       arm();
       buf+=dec.decode(value,{stream:true});
-      let parts=buf.split('\n\n'); buf=parts.pop();
+      let parts=buf.split(/\r?\n\r?\n/); buf=parts.pop();   // 이벤트 경계: \n\n(OpenRouter/Claude) + \r\n\r\n(직접 Gemini) 모두 처리
       for(const p of parts){
-        for(const line of p.split('\n')){
+        for(const line of p.split(/\r?\n/)){
           const t=line.trim();
           if(t.startsWith('data:')){
             const d=t.slice(5).trim();
