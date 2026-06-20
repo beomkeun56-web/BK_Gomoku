@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.97</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.98</span></div>
 </div>
 
 <div id="hud">
@@ -1287,7 +1287,7 @@ function activeToneReminder(){
     + '\n\n[★출력 골격 — 매 턴 이 순서·요소를 절대 빠뜨리지 말 것] 아래 6요소를 정확히 이 순서로 출력한다:\n'
     + '1) 제목: "# **{국기} 핵심사건**" (한 줄)\n'
     + '2) 진행줄: "<prog>신분·소속 │ {현재날짜 YYYY/MM/DD} │ 현재 막 │ 다음 ▷ 일정명 {일정날짜 YYYY/MM/DD}</prog>" (한 줄. ★D-NN 쓰지 말 것 — 앱이 두 날짜로 계산. ★현재날짜는 본문에서 실제로 흐른 시간에 맞춰 적는다 — 본문이 다음 날·며칠 뒤로 넘어가면 날짜도 그만큼 전진, 같은 순간 연속 장면이면 그대로(본문은 넘어갔는데 날짜만 박아두기 금지). 하루엔 현실적으로 가능한 만큼만 전개하고 여러 날 걸릴 일은 여러 날에 나눠라. 일정날짜는 고정)\n'
-    + '3) 상태판(진행줄 다음, 각 한 줄): <goal>목표=공식 일정 향한 큰 그림(판세·핵심 변수)</goal> <step>수순=목표 이루는 큰 전략 방향 3가지를 →로(전술 나열 ❌). 큰 그림이라 같은 국면이면 거의 그대로 유지하되, 전술 절차로 잘못 잡혔으면 큰 그림으로 교정(예 ⭕\'표심 규합 → 서동재 견제 → 명분 쌓기\')</step> <now>현황=지금 이 턴에 실제 벌어지는 구체 행동·상황 한 줄, 매 턴 갱신</now> <stat>세력 NN │ 민심 NN │ 리스크 NN │ 명분 NN (0~100, 값 뒤 직전대비 ▲/▼/–. 세력·민심·명분↑=좋음, 리스크↑=나쁨. 변화는 이번 사건 결과로만 ±1~15)</stat>. 누락은 전체목록 금지·델타로만: 새로 묻힌 과거형 미해결만 <loose+>항목</loose+>, 이번에 실제 해결된 과거 누락만 <loose->키워드</loose-> (없으면 안 씀, 이번 턴 주요 행동은 누락 아님)\n'
+    + '3) 상태판(진행줄 다음, 각 한 줄): <goal>목표=공식 일정 향한 큰 그림(판세·핵심 변수)</goal> <step>수순=목표 이루는 큰 전략 방향 3가지를 →로(전술 나열 ❌). 큰 그림이라 같은 국면이면 거의 그대로 유지하되, 전술 절차로 잘못 잡혔으면 큰 그림으로 교정(예 ⭕\'표심 규합 → 서동재 견제 → 명분 쌓기\')</step> <now>현황=지금 이 턴에 실제 벌어지는 구체 행동·상황 한 줄, 매 턴 갱신</now> <stat>세력 NN │ 민심 NN │ 리스크 NN │ 명분 NN (0~100, 값 뒤 직전대비 ▲/▼/–. 세력·민심·명분↑=좋음, 리스크↑=나쁨. 변화는 이번 사건 결과로만 ±1~15)</stat> <stepidx>지금 진행 중인 수순 축 번호 1·2·3 중 하나(★매 턴 반드시, 숫자만)</stepidx>. 누락은 전체목록 금지·델타로만: 새로 묻힌 과거형 미해결만 <loose+>항목</loose+>, 이번에 실제 해결된 과거 누락만 <loose->키워드</loose-> (없으면 안 씀, 이번 턴 주요 행동은 누락 아님)\n'
     + '4) 요약: "> 한 문장 결과 요약" (인용 한 줄 — 절대 생략 금지)\n'
     + '5) 본문: "## 소제목"(짧은 명사구) + 그 아래 내용 — 소제목은 1~2개 반드시, 반드시 마크다운 "## "로(굵은 글씨·평문 대체 금지). 소제목 없이 본문만 쓰지 말 것.\n'
     + '6) 선택지: "## **✦ 어떻게 하시겠습니까?**" + 1인칭 대사 3개(셋이 모두 공격·비리이지 않게 — 공격/건설(정책·민생·동맹)/방어·명분 중 서로 다른 결을 섞어라).\n'
@@ -2217,6 +2217,13 @@ function progWithDday(p){
 }
 // 단일 태그 본문 추출
 function pickTag(text,tag){ const m=(text||'').match(new RegExp('<'+tag+'>([\\s\\S]*?)<\\/'+tag+'>','i')); return m?m[1].replace(/\s+/g,' ').trim():''; }
+// 현재 진행 중인 수순 축 번호(1~3) — 숫자/원문자(①②③)/"N번" 모두 인식
+function stepIdxOf(content){
+  const raw=pickTag(content,'stepidx'); if(!raw) return 0;
+  const d=raw.match(/[1-9]/); if(d) return parseInt(d[0]);
+  const circ='①②③④⑤⑥⑦⑧⑨⑩'; for(let i=0;i<circ.length;i++) if(raw.includes(circ[i])) return i+1;
+  return 0;
+}
 // 지표 줄 렌더: '세력 58 ▲ │ 민심 42 ▼ │ 리스크 71 ▲ │ 명분 40 –' → 항목별 좋고나쁨에 따라 파랑/빨강
 function renderStat(s){
   const items=s.split(/\s*[│|]\s*/).map(x=>x.trim()).filter(Boolean);
@@ -2317,7 +2324,7 @@ function setMsgGuide(mdEl, content, idx){
   if(goal) html+=row('목표','<span class="gtxt-i">'+esc(goal)+'</span>');
   if(step){
     const circ='①②③④⑤⑥⑦⑧⑨⑩';
-    const cur=parseInt(pickTag(content,'stepidx'))||0;   // 현재 진행 중인 축(1~3) — 그 칸을 강조
+    const cur=stepIdxOf(content);   // 현재 진행 중인 축(1~3) — 그 칸을 강조
     const steps=step.replace(/^수순\s*[:：]?\s*/,'').split(/\s*(?:→|->|;|＞)\s*/)
       .map(x=>x.replace(/^[①-⑩\d]+[).．]?\s*/,'').trim()).filter(Boolean);
     const sh=steps.map((x,i)=>'<span class="g-step'+(i+1===cur?' g-step-cur':'')+'">'+(circ[i]||(i+1)+'.')+' '+esc(x)+'</span>').join('<span class="g-arr">→</span>');
