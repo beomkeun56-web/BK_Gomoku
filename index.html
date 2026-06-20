@@ -404,7 +404,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.94</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.95</span></div>
 </div>
 
 <div id="hud">
@@ -1299,7 +1299,12 @@ function activeToneReminder(){
 }
 // 캐시 친화: 크고 고정된 SYSTEM_PROMPT를 맨 앞(불변 프리픽스)에 두고, 설정에 따라 바뀌는 톤 리마인더는 뒤로.
 // → 톤·길이를 바꿔도 앞쪽 프리픽스가 그대로라 암묵적 캐시가 유지된다(변하는 부분은 끝으로).
-function sysText(){ return SYSTEM_PROMPT + '\n\n' + activeToneReminder(); }
+// 화면에 고정된 '큰 전략 수순'을 GM에게도 주입 — 이야기가 이 축들을 따라 목표로 흐르게(표시와 스토리 일치)
+function stratReminder(){
+  if(!stratStep) return '';
+  return '\n\n[★현재 전략 수순 — 이야기를 이 큰 축들을 따라 진전시켜라] 지금 목표를 향한 큰 전략 3축은 「'+stratStep+'」다. 한 축(예: 약점·비자금 캐기)에만 매달려 늘어지지 말고, 표 규합·견제·명분 등 이 축들을 번갈아 다루며 이야기를 목표(공식 일정)로 수렴시켜라. 한 서브사안이 매듭나면 다음 축으로 자연스럽게 넘어간다. (플레이어 입력은 늘 우선하되, 큰 흐름은 이 수순을 따른다.)';
+}
+function sysText(){ return SYSTEM_PROMPT + '\n\n' + activeToneReminder() + stratReminder(); }
 let cfg = loadCfg();
 let history = loadHistory();   // [{role:'user'|'assistant', content}] — 전체 기록(표시·복원용)
 let stats = loadStats();       // {국력,경제,...} last known
