@@ -404,7 +404,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.93</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.94</span></div>
 </div>
 
 <div id="hud">
@@ -2227,25 +2227,44 @@ function renderStat(s){
 // 목표 핵심부(— 앞) — 같은 국면 판별용
 function goalCore(g){ return (g||'').split(/[—\-–]/)[0].replace(/[\s·,.\/|]/g,'').trim(); }
 // 수순(큰 전략 3축)을 '목표'만 떼어 별도 호출로 생성·고정한다. 목표 국면이 바뀌면 새로 뽑는다.
-// 모델이 매 턴 본문에 쓰는 <step>(전술)은 디스플레이에서 무시 — 폴백으로만 쓴다.
+// 모델이 매 턴 본문에 쓰는 <step>(전술)은 디스플레이에서 무시한다.
+// 전술적 표현(작전 단어)인지 검사 — LLM이 큰 그림 대신 작전을 뱉으면 버리기 위함
+function looksTactical(s){ return /잠입|탈취|해독|매수|회수|입수|압수|도청|미행|금고|USB|마스터키|장부|저지\b|사퇴 압박|협박|빼내|훔/.test(s||''); }
+// 목표만 보고 만드는 '큰 전략 3축' 결정적 템플릿(절대 전술이 아님 — LLM 실패/전술 시 이걸로 보장)
+function stratTemplate(goal){
+  const g=goal||''; let foe='';
+  const m=g.match(/([가-힣]{2,4})(?:의)?\s*(?:대항마|꺾기|견제)/) || g.match(/—\s*[^,·]*?([가-힣]{2,4})/);
+  if(m) foe=m[1];
+  const foePart= foe ? (foe+' 약점·실정으로 견제') : '경쟁자 견제·약점 공략';
+  if(/경선|선거|전당대회|당대표|원내대표|대선|공천|최고위원/.test(g))
+    return '지지 세력·표 규합 → '+foePart+' → 정책·민생으로 명분 쌓기';
+  if(/법안|입법|예산|국정감사|상임위|특조법/.test(g))
+    return '우군 의원 규합 → 쟁점 선점·여론전 → 협상으로 통과 동력 확보';
+  return '세력·우군 결집 → '+foePart+' → 성과·명분으로 입지 강화';
+}
 let _stratBusy=false;
 async function ensureStratStep(goal){
   if(!goal) return;
   const core=goalCore(goal);
-  if(core && core===stratGoal && stratStep) return;   // 이미 이 국면 수순 보유
+  if(core && core===stratGoal && stratStep && !looksTactical(stratStep)) return;   // 이미 이 국면 큰그림 보유
+  // 1) 즉시 결정적 템플릿으로 채운다(전술이 절대 안 뜨게, 무료·즉시, 화면 바로 반영)
+  stratStep=stratTemplate(goal); stratGoal=core;
+  localStorage.setItem(LS+'_strat',stratStep); localStorage.setItem(LS+'_stratgoal',stratGoal);
+  refreshLastGuide();
+  // 2) LLM으로 더 맞춤한 큰 그림을 시도 — 형식 OK & 전술 아닐 때만 업그레이드, 아니면 템플릿 유지
   if(_stratBusy) return; _stratBusy=true;
   try{
-    const sys='너는 정치 시뮬레이션 게임의 전략 참모다. 주어진 목표(공식 일정)를 이루기 위한 "큰 전략 방향 3가지"만 한 줄로 뽑는다. 이번 턴의 눈앞 행동·전술(협박·잠입·탈취·해독·매수 같은 단발 행위)은 절대 쓰지 말고, 세력화·견제·명분·여론 같은 굵직한 전략 축으로만 쓴다.';
-    const prompt='목표: "'+goal+'"\n이 목표를 이루기 위한 굵직한 전략 방향 정확히 3개를 \' → \'로 이어 한 줄로만 출력(번호·설명·따옴표 없이). 예시 형식: 계파 지지 규합으로 표 확보 → 경쟁자 약점으로 견제 → 입법·민생 성과로 명분 쌓기';
+    const sys='너는 정치 시뮬레이션 게임의 전략 참모다. 목표(공식 일정)를 이루기 위한 "큰 전략 방향 3가지"만 한 줄로 뽑는다. 이번 턴의 눈앞 행동·작전(잠입·탈취·해독·매수·법안 저지·협박·장부 같은 단발 수단)은 절대 쓰지 말고, 세력화·표 규합·견제·명분·여론 같은 굵직한 전략 축으로만 쓴다.';
+    const prompt='목표: "'+goal+'"\n이 목표를 이루기 위한 굵직한 전략 방향 정확히 3개를 \' → \'로 이어 한 줄로만 출력(번호·설명·따옴표·작전 단어 금지). 예시 형식: 계파 지지 규합으로 표 확보 → 경쟁자 약점으로 견제 → 입법·민생 성과로 명분 쌓기';
     const out=await callOnce([{role:'user',content:prompt}], sys, briefModel(), 200);
-    let line=(out||'').split('\n').map(s=>s.trim()).filter(Boolean).find(s=>/→|->/.test(s))||'';
-    line=line.replace(/^["'`\s]+|["'`\s]+$/g,'').replace(/^[①-⑩\d][).．]?\s*/,'').trim();
-    if(line && /→|->/.test(line)){
-      stratStep=line; stratGoal=core;
-      localStorage.setItem(LS+'_strat',stratStep); localStorage.setItem(LS+'_stratgoal',stratGoal);
-      refreshLastGuide();   // 생성되면 마지막 패널을 다시 그려 큰 그림 수순으로 교체
+    let raw=(out||'').replace(/```/g,'').trim();
+    let line=raw.split('\n').map(s=>s.trim()).find(s=>/→|->/.test(s)) || '';   // 화살표 한 줄 우선
+    if(!line){ const items=raw.split('\n').map(s=>s.replace(/^[\-•*\d①-⑩).．\s]+/,'').trim()).filter(Boolean).slice(0,3); if(items.length>=2) line=items.join(' → '); }
+    line=line.replace(/^["'`\s]+|["'`\s]+$/g,'').replace(/^[①-⑩\d][).．]?\s*/,'').replace(/\s*->\s*/g,' → ').trim();
+    if(line && line.split('→').length>=2 && !looksTactical(line)){   // 형식 OK + 전술 아님 → 업그레이드
+      stratStep=line; localStorage.setItem(LS+'_strat',stratStep); refreshLastGuide();
     }
-  }catch(e){ /* 실패 시 모델 step 폴백 유지 */ }
+  }catch(e){ /* 실패해도 템플릿 유지 */ }
   finally{ _stratBusy=false; }
 }
 // 가장 최근 GM 메시지의 상태판을 다시 렌더(수순 비동기 생성 후 반영)
@@ -2327,8 +2346,8 @@ async function continueGen(){
   history[history.length-1].content=acc;
   const {body, choices}=splitChoices(acc);
   renderGm(mdEl, sanitizeBody(body), false);
+  ensureStratStep(replayPanel(history.length-1).goal);   // 큰 그림 수순: 템플릿 즉시 세팅(+LLM 업그레이드 async)
   setMsgGuide(mdEl, acc, history.length-1);
-  ensureStratStep(replayPanel(history.length-1).goal);   // 목표 국면이 바뀌었으면 큰 그림 수순 새로 뽑기
   saveHistory(); parseStats(acc); renderChoices(choices);
   addGmFooter(gm); busy=false; sendBtn.disabled=false;
   recordTurnCost();
