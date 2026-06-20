@@ -133,6 +133,11 @@
   /* ===== Choices (회색 말풍선 + 연필) — 본문과 함께 스크롤 ===== */
   #choices{max-width:820px; margin:0 auto; padding:6px 0 10px; font-size:var(--fs); text-align:left}
   #choices.empty{display:none}
+  /* 현재 상황 가이드 — 선택지 바로 위 고정 영역(턴이 바뀌어도 안 사라지고 교체됨) */
+  #guideBar{max-width:820px; margin:0 auto; padding:10px 0 4px; font-size:.9em; color:#9298a3;
+    line-height:1.55; border-top:1px solid var(--line)}
+  #guideBar.hidden{display:none}
+  #guideBar .gtag{color:#6b6f78; margin-right:6px}
   .choices-head{display:none}
   .choice-row{display:flex; gap:6px; align-items:flex-start; margin-bottom:10px}
   .choice-row .edit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%;
@@ -201,10 +206,10 @@
   .illust img{display:block; width:100%; border-radius:14px; border:1px solid var(--line)}
   /* 와이드 화면 대응: 레이아웃이 커지면 본문·입력 영역도 넓게 */
   @media (min-width:1200px){
-    .msg, .msg.user, #choices, .cmdrow, .inputrow, .toolrow, .illust{ max-width:1040px }
+    .msg, .msg.user, #choices, #guideBar, .cmdrow, .inputrow, .toolrow, .illust{ max-width:1040px }
   }
   @media (min-width:1600px){
-    .msg, .msg.user, #choices, .cmdrow, .inputrow, .toolrow, .illust{ max-width:1200px }
+    .msg, .msg.user, #choices, #guideBar, .cmdrow, .inputrow, .toolrow, .illust{ max-width:1200px }
   }
   .illust .cap{font-size:.74rem; color:var(--dim); margin-top:7px; text-align:center; letter-spacing:.5px}
   .illust.loading{color:var(--mut); font-size:.85rem; text-align:center; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
@@ -332,7 +337,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.48</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.49</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -364,6 +369,7 @@
     </div>
    </div>
   </div>
+  <div id="guideBar" class="hidden"></div>
   <div id="choices" class="empty"></div>
 </div>
 
@@ -1273,7 +1279,12 @@ function saveStats(){ localStorage.setItem(LS+'_stats', JSON.stringify(stats)); 
 
 /* ---------- DOM ---------- */
 const $=id=>document.getElementById(id);
-const logEl=$('log'), choicesEl=$('choices'), inp=$('inp'), sendBtn=$('send');
+const logEl=$('log'), choicesEl=$('choices'), guideBarEl=$('guideBar'), inp=$('inp'), sendBtn=$('send');
+// 현재 상황 가이드(선택지 위 고정 줄). 턴이 끝날 때만 갱신 — 선택 눌러도 다음 가이드 준비될 때까지 유지.
+function setGuide(text){
+  if(text){ guideBarEl.innerHTML='<span class="gtag">지금</span>'+esc(text); guideBarEl.classList.remove('hidden'); }
+  else { guideBarEl.innerHTML=''; guideBarEl.classList.add('hidden'); }
+}
 
 /* ---------- Markdown ---------- */
 if(window.marked){ marked.setOptions({breaks:true, gfm:true}); }
@@ -1563,7 +1574,7 @@ function addMessage(role, text, streaming){
 }
 function scrollDown(){ logEl.scrollTop=logEl.scrollHeight; }
 // 메시지만 제거(#choices·#welcome 등 구조 요소는 보존)
-function clearLog(){ logEl.querySelectorAll('.msg, .gm-footer').forEach(e=>e.remove()); const sb=$('suggestBox'); if(sb) sb.remove(); renderChoices([]); }
+function clearLog(){ logEl.querySelectorAll('.msg, .gm-footer').forEach(e=>e.remove()); const sb=$('suggestBox'); if(sb) sb.remove(); renderChoices([]); setGuide(''); }
 // 사용자가 위로 올려 읽는 중이면 자동 스크롤하지 않음(끊김·튐 방지)
 function maybeScroll(){
   if(logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 140) logEl.scrollTop=logEl.scrollHeight;
@@ -1908,13 +1919,11 @@ function addGmFooter(msgWrap){
   if(!msgWrap) return;
   removeFooters();
   const f=document.createElement('div'); f.className='gm-footer';
-  // 직전 GM 응답에서 가이드 한 줄을 꺼내 표시(있을 때만)
+  // 직전 GM 응답의 가이드 한 줄 → 선택지 위 고정 바에 표시(없으면 직전 것 유지)
   const last=(history.length && history[history.length-1].role==='assistant') ? history[history.length-1].content : '';
   const guide=extractGuide(last);
-  let html='';
-  if(guide) html+=`<div class="gm-guide"><span class="gtag">지금</span>${esc(guide)}</div>`;
-  html+=`<div class="gm-actions"><button id="btnCont">이어서 생성</button><button id="btnRegen">다시 생성</button></div>`;
-  f.innerHTML=html;
+  if(guide) setGuide(guide);
+  f.innerHTML=`<div class="gm-actions"><button id="btnCont">이어서 생성</button><button id="btnRegen">다시 생성</button></div>`;
   msgWrap.querySelector('.bubble').appendChild(f);
   f.querySelector('#btnCont').onclick=continueGen;
   f.querySelector('#btnRegen').onclick=regen;
