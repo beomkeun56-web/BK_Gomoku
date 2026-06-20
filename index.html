@@ -87,7 +87,7 @@
   .msg.gm .role{display:none}
 
   /* markdown styling */
-  .md h1{font-size:1.72em; font-weight:800; margin:.3em 0 .55em; line-height:1.3; border-bottom:1px solid var(--line); padding-bottom:.38em}
+  .md h1{font-size:1.72em; font-weight:800; margin:.3em 0 .5em; line-height:1.3}
   .md h2{font-size:1.3em; margin:1em 0 .45em; color:#fff}
   .md h2.sec{border-top:1px solid var(--line); padding-top:1.15em; margin-top:1.5em}
   .md h2 .sec-mark{color:#fff; margin-right:.15em}
@@ -384,7 +384,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.71</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.72</span></div>
 </div>
 
 <div id="hud">
@@ -2147,7 +2147,7 @@ function setMsgGuide(mdEl, content){
   if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
   let html='';
   if(g) html+='<span class="gtag">✦ 제안</span><span class="gtxt">'+esc(g)+'</span>';
-  if(prog) html+='<div class="md-progline">'+esc(prog)+'</div>';   // 진행줄은 제안 밑에
+  if(prog) html+='<div class="md-progline">✦ '+esc(prog)+'</div>';   // 진행줄은 제안 밑에(✦ 표시)
   el.innerHTML=html;
 }
 // 하단바 '이어서/다시' 버튼: 직전이 GM 응답이고 생성 중이 아닐 때만 활성
@@ -2948,12 +2948,21 @@ function withDriveToken(cb){
   gClientId=$('gClientId').value.trim(); localStorage.setItem(LS+'_gcid',gClientId);
   if(!gClientId){ driveStatus('OAuth 클라이언트 ID를 입력하세요.','err'); return; }
   if(!(window.google&&google.accounts&&google.accounts.oauth2)){ driveStatus('구글 로그인 스크립트 로딩 중… 잠시 후 다시 시도하세요.','err'); return; }
+  if(gToken && Date.now()<gTokenExp){ cb(); return; }   // 유효 토큰이면 재로그인 없이 바로 사용
   try{
+    let triedConsent=false;
     const tc=google.accounts.oauth2.initTokenClient({
       client_id:gClientId, scope:'https://www.googleapis.com/auth/drive.file',
-      callback:(resp)=>{ if(resp&&resp.access_token){ gToken=resp.access_token; gTokenExp=Date.now()+50*60*1000; cb(); } else { driveStatus('인증 실패: '+(resp&&resp.error||'토큰 없음'),'err'); } }
+      callback:(resp)=>{
+        if(resp&&resp.access_token){ gToken=resp.access_token; gTokenExp=Date.now()+50*60*1000; localStorage.setItem(LS+'_gconsent','1'); cb(); }
+        else if(!triedConsent){ triedConsent=true; try{ tc.requestAccessToken({prompt:'consent'}); }catch(e){ driveStatus('인증 오류: '+e.message,'err'); } }   // 무음 실패 → 최초 1회만 동의창
+        else { driveStatus('인증 실패: '+(resp&&resp.error||'토큰 없음'),'err'); }
+      },
+      error_callback:(err)=>{ if(!triedConsent){ triedConsent=true; try{ tc.requestAccessToken({prompt:'consent'}); }catch(e){ driveStatus('인증 오류: '+e.message,'err'); } } else { driveStatus('인증 취소/오류',''); } }
     });
-    tc.requestAccessToken({prompt: (gToken && Date.now()<gTokenExp)?'':'consent'});
+    // 한 번이라도 동의했으면 이후엔 무음(prompt:'')으로 토큰만 조용히 갱신 → 매번 로그인 안 함
+    const grantedBefore=localStorage.getItem(LS+'_gconsent')==='1';
+    tc.requestAccessToken({prompt: grantedBefore?'':'consent'});
   }catch(e){ driveStatus('인증 오류: '+e.message,'err'); }
 }
 async function driveErr(r){
