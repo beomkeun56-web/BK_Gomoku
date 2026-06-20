@@ -153,6 +153,8 @@
   .md-guide .g-line + .g-line{margin-top:7px}
   /* 다음 단계(①→②→③) */
   .md-guide .gnext{color:#cfd4dc; line-height:1.95}
+  .md-guide .gnext .g-step-cur{background:#2a2d36; color:#fff; padding:2px 7px; border-radius:6px;
+    box-decoration-break:clone; -webkit-box-decoration-break:clone}   /* 현재 진행 중인 수순 축 강조(회색 음영) */
   .md-guide .g-step{white-space:normal}
   .md-guide .g-arr{color:#6b6f78; margin:0 5px}
   .md-guide .md-progline{margin-top:9px; color:#6b6f78; font-size:.86em; letter-spacing:.01em}
@@ -404,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.96</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.97</span></div>
 </div>
 
 <div id="hud">
@@ -1179,7 +1181,7 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 [명령어] 시작 / 저장 / 이어하기+스냅샷 / 상태 / 국정과제(과제) / 새 게임 / 삽화 / 이름변경 / 회담·예산·선거·인사.
 
 [렌더링] 카드·대시보드·위젯 금지, 순수 마크다운 텍스트+표로만. 코드/위젯 내부 텍스트를 본문에 노출하지 않는다. 신호 이모지(🔴🔵🔺🔻)·색상 점은 쓰지 않고 스탯 변동은 +/- 숫자로만.
-[문장 강조] 그 턴에서 특히 긍정적·유리한 핵심 문장은 <good>문장</good>, 부정적·위험·나쁜 핵심 문장은 <bad>문장</bad> 태그로 감싸 강조한다. 매 턴 각 0~2개 정도만 꼭 필요한 곳에 쓰고 남용하지 않는다(평범한 문장은 감싸지 않음). 강조에는 이 두 태그만, 제목 아래 진행줄에는 <prog>, 상태판에는 <goal>·<step>·<now>·<stat>·<loose+>·<loose-> 태그만 쓴다 — 그 외 HTML 태그는 쓰지 않는다.
+[문장 강조] 그 턴에서 특히 긍정적·유리한 핵심 문장은 <good>문장</good>, 부정적·위험·나쁜 핵심 문장은 <bad>문장</bad> 태그로 감싸 강조한다. 매 턴 각 0~2개 정도만 꼭 필요한 곳에 쓰고 남용하지 않는다(평범한 문장은 감싸지 않음). 강조에는 이 두 태그만, 제목 아래 진행줄에는 <prog>, 상태판에는 <goal>·<step>·<now>·<stat>·<loose+>·<loose->·<stepidx> 태그만 쓴다 — 그 외 HTML 태그는 쓰지 않는다.
 
 응답을 끝내기 직전 반드시: (1) 이번 턴이 '한 장면/한 결정'만 다뤘는가(여러 날짜·사건 나열 금지) (2) 날짜가 자연스럽게 앞으로만 흘렀는가 (3) 스탯 변동을 -15~+15 안으로 지켰는가 (4) 비가역·중대 결정에 제동을 적용했는가 (5) 끝에 3개 선택지를 띄웠는가 — 를 확인한다.`;
 
@@ -1303,7 +1305,7 @@ function activeToneReminder(){
 // 화면에 고정된 '큰 전략 수순'을 GM에게도 주입 — 이야기가 이 축들을 따라 목표로 흐르게(표시와 스토리 일치)
 function stratReminder(){
   if(!stratStep) return '';
-  return '\n\n[★현재 전략 수순 — GM 내부 지침(본문에 드러내지 말 것)] 지금 목표를 향한 큰 전략 3축은 「'+stratStep+'」다. 한 축(예: 약점·비자금 캐기)에만 매달려 늘어지지 말고, 표 규합·견제·명분 등 이 축들을 번갈아 다루며 이야기를 목표(공식 일정)로 수렴시켜라. 한 서브사안이 매듭나면 다음 축으로 자연스럽게 넘어간다. (플레이어 입력은 늘 우선.) ★이 수순·축은 GM의 머릿속 계획일 뿐이다 — 본문에 \'이제 부수는 건 끝났다\', \'건설적인 한 수를 둘 타이밍\', \'다음 단계는 명분 쌓기\' 같은 메타·설계 용어로 절대 노출하지 말고, 오직 구체적 사건·대사·행동으로만 보여줘라.';
+  return '\n\n[★현재 전략 수순 — GM 내부 지침(본문에 드러내지 말 것)] 지금 목표를 향한 큰 전략 3축은 「'+stratStep+'」다. 한 축(예: 약점·비자금 캐기)에만 매달려 늘어지지 말고, 표 규합·견제·명분 등 이 축들을 번갈아 다루며 이야기를 목표(공식 일정)로 수렴시켜라. 한 서브사안이 매듭나면 다음 축으로 자연스럽게 넘어간다. (플레이어 입력은 늘 우선.) ★이 수순·축은 GM의 머릿속 계획일 뿐이다 — 본문에 \'이제 부수는 건 끝났다\', \'건설적인 한 수를 둘 타이밍\', \'다음 단계는 명분 쌓기\' 같은 메타·설계 용어로 절대 노출하지 말고, 오직 구체적 사건·대사·행동으로만 보여줘라. 또한 지금 이야기가 이 3축 중 몇 번째를 진행 중인지 진행줄 근처에 <stepidx>1~3 중 현재 축 번호</stepidx>로 한 줄 표시하라(화면에서 그 축이 강조됨, 본문엔 안 보임).';
 }
 function sysText(){ return SYSTEM_PROMPT + '\n\n' + activeToneReminder() + stratReminder(); }
 let cfg = loadCfg();
@@ -1657,7 +1659,7 @@ function displayClean(t){
 }
 function sanitizeBody(t){
   if(!t) return t;
-  t=t.replace(/<(guide|prog|goal|now|step|stat|loose)>[\s\S]*?<\/\1>\s*/gi,'');   // 상태판 태그들은 본문에 안 보이고 상태판에서만 표시
+  t=t.replace(/<(guide|prog|goal|now|step|stat|loose|stepidx)>[\s\S]*?<\/\1>\s*/gi,'');   // 상태판 태그들은 본문에 안 보이고 상태판에서만 표시
   t=t.replace(/<loose[+\-]>[\s\S]*?<\/loose[+\-]>\s*/gi,'');                       // 누락 델타 태그도 본문에서 제거
   return t.split('\n').filter(line=>{
     const s=line.trim();
@@ -2315,9 +2317,10 @@ function setMsgGuide(mdEl, content, idx){
   if(goal) html+=row('목표','<span class="gtxt-i">'+esc(goal)+'</span>');
   if(step){
     const circ='①②③④⑤⑥⑦⑧⑨⑩';
+    const cur=parseInt(pickTag(content,'stepidx'))||0;   // 현재 진행 중인 축(1~3) — 그 칸을 강조
     const steps=step.replace(/^수순\s*[:：]?\s*/,'').split(/\s*(?:→|->|;|＞)\s*/)
       .map(x=>x.replace(/^[①-⑩\d]+[).．]?\s*/,'').trim()).filter(Boolean);
-    const sh=steps.map((x,i)=>'<span class="g-step">'+(circ[i]||(i+1)+'.')+' '+esc(x)+'</span>').join('<span class="g-arr">→</span>');
+    const sh=steps.map((x,i)=>'<span class="g-step'+(i+1===cur?' g-step-cur':'')+'">'+(circ[i]||(i+1)+'.')+' '+esc(x)+'</span>').join('<span class="g-arr">→</span>');
     html+=row('수순',sh,'gnext');
   }
   if(now) html+=row('현황',esc(now));
