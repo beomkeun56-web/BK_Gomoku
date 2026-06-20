@@ -404,7 +404,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.85</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.86</span></div>
 </div>
 
 <div id="hud">
@@ -449,6 +449,8 @@
     <button class="chip" data-cmd="새 게임">새 게임</button>
     <button class="chip" id="btnBarSave" title="저장(드라이브/파일)">Save</button>
     <button class="chip" id="btnBarLoad" title="불러오기(드라이브/파일)">Load</button>
+    <button class="chip" id="btnCont2" title="직전 응답을 이어서 생성" disabled>이어서</button>
+    <button class="chip" id="btnRegen2" title="이번 턴 다시 생성" disabled>다시</button>
   </div>
   <div class="inputrow hidden" id="inputRow">
     <textarea id="inp" rows="1" placeholder="메시지 보내기"></textarea>
@@ -465,9 +467,6 @@
     <span id="turnBadge" class="drive-badge" title="현재 게임 누적 턴수"></span>
     <span id="balBadge" class="drive-badge" title="OpenRouter 잔액(매 턴 갱신)"></span>
     <span id="costBadge" class="cost-badge" title="추정 비용" style="display:none"></span>
-    <div class="spacer"></div>
-    <button class="pill" id="btnCont2" title="직전 응답을 이어서 생성" disabled>이어서</button>
-    <button class="pill" id="btnRegen2" title="이번 턴 다시 생성" disabled>다시</button>
   </div>
 </div>
 
