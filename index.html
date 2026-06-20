@@ -145,6 +145,7 @@
   /* 제안 글자: 회색 음영(강조) 처리 */
   .md-guide .gtxt{background:#2a2d36; color:#dfe3ea; padding:2px 7px; border-radius:6px;
     box-decoration-break:clone; -webkit-box-decoration-break:clone}
+  .md-guide .md-progline{margin-top:9px; color:#6b6f78; font-size:.86em; letter-spacing:.01em}
   /* 비용 팝업 */
   .cost-sum{background:#16171c; border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:.9rem; color:#cfd4dc; line-height:1.6}
   .cost-tbl{width:100%; border-collapse:collapse; margin:14px 0 6px; font-size:.84rem}
@@ -162,6 +163,15 @@
   .ask-out{margin-top:14px; font-size:.92rem; line-height:1.7}
   .ask-out:empty{display:none}
   .ask-actions{display:flex; gap:8px; margin-top:12px}
+  /* 정리 이전 질문 목록 */
+  .ask-hist{margin-top:16px}
+  .ask-hist:empty{display:none}
+  .ask-hist-t{font-size:.78rem; color:var(--dim); margin-bottom:6px}
+  .ask-hist-row{display:flex; gap:6px; align-items:center; margin-bottom:5px}
+  .ask-hist-q{flex:1; min-width:0; text-align:left; background:#16171c; border:1px solid var(--line); color:#cfd4dc; border-radius:8px; padding:7px 10px; font-family:inherit; font-size:.84rem; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ask-hist-q:hover{border-color:var(--accent); color:#fff}
+  .ask-hist-del{flex:0 0 auto; width:28px; height:28px; border-radius:8px; background:transparent; border:1px solid var(--line); color:var(--dim); cursor:pointer}
+  .ask-hist-del:hover{color:#ff6b6b; border-color:#5a2e2a}
   /* 페르소나 표 — 이름 열 좁게 */
   .persona-tbl td{text-align:left!important; white-space:normal!important; vertical-align:top}
   .persona-tbl td:first-child,.persona-tbl th:first-child{width:34%}
@@ -373,7 +383,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.69</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.70</span></div>
 </div>
 
 <div id="hud">
@@ -715,6 +725,7 @@
       <button class="mini-btn" id="askClear">삭제</button>
       <button class="mini-btn" id="askAgain">재질문</button>
     </div>
+    <div id="askHist" class="ask-hist"></div>
   </div>
 </div>
 
@@ -1593,6 +1604,7 @@ function displayClean(t){
 function sanitizeBody(t){
   if(!t) return t;
   t=t.replace(/<guide>[\s\S]*?<\/guide>\s*/gi,'');   // 가이드 한 줄은 본문에 안 보이고 푸터에서만 표시
+  t=t.replace(/<prog>[\s\S]*?<\/prog>\s*/gi,'');     // 진행줄도 본문 상단에 안 보이고 제안 밑(푸터)에서만 표시
   return t.split('\n').filter(line=>{
     const s=line.trim();
     if(/^[가-힣·]{2,7}\s*\d{1,3}\s*[▲▼]/.test(s)) return false;        // "평판 100 ▲2 · 원인: …"
@@ -2125,12 +2137,17 @@ function addGmFooter(msgWrap){
   updateActionBtns(); updateTurnBadge();
 }
 // 가이드를 '해당 GM 메시지 안'에 영구히 붙인다(매 턴 남고, 지난 턴 것도 안 사라짐)
+function extractProg(text){ const m=(text||'').match(/<prog>([\s\S]*?)<\/prog>/i); return m?m[1].replace(/\s+/g,' ').trim():''; }
 function setMsgGuide(mdEl, content){
-  const g=extractGuide(content); if(!g) return;
+  const g=extractGuide(content); const prog=extractProg(content);
+  if(!g && !prog) return;
   const bubble=mdEl && mdEl.parentElement; if(!bubble) return;
   let el=bubble.querySelector('.md-guide');
   if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
-  el.innerHTML='<span class="gtag">✦ 제안</span><span class="gtxt">'+esc(g)+'</span>';
+  let html='';
+  if(g) html+='<span class="gtag">✦ 제안</span><span class="gtxt">'+esc(g)+'</span>';
+  if(prog) html+='<div class="md-progline">'+esc(prog)+'</div>';   // 진행줄은 제안 밑에
+  el.innerHTML=html;
 }
 // 하단바 '이어서/다시' 버튼: 직전이 GM 응답이고 생성 중이 아닐 때만 활성
 function updateActionBtns(){
@@ -2828,7 +2845,8 @@ const _btnNew=$('btnNew'); if(_btnNew) _btnNew.onclick=newGame;
 function makeSaveCode(){
   const data={ v:2, history, stats, summary, summaryUpto, illusts, tone: gameTone,
     cost: costTotal, costImg: costImgTotal, turns: turnCount,   // 누적 비용(텍스트+이미지)·이미지누적·턴수 동기화
-    cfg: cfg,   // 모든 설정값(제공사·키·모델·삽화·화풍·인물 등) 전체 저장
+    costLog: costLog, askLog: askLog, fx: usdKrw,   // 턴별 비용기록·정리 질문기록·환율
+    cfg: cfg,   // 모든 설정값(제공사·키·모델·삽화·화풍·인물·페르소나·커스텀 추가지시 등) 전체 저장
     ui:{ font:localStorage.getItem(LS+'_font'), fs:localStorage.getItem(LS+'_fs'),
          uifs:localStorage.getItem(LS+'_uifs'), speed:localStorage.getItem(LS+'_speed'),
          sumon:localStorage.getItem(LS+'_sumon') },
@@ -2853,6 +2871,9 @@ async function applySaveCode(code){
   if(typeof d.cost==='number'){ costTotal=d.cost; localStorage.setItem(LS+'_cost', String(costTotal)); }
   if(typeof d.costImg==='number'){ costImgTotal=d.costImg; localStorage.setItem(LS+'_costimg', String(costImgTotal)); }
   if(typeof d.turns==='number'){ turnCount=d.turns; localStorage.setItem(LS+'_turns', String(turnCount)); }
+  if(Array.isArray(d.costLog)){ costLog=d.costLog; localStorage.setItem(LS+'_costlog', JSON.stringify(costLog)); }
+  if(Array.isArray(d.askLog)){ askLog=d.askLog; localStorage.setItem(LS+'_asklog', JSON.stringify(askLog)); }
+  if(typeof d.fx==='number'&&d.fx>0){ usdKrw=d.fx; localStorage.setItem(LS+'_fx', String(usdKrw)); }
   // 설정값 복원: v2는 전체 cfg, 구버전은 일부 필드
   if(d.cfg && typeof d.cfg==='object'){ cfg=d.cfg; saveCfg(); }
   else if(d.provider){ cfg.provider=d.provider; cfg.model=d.model||''; cfg.modelManual=d.modelManual||''; saveCfg(); }
@@ -3128,21 +3149,35 @@ function buildAskContext(){
   if(typeof summary==='string' && summary) parts.unshift('[줄거리 요약]\n'+summary);
   return parts.join('\n\n');
 }
+let askLog=(()=>{ try{ return JSON.parse(localStorage.getItem(LS+'_asklog')||'[]')||[]; }catch(e){ return []; } })();  // [{q,a,ts}]
 { const ov=$('askOverlay');
-  const open=()=>{ $('askIn').value=''; $('askOut').innerHTML=''; $('askActions').style.display='none'; ov.classList.add('on'); setTimeout(()=>{ try{$('askIn').focus();}catch(e){} },50); };
+  function saveAskLog(){ try{ localStorage.setItem(LS+'_asklog', JSON.stringify(askLog.slice(-40))); }catch(e){} }
+  function renderAskHist(){
+    const el=$('askHist'); if(!el) return;
+    if(!askLog.length){ el.innerHTML=''; return; }
+    let h='<div class="ask-hist-t">이전 질문</div>';
+    askLog.slice().reverse().forEach((it)=>{ const i=askLog.indexOf(it);
+      h+='<div class="ask-hist-row"><button class="ask-hist-q" data-i="'+i+'" title="다시 보기">'+esc(it.q)+'</button><button class="ask-hist-del" data-i="'+i+'" title="삭제">✕</button></div>'; });
+    el.innerHTML=h;
+    el.querySelectorAll('.ask-hist-q').forEach(b=>b.onclick=()=>{ const it=askLog[+b.dataset.i]; if(!it) return;
+      $('askIn').value=it.q; lastAskQ=it.q; $('askOut').innerHTML=mdToHtml(it.a||''); $('askActions').style.display='flex'; });
+    el.querySelectorAll('.ask-hist-del').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); askLog.splice(+b.dataset.i,1); saveAskLog(); renderAskHist(); });
+  }
+  const open=()=>{ $('askIn').value=''; $('askOut').innerHTML=''; $('askActions').style.display='none'; renderAskHist(); ov.classList.add('on'); setTimeout(()=>{ try{$('askIn').focus();}catch(e){} },50); };
   const b=$('btnAsk'); if(b) b.onclick=open;
   const c=$('askClose'); if(c) c.onclick=()=>ov.classList.remove('on');
   if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
+  let lastAskQ='';
   async function runAsk(q){
     const key=((cfg.keys&&cfg.keys[cfg.provider])||cfg.key||'').trim();
     if(!cfg.provider||!key||!(cfg.model||cfg.modelManual)){ $('askOut').innerHTML='<span class="hint">먼저 설정에서 제공사·모델·API 키를 입력하세요.</span>'; return; }
     const out=$('askOut'); out.innerHTML='<span class="hint">생각 중…</span>'; $('askActions').style.display='none';
     const sys='너는 이 한국 정치 시뮬레이션 게임의 도우미다. 현재 진행 맥락을 바탕으로 플레이어의 질문에 한국어로 사실적·구체적으로 답한다. ① 정보·제도 질문(원내대표 선출 방식, 당 조직 구조 등)은 현실 한국 정치에 근거해 명확히 설명한다. ② "이렇게 하면 어떻게 되나?" 류의 예측 질문은 현재 상황 기준으로 가능한 전개·리스크·득실을 현실적으로 미리 예측해 준다. 게임을 진행시키지 말 것(턴·날짜·스탯을 바꾸지 말고 설명·조언만). 핵심 위주로 너무 길지 않게.';
     try{ const a=await callOnce([{role:'user', content:'[현재 진행 맥락]\n'+buildAskContext()+'\n\n[질문]\n'+q}], sys, '', 6000);
-      out.innerHTML=mdToHtml(a||'(답변 없음)'); $('askActions').style.display='flex';
+      const ans=a||'(답변 없음)'; out.innerHTML=mdToHtml(ans); $('askActions').style.display='flex';
+      askLog.push({q, a:ans, ts:Date.now()}); if(askLog.length>40) askLog=askLog.slice(-40); saveAskLog(); renderAskHist();
     }catch(e){ out.innerHTML='<span class="hint">실패: '+esc(e.message)+'</span>'; }
   }
-  let lastAskQ='';
   const go=$('askGo'); if(go) go.onclick=()=>{ const q=$('askIn').value.trim(); if(!q) return; lastAskQ=q; runAsk(q); };
   const cl=$('askClear'); if(cl) cl.onclick=()=>{ $('askOut').innerHTML=''; $('askIn').value=''; $('askActions').style.display='none'; try{$('askIn').focus();}catch(e){} };
   const ag=$('askAgain'); if(ag) ag.onclick=()=>{ if(lastAskQ) runAsk(lastAskQ); };
