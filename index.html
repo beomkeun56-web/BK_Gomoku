@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.02</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.03</span></div>
 </div>
 
 <div id="hud">
@@ -2048,14 +2048,18 @@ async function streamGemini(model,key,onToken,msgs){
   model=gemModelId(model);
   const contents=msgs.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
-  // 출력 토큰은 넉넉히(사고가 많은 gemini-3 프리뷰가 사고로 다 써서 본문이 비는 것 방지)
-  const maxOut=Math.max(outMax(model), 16384);
+  const isG3=/gemini-3/i.test(model);
+  // 출력 토큰은 넉넉히(사고가 많은 gemini-3가 사고로 다 써서 본문이 비는 것 방지)
+  const maxOut=Math.max(outMax(model), isG3?32768:16384);
+  // 직접 Gemini는 기본 안전필터가 강해 정치·치정·협박 묘사를 빈 응답으로 차단 → 모두 해제
+  const SAFETY=['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT']
+    .map(c=>({category:c, threshold:'BLOCK_NONE'}));
   const send=async(useCache, limitThinking)=>{
     let cacheName='';
     if(useCache){ try{ cacheName=await geminiCacheName(model,key); }catch(e){} }
     const gen={maxOutputTokens:maxOut, temperature:0.9};
-    if(limitThinking) gen.thinkingConfig={thinkingBudget:4096};   // 사고 예산 제한 → 본문 출력 여지 확보
-    const body={contents, generationConfig:gen};
+    if(limitThinking) gen.thinkingConfig = isG3 ? {thinkingLevel:'low'} : {thinkingBudget:4096};   // 사고 제한 → 본문 출력 여지(gemini-3는 thinkingLevel)
+    const body={contents, generationConfig:gen, safetySettings:SAFETY};
     if(cacheName) body.cachedContent=cacheName;                 // 명시 캐시 사용(시스템은 캐시에 들어있음)
     else body.system_instruction={parts:[{text:sysText()}]};    // 인라인 시스템(암묵 캐시)
     return fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
@@ -2170,7 +2174,7 @@ async function runAssistant(){
     // 빈 응답 방어: 모델이 본문을 거의 안 냈으면(사고로 출력 소진 등) 에러로 처리해 깨끗이 재시도 가능하게
     if(!errored && !sanitizeBody(splitChoices(clean).body).replace(/[#>*_`~\s]/g,'').trim()){
       errored=true;
-      clean=(clean.trim()?clean+'\n\n':'')+'⚠️ 모델이 빈 응답을 반환했습니다(Gemini 프리뷰가 사고에 출력 토큰을 다 쓴 경우가 많습니다). 다시 시도하거나, 설정에서 모델을 gemini-2.5-pro로 바꾸거나 출력 분량을 늘려보세요.';
+      clean=(clean.trim()?clean+'\n\n':'')+'⚠️ 모델이 빈 응답을 반환했습니다(직접 Gemini의 안전필터 차단 또는 사고 토큰 소진). 다시 시도해 주세요 — 안 되면 OpenRouter로 바꾸면 가장 안정적입니다.';
     }
     await typer.finish();
     const {body, choices}=splitChoices(clean);
