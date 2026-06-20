@@ -140,8 +140,11 @@
   #guideBar .gtag{color:#6b6f78; margin-right:6px}
   /* 턴마다 메시지에 영구히 붙는 가이드 줄(지난 턴 것도 안 사라짐) — 위·아래 구분선 */
   .md-guide{margin-top:16px; padding:15px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
-    color:#9298a3; font-size:.9em; line-height:1.55}
+    color:#9298a3; font-size:.9em; line-height:1.9}
   .md-guide .gtag{color:#6b6f78; margin-right:6px}
+  /* 제안 글자: 회색 음영(강조) 처리 */
+  .md-guide .gtxt{background:#2a2d36; color:#dfe3ea; padding:2px 7px; border-radius:6px;
+    box-decoration-break:clone; -webkit-box-decoration-break:clone}
   .choices-head{display:none}
   .choice-row{display:flex; gap:6px; align-items:flex-start; margin-bottom:10px}
   .choice-row .edit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%;
@@ -345,7 +348,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.63</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.64</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1991,7 +1994,7 @@ function setMsgGuide(mdEl, content){
   const bubble=mdEl && mdEl.parentElement; if(!bubble) return;
   let el=bubble.querySelector('.md-guide');
   if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
-  el.innerHTML='<span class="gtag">✦ 제안</span>'+esc(g);
+  el.innerHTML='<span class="gtag">✦ 제안</span><span class="gtxt">'+esc(g)+'</span>';
 }
 // 하단바 '이어서/다시' 버튼: 직전이 GM 응답이고 생성 중이 아닐 때만 활성
 function updateActionBtns(){
