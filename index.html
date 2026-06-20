@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.99</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.00</span></div>
 </div>
 
 <div id="hud">
@@ -2024,16 +2024,37 @@ async function streamAnthropic(model,key,onToken,msgs){
   });
 }
 
+// 구글 직접 API 모델 id 정리(OpenRouter식 'google/' 접두어 제거)
+function gemModelId(m){ return (m||'').replace(/^google\//i,'').trim(); }
+// 명시 캐싱(CachedContent): 거대한 고정 SYSTEM_PROMPT를 1시간 TTL로 캐시해, 수 분짜리 암묵 캐시보다
+// 오래(쉬어도) 유지. 같은 모델·같은 프롬프트면 이름 재사용, 만료 임박 시 재생성. 실패하면 인라인으로 폴백.
+let _gemCache=null;
+function _sysHash(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return h; }
+async function geminiCacheName(model,key){
+  if(cfg.geminiCache===false) return '';                       // 끌 수 있게(기본 켜짐)
+  const hash=_sysHash(SYSTEM_PROMPT);
+  if(_gemCache && _gemCache.model===model && _gemCache.hash===hash && _gemCache.exp>Date.now()+60000) return _gemCache.name;
+  try{
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/cachedContents?key='+encodeURIComponent(key),{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'models/'+model, systemInstruction:{parts:[{text:SYSTEM_PROMPT}]}, ttl:'3600s'})});
+    if(!r.ok){ _gemCache=null; return ''; }                     // 최소 토큰 미달·미지원 등 → 폴백
+    const j=await r.json(); if(!j||!j.name) return '';
+    _gemCache={name:j.name, model, hash, exp:Date.now()+3600*1000};
+    return j.name;
+  }catch(e){ return ''; }
+}
 async function streamGemini(model,key,onToken,msgs){
+  model=gemModelId(model);
   const contents=msgs.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
+  let cacheName=''; try{ cacheName=await geminiCacheName(model,key); }catch(e){}
+  const body={contents, generationConfig:{maxOutputTokens:outMax(model), temperature:0.9}};
+  if(cacheName) body.cachedContent=cacheName;                   // 명시 캐시 사용(시스템은 캐시에 들어있음)
+  else body.system_instruction={parts:[{text:sysText()}]};      // 폴백: 인라인 시스템(암묵 캐시)
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
   const res=await fetch(url,{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      system_instruction:{parts:[{text:sysText()}]},
-      contents,
-      generationConfig:{maxOutputTokens:outMax(model), temperature:0.9}
-    })
+    body:JSON.stringify(body)
   });
   await readSSE(res,(data)=>{
     try{ const j=JSON.parse(data);
@@ -2056,6 +2077,7 @@ async function callOnce(messages, sys, modelOverride, maxTok){
     const j=await r.json(); return (j.content||[]).map(c=>c.text||'').join('');
   }
   if(provider==='gemini'){
+    model=gemModelId(model);
     const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,{
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({system_instruction:{parts:[{text:sys}]},
