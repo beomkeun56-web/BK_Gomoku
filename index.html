@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.05</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.06</span></div>
 </div>
 
 <div id="hud">
@@ -2069,10 +2069,12 @@ async function streamGemini(model,key,onToken,msgs){
   let res=await send(cfg.geminiCache!==false, true);
   if(!res.ok && _gemCache){ _gemCache=null; res=await send(false, true); }   // 캐시로 실패 → 캐시 빼고 재시도
   if(!res.ok){ res=await send(false, false); }                               // 그래도 실패(thinkingConfig 미지원 등) → 최소 구성으로 재시도
+  let gotText=false, nData=0, rawTail='';
   await readSSE(res,(data)=>{
+    nData++; rawTail=data;
     try{ const j=JSON.parse(data);
       const c0=j.candidates?.[0];
-      const parts=c0?.content?.parts; if(parts) for(const p of parts) if(p.text) onToken(p.text);
+      const parts=c0?.content?.parts; if(parts) for(const p of parts) if(p.text){ onToken(p.text); gotText=true; }
       if(c0?.finishReason && c0.finishReason!=='STOP') lastGemDiag='finishReason='+c0.finishReason;   // SAFETY/MAX_TOKENS/RECITATION 등
       if(j.promptFeedback?.blockReason) lastGemDiag='promptBlock='+j.promptFeedback.blockReason;
       if(j.error) lastGemDiag='error='+String(j.error.message||j.error.status||JSON.stringify(j.error)).slice(0,150);   // 스트림 내부 에러
@@ -2080,6 +2082,8 @@ async function streamGemini(model,key,onToken,msgs){
         cacheRead:um.cachedContentTokenCount||0};
     }catch(e){}
   });
+  // 텍스트가 하나도 안 왔는데 사유도 못 잡았으면, 원시 응답을 그대로 노출(진단)
+  if(!gotText && !lastGemDiag) lastGemDiag='ndata='+nData+' raw='+String(rawTail||'(빈 스트림)').slice(0,220);
 }
 
 // 비스트리밍 1회 호출(요약 등 내부용)
