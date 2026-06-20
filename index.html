@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.08</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.09</span></div>
 </div>
 
 <div id="hud">
@@ -3007,6 +3007,7 @@ function newGame(){
   history=[]; stats={}; saveHistory(); saveStats();
   summary=''; summaryUpto=0; persistSummary();
   illusts=[]; saveIllusts();
+  stratStep=''; stratGoal=''; localStorage.removeItem(LS+'_strat'); localStorage.removeItem(LS+'_stratgoal');   // 큰 그림 수순 캐시 초기화(새 게임에 옛 수순 남지 않게)
   if(typeof charAnchor!=='undefined') charAnchor=null;
   if(typeof charSheetSrc!=='undefined'){ charSheetSrc=null; charSheetKey=''; }
   if(typeof lastIllustSrc!=='undefined') lastIllustSrc=null;
