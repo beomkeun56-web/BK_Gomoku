@@ -145,6 +145,14 @@
   /* 제안 글자: 회색 음영(강조) 처리 */
   .md-guide .gtxt{background:#2a2d36; color:#dfe3ea; padding:2px 7px; border-radius:6px;
     box-decoration-break:clone; -webkit-box-decoration-break:clone}
+  /* 비용 팝업 */
+  .cost-sum{background:#16171c; border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:.9rem; color:#cfd4dc; line-height:1.6}
+  .cost-tbl{width:100%; border-collapse:collapse; margin:14px 0 6px; font-size:.84rem}
+  .cost-tbl th,.cost-tbl td{padding:7px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap}
+  .cost-tbl th:first-child,.cost-tbl td:first-child{text-align:left; white-space:normal}
+  .cost-tbl th{color:var(--dim); font-weight:600}
+  .cost-tbl td{color:#dfe3ea}
+  .cost-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; font-size:.8rem; color:var(--dim); flex-wrap:wrap}
   .choices-head{display:none}
   .choice-row{display:flex; gap:6px; align-items:flex-start; margin-bottom:10px}
   .choice-row .edit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%;
@@ -348,7 +356,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.64</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.65</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -664,6 +672,16 @@
 </div>
 
 <!-- ===== Illustration timing modal ===== -->
+<div class="overlay" id="costOverlay">
+  <div class="modal" style="max-width:520px">
+    <div style="display:flex; align-items:center">
+      <h2>💰 사용 비용</h2>
+      <button class="modal-x" id="costClose">✕</button>
+    </div>
+    <div id="costBody"></div>
+  </div>
+</div>
+
 <div class="overlay" id="illustOverlay">
   <div class="modal" style="max-width:430px">
     <div style="display:flex; align-items:center">
@@ -1643,6 +1661,7 @@ let costLastTurn=0;
 let costTotal=parseFloat(localStorage.getItem(LS+'_cost')||'0')||0;
 let costImgTotal=parseFloat(localStorage.getItem(LS+'_costimg')||'0')||0;   // 이미지 비용만 누적
 let turnCount=parseInt(localStorage.getItem(LS+'_turns')||'0')||0;
+let costLog=(()=>{ try{ return JSON.parse(localStorage.getItem(LS+'_costlog')||'[]')||[]; }catch(e){ return []; } })();  // 턴별 {ts,model,inTok,outTok,usd}
 function priceFor(model){ const m=(model||'').toLowerCase();
   for(const k in PRICE) if(m.includes(k)) return PRICE[k]; return null; }
 function usageCostUSD(model,u){
@@ -1668,19 +1687,61 @@ function costText(){
   if(costImgTotal>0) s+='\n그중 삽화 '+krw(costImgTotal);
   return s;
 }
+// OpenRouter 실시간 크레딧(구매액·누적 사용액) — OpenRouter 제공사 + 키 있을 때만
+async function fetchORCredits(){
+  const key=((cfg.keys&&cfg.keys.openrouter)||cfg.key||'').trim();
+  if(!key) throw new Error('NOKEY');
+  const r=await fetch('https://openrouter.ai/api/v1/credits',{headers:{'Authorization':'Bearer '+key}});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json(); const d=j.data||j;
+  return {total:Number(d.total_credits), used:Number(d.total_usage)};
+}
+function fmtTok(n){ return (n||0).toLocaleString('ko-KR'); }
+function usd(n){ return '$'+(Number(n)||0).toFixed(Math.abs(n)>=1?2:4); }
+async function openCostModal(){
+  const ov=$('costOverlay'); if(!ov) return; ov.classList.add('on');
+  const body=$('costBody');
+  const rows=costLog.slice(-15).reverse();
+  let html='<div id="orCredits" class="cost-sum">불러오는 중…</div>';
+  if(rows.length){
+    html+='<table class="cost-tbl"><thead><tr><th>모델</th><th>입력</th><th>출력</th><th>비용</th></tr></thead><tbody>';
+    rows.forEach(r=>{ html+='<tr><td>'+esc(String(r.model||'').split('/').pop())+'</td><td>'+fmtTok(r.inTok)+'</td><td>'+fmtTok(r.outTok)+'</td><td>'+krw(r.usd)+'</td></tr>'; });
+    html+='</tbody></table>';
+  } else html+='<div class="hint" style="margin:10px 0">아직 기록된 턴이 없습니다.</div>';
+  const avg = turnCount>0 ? costTotal/turnCount : 0;
+  html+='<div class="cost-foot"><span>로컬 누적 '+krw(costTotal)+' · '+turnCount+'턴 · 1턴 평균 '+krw(avg)+'</span><button id="costReset" class="mini-btn">초기화</button></div>';
+  body.innerHTML=html;
+  $('costReset').onclick=()=>{ if(confirm('로컬 누적 비용·턴·기록을 0으로 초기화할까요?')){ resetCost(); openCostModal(); } };
+  const cdiv=$('orCredits');
+  if(cfg.provider!=='openrouter'){ cdiv.innerHTML='<span class="hint">누적·잔액 실시간 조회는 OpenRouter 제공사일 때만 됩니다(현재 '+esc(cfg.provider||'?')+'). 아래는 앱이 기록한 값입니다.</span>'; return; }
+  try{
+    const c=await fetchORCredits();
+    const bal=(isFinite(c.total)&&isFinite(c.used))?(c.total-c.used):null;
+    cdiv.innerHTML='<b>구매액</b> '+usd(c.total)+' ('+krw(c.total)+') &nbsp;·&nbsp; <b>누적 사용</b> '+usd(c.used)+' ('+krw(c.used)+')'
+      +(bal!=null?(' &nbsp;·&nbsp; <b>잔액</b> '+usd(bal)+' ('+krw(bal)+')'):'');
+  }catch(e){
+    cdiv.innerHTML='<span class="hint">OpenRouter 잔액 조회 실패('+esc(e.message)+') — 브라우저 CORS 또는 키 문제일 수 있습니다. 아래 로컬 기록은 정상입니다.</span>';
+  }
+}
 // 비용 합산: kind='img'이면 이미지 누적도 별도 집계
 function addCost(usd, kind){ if(!(usd>0)) return;
   costLastTurn+=usd; costTotal+=usd; localStorage.setItem(LS+'_cost',String(costTotal));
   if(kind==='img'){ costImgTotal+=usd; localStorage.setItem(LS+'_costimg',String(costImgTotal)); }
   costBadge(); }
 function newTurnCost(){ costLastTurn=0; costBadge(); }   // 새 턴 시작 시 1턴 비용 초기화
-function recordTurnCost(){   // 텍스트(스토리) 비용 합산
+function recordTurnCost(){   // 텍스트(스토리) 비용 합산 + 턴별 기록
   const {model}=resolveCfg();
-  addCost(usageCostUSD(model,lastUsage));
+  const u=lastUsage; const usd=usageCostUSD(model,u);
+  addCost(usd);
+  if(u && (usd>0 || u.inTok || u.outTok)){
+    costLog.push({ts:Date.now(), model, inTok:u.inTok||0, outTok:u.outTok||0, usd:usd||0});
+    if(costLog.length>60) costLog=costLog.slice(-60);
+    try{ localStorage.setItem(LS+'_costlog', JSON.stringify(costLog)); }catch(e){}
+  }
 }
 function bumpTurn(){ turnCount++; localStorage.setItem(LS+'_turns',String(turnCount)); }
-function resetCost(){ costTotal=0; costLastTurn=0; costImgTotal=0; turnCount=0;
-  localStorage.setItem(LS+'_cost','0'); localStorage.setItem(LS+'_costimg','0'); localStorage.setItem(LS+'_turns','0'); costBadge(); }
+function resetCost(){ costTotal=0; costLastTurn=0; costImgTotal=0; turnCount=0; costLog=[];
+  localStorage.setItem(LS+'_cost','0'); localStorage.setItem(LS+'_costimg','0'); localStorage.setItem(LS+'_turns','0'); localStorage.setItem(LS+'_costlog','[]'); costBadge(); }
 
 /* ---------- LLM call (streaming) ---------- */
 async function streamLLM(onToken){
@@ -2969,7 +3030,9 @@ $('btnBarLoad').onclick=()=>{
 driveBadge(driveAuto?'켜짐':'꺼짐', driveAuto?'ok':'err');
 costBadge();   // 추정 비용 배지 초기화
 // '비용' 버튼: 누르면 추정 비용 표시(확인 누르면 누적 초기화)
-{ const cbtn=$('costBtn'); if(cbtn) cbtn.onclick=()=>{ if(confirm(costText()+'\n\n[확인]을 누르면 누적을 0으로 초기화합니다.')) resetCost(); }; }
+{ const cbtn=$('costBtn'); if(cbtn) cbtn.onclick=openCostModal; }
+{ const cc=$('costClose'); if(cc) cc.onclick=()=>$('costOverlay').classList.remove('on');
+  const ov=$('costOverlay'); if(ov) ov.onclick=(e)=>{ if(e.target===ov) ov.classList.remove('on'); }; }
 { const sb=$('btnScrollDown'); if(sb) sb.onclick=()=>scrollDown(); }
 // 하단바 '이어서/다시' 버튼
 { const c=$('btnCont2'); if(c) c.onclick=continueGen; const r=$('btnRegen2'); if(r) r.onclick=regen; updateActionBtns(); }
