@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.10</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.11</span></div>
 </div>
 
 <div id="hud">
@@ -2352,30 +2352,35 @@ function refreshLastGuide(){
 // 책임진다(같은 국면이면 거의 동일 유지). 누락은 <loose+>(추가)/<loose->(해결) 델타로만 누적.
 function replayPanel(uptoIdx){
   let goal='', step='', loose=[];
+  let stepCur=0, prevCore='';   // 현재 축: ①부터 시작, 한 턴에 최대 +1만 전진(점프 금지), 국면 바뀌면 리셋
   const end=(uptoIdx==null||uptoIdx<0)?history.length-1:Math.min(uptoIdx,history.length-1);
   for(let i=0;i<=end;i++){
     const h=history[i]; if(!h||h.role!=='assistant') continue;
     const c=h.content||'';
     let ng=pickTag(c,'goal'), ns=pickTag(c,'step');
     if(!ng && !ns){ const g=pickTag(c,'guide'); if(g){ const p=g.split(/\s*\|\|\s*/); ng=(p[0]||'').replace(/^현황\s*[:：]?\s*/,'').trim(); ns=p.slice(1).join(' → ').trim(); } }   // 구버전 폴백
-    if(ng) goal=ng;   // 최신 목표
+    if(ng){ goal=ng; const cr=goalCore(ng); if(cr!==prevCore){ stepCur=0; prevCore=cr; } }   // 국면 전환 시 축 리셋
     if(ns) step=ns;   // 최신 수순(같은 국면이면 모델이 거의 동일 유지, 전술로 잘못 잡혔으면 교정)
+    const raw=stepIdxOf(c);                                   // 모델이 준 현재 축(0=없음)
+    const target=raw>0?raw:(stepCur||1);
+    stepCur=Math.min(Math.max(target,1), (stepCur||0)+1);     // 첫 턴=1, 이후 한 턴에 +1까지만
     // 누락: 델타로만 — 새로 묻힌 일 추가 / 해결된 일 제거
     (c.match(/<loose\+>([\s\S]*?)<\/loose\+>/gi)||[]).forEach(m=>{ const v=m.replace(/<\/?loose\+>/gi,'').replace(/\s+/g,' ').trim(); if(v && !loose.includes(v)) loose.push(v); });
     (c.match(/<loose->([\s\S]*?)<\/loose->/gi)||[]).forEach(m=>{ const k=m.replace(/<\/?loose->/gi,'').replace(/\s+/g,' ').trim(); if(k) for(let j=loose.length-1;j>=0;j--){ if(loose[j].includes(k)||k.includes(loose[j])) loose.splice(j,1); } });
     // 구버전 plain <loose> 전체목록(델타가 없을 때만) → 항목 누적
     if(!/<loose[+\-]>/i.test(c)){ const pl=pickTag(c,'loose'); if(pl) pl.split(/\s*[│|·;]\s*/).map(x=>x.trim()).filter(Boolean).forEach(v=>{ if(!loose.includes(v)) loose.push(v); }); }
   }
-  return {goal, step, loose};
+  const cnt=(step.match(/→|->/g)||[]).length+1;               // 수순 축 개수
+  stepCur=Math.min(stepCur, cnt);
+  return {goal, step, loose, stepCur};
 }
 function setMsgGuide(mdEl, content, idx){
   const prog=extractProg(content);
-  const now=pickTag(content,'now');                   // 현황: 지금 진행 중인 구체 행동(이번 턴 값)
   const stat=pickTag(content,'stat');                 // 지표만 이번 턴 값(매 턴 변동)
-  const {goal, step:modelStep, loose}=replayPanel(idx);   // 목표·누락은 누적
+  const {goal, step:modelStep, loose, stepCur}=replayPanel(idx);   // 목표·누락 누적, stepCur=현재 축(①부터 순차)
   // 수순: 앱이 목표만 떼어 뽑은 '큰 전략 3축'을 우선(이 국면용이 있으면), 없으면 모델의 전술 step 폴백
   const step=(stratStep && goal && goalCore(goal)===stratGoal) ? stratStep : modelStep;
-  if(!prog && !goal && !step && !now && !stat && !loose.length) return;
+  if(!prog && !goal && !step && !stat && !loose.length) return;
   const bubble=mdEl && mdEl.parentElement; if(!bubble) return;
   let el=bubble.querySelector('.md-guide');
   if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
@@ -2385,13 +2390,12 @@ function setMsgGuide(mdEl, content, idx){
   if(goal) html+=row('목표','<span class="gtxt-i">'+esc(goal)+'</span>');
   if(step){
     const circ='①②③④⑤⑥⑦⑧⑨⑩';
-    const cur=stepIdxOf(content);   // 현재 진행 중인 축(1~3) — 그 칸을 강조
+    const cur=stepCur;   // 현재 진행 중인 축(①부터 순차, 점프 없음) — 그 칸을 강조
     const steps=step.replace(/^수순\s*[:：]?\s*/,'').split(/\s*(?:→|->|;|＞)\s*/)
       .map(x=>x.replace(/^[①-⑩\d]+[).．]?\s*/,'').trim()).filter(Boolean);
     const sh=steps.map((x,i)=>'<span class="g-step'+(i+1===cur?' g-step-cur':'')+'">'+(circ[i]||(i+1)+'.')+' '+esc(x)+'</span>').join('<span class="g-arr">→</span>');
     html+=row('수순',sh,'gnext');
   }
-  if(now) html+=row('현황',esc(now));
   if(stat) html+=row('지표','<span class="gstat">'+renderStat(stat)+'</span>');
   if(loose.length) html+=row('누락','<span class="gloose">'+loose.slice(0,3).map(esc).join('<span class="g-dot"> · </span>')+'</span>');
   el.innerHTML=html;
