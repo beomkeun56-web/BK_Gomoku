@@ -404,7 +404,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.83</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.84</span></div>
 </div>
 
 <div id="hud">
@@ -442,6 +442,8 @@
     <button class="chip" id="btnAddSit">상황</button>
     <button class="chip" id="btnSuggest">답변</button>
     <button class="chip" id="btnPersona" title="주요 인물 페르소나 설정">페르소나</button>
+    <button class="chip" id="btnMode" title="현재 드라마 모드 · 눌러서 변경(커스텀 포함)">모드</button>
+    <button class="chip" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화자동</button>
     <button class="chip" id="btnFs" title="글자 크기">글자크기</button>
     <button class="chip" id="btnCfg" title="API 설정">설정</button>
     <button class="chip" data-cmd="새 게임">새 게임</button>
@@ -456,8 +458,6 @@
     <button class="pill" id="btnMenu" title="메뉴 · 명령어">☰</button>
     <button class="pill" id="btnInput" title="입력창 열기">입력</button>
     <button class="pill" id="btnAsk" title="현재 상황 질문·예측 도우미">정리</button>
-    <button class="pill" id="btnMode" title="현재 드라마 모드 · 눌러서 변경">모드</button>
-    <button class="pill" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화</button>
     <button class="pill" id="btnIllust" title="현재 장면을 삽화로 생성">삽화</button>
     <button class="pill" id="costBtn" title="추정 비용 보기">비용</button>
     <button class="pill" id="btnScrollDown" title="맨 아래로 스크롤">↓</button>
@@ -2666,7 +2666,7 @@ function modeShort(tone){
 }
 function updateModeBtn(){
   const b=$('btnMode'); if(!b) return;
-  b.textContent = modeShort(currentTone());
+  b.textContent = '모드 '+modeShort(currentTone());
 }
 const CM_KEYS=['intensity','event','comic','cider','romance'];
 const CM_DEF={intensity:4,event:3,comic:3,cider:3,romance:1};   // 1~8 기본값(보통 수위)
@@ -2721,7 +2721,7 @@ function recentArcText(acc){
   parts.push(sanitizeBody(splitChoices(acc).body));
   return parts.join('\n\n--- 다음 장면 ---\n\n');
 }
-function autoLabel(){ const n=autoEveryRaw(); return n<=0?'삽화 끔': n===1?'매턴': n+'턴'; }
+function autoLabel(){ const n=autoEveryRaw(); return n<=0?'삽화 끔': n===1?'삽화 매턴': '삽화 '+n+'턴'; }
 function updateAutoIllustBtn(){ const b=$('btnAutoIllust'); if(b){ b.textContent=autoLabel(); b.classList.toggle('on', autoActive());
   b.title='자동 삽화 빈도 — 누를 때마다 끔→매턴→2턴→3턴→4턴 순환'; } }
 // 툴바 '삽화' 버튼: 누를 때마다 끔/매턴/2/3/4턴 순환(현재 상태가 글자로 보임)
