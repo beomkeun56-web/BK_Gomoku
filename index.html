@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.11</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.12</span></div>
 </div>
 
 <div id="hud">
@@ -852,17 +852,9 @@
     </div>
 
     <div class="field">
-      <label>드라마 톤 (권력의 길 등)</label>
-      <div class="seg" id="setupTone">
-        <button data-tone="진지한 정치 스릴러(하우스 오브 카드 톤)">정치</button>
-        <button data-tone="막장 드라마(자극·반전·치정·배신)">막장</button>
-        <button data-tone="코믹 정치 드라마(풍자·블랙코미디·병맛 유머)">코믹</button>
-        <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+<br>코믹</button>
-        <button data-tone="진지+막장 혼합" class="on">혼합</button>
-        <button data-tone="__custom__">커스텀</button>
-      </div>
-      <div id="suCustomPanel" style="display:none; margin-top:8px">
-        <div class="hint" style="margin-bottom:6px">각 항목을 1(낮음)~8(높음) 숫자로 입력하세요.</div>
+      <label>드라마 톤 수치 (1~8, 강도·색깔만 — 메인 스토리는 동일)</label>
+      <div id="suCustomPanel" style="margin-top:4px">
+        <div class="hint" style="margin-bottom:6px">각 항목을 1(낮음)~8(높음) 숫자로. 진행 중에도 ☰→톤에서 언제든 조정.</div>
         <div class="cm-row"><span class="cm-label">진지 ↔ 자극</span><input type="number" id="su_cm_intensity" min="1" max="8" step="1"><span class="cm-val" id="sucmv_intensity"></span></div>
         <div class="cm-row"><span class="cm-label">충격·반전 빈도</span><input type="number" id="su_cm_event" min="1" max="8" step="1"><span class="cm-val" id="sucmv_event"></span></div>
         <div class="cm-row"><span class="cm-label">웃음·코믹</span><input type="number" id="su_cm_comic" min="1" max="8" step="1"><span class="cm-val" id="sucmv_comic"></span></div>
@@ -918,19 +910,9 @@
       <h2>🎭 드라마 모드</h2>
       <button class="modal-x" id="modeClose">✕</button>
     </div>
-    <p class="desc">진행 중에도 모드를 바꿀 수 있습니다. 바꾸면 <b>다음 턴부터</b> 그 톤으로 전개됩니다. (이미 쌓인 이야기 맥락은 유지)</p>
-    <div class="field">
-      <div class="seg" id="modeSeg">
-        <button data-tone="진지한 정치 스릴러(하우스 오브 카드 톤)">정치</button>
-        <button data-tone="막장 드라마(자극·반전·치정·배신)">막장</button>
-        <button data-tone="코믹 정치 드라마(풍자·블랙코미디·병맛 유머)">코믹</button>
-        <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+<br>코믹</button>
-        <button data-tone="진지+막장 혼합">혼합</button>
-        <button data-tone="__custom__">커스텀</button>
-      </div>
-    </div>
-    <div class="field" id="customPanel" style="display:none">
-      <label>커스텀 수치</label>
+    <p class="desc">진행 중에도 톤 수치를 바꿀 수 있습니다. 바꾸면 <b>다음 턴부터</b> 반영됩니다(메인 스토리·일정은 그대로, 강도·색깔만 변함). 심심하면 코믹↑, 로맨스 필요하면 치정·로맨스↑.</p>
+    <div class="field" id="customPanel">
+      <label>톤 수치 (1~8, 언제든 조정)</label>
       <div class="cm-row"><span class="cm-label">진지 ↔ 자극</span><input type="number" id="cm_intensity" min="1" max="8" step="1"><span class="cm-val" id="cmv_intensity"></span></div>
       <div class="cm-row"><span class="cm-label">충격·반전 빈도</span><input type="number" id="cm_event" min="1" max="8" step="1"><span class="cm-val" id="cmv_event"></span></div>
       <div class="cm-row"><span class="cm-label">웃음·코믹</span><input type="number" id="cm_comic" min="1" max="8" step="1"><span class="cm-val" id="cmv_comic"></span></div>
@@ -1208,7 +1190,7 @@ const PROVIDERS = {
 const LS='gukga_v1';
 let gameTone=localStorage.getItem(LS+'_tone')||'';
 const DEFAULT_TONE='진지+막장 혼합';
-function currentTone(){ return gameTone || DEFAULT_TONE; }
+function currentTone(){ return '__custom__'; }   // 프리셋 폐지 — 항상 수치 다이얼(커스텀) 기반
 function setGameTone(t){ gameTone=t||''; try{ localStorage.setItem(LS+'_tone', gameTone); }catch(e){} }
 // 커스텀 모드 수치 → 한국어 톤 지시문
 const CM_LABELS={
@@ -2819,7 +2801,7 @@ function modeShort(tone){
 }
 function updateModeBtn(){
   const b=$('btnMode'); if(!b) return;
-  b.textContent = '모드 '+modeShort(currentTone());
+  b.textContent = '톤';   // 프리셋 폐지 — 수치 다이얼 팝업 여는 버튼
 }
 const CM_KEYS=['intensity','event','comic','cider','romance'];
 const CM_DEF={intensity:4,event:3,comic:3,cider:3,romance:1};   // 1~8 기본값(보통 수위)
@@ -2827,15 +2809,10 @@ function syncCmLabels(){ CM_KEYS.forEach(k=>{ const el=$('cmv_'+k); if(el) el.te
 function showCustomPanel(on){ const p=$('customPanel'); if(p) p.style.display=on?'':'none'; }
 function loadCmToForm(){ CM_KEYS.forEach(k=>{ const el=$('cm_'+k); if(el) el.value=String(cmGet(k, CM_DEF[k])); }); syncCmLabels(); }
 function openModePopup(){
-  document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on', x.dataset.tone===currentTone()));
-  loadCmToForm(); showCustomPanel(currentTone()==='__custom__');
+  loadCmToForm();   // 수치 다이얼만(프리셋 없음)
   { const ce=$('customExtra'); if(ce) ce.value=cfg.customExtra||''; }
   $('modeOverlay').classList.add('on');
 }
-document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b));
-  showCustomPanel(b.dataset.tone==='__custom__');
-});
 CM_KEYS.forEach(k=>{ const el=$('cm_'+k); if(el) el.oninput=syncCmLabels; });
 $('btnMode').onclick=openModePopup;
 $('modeClose').onclick=()=>$('modeOverlay').classList.remove('on');
@@ -2844,12 +2821,9 @@ $('modeOverlay').addEventListener('click',e=>{ if(e.target===$('modeOverlay')) $
 { const add=$('modeExtraAdd'); if(add) add.onclick=()=>{ const i=$('modeExtraIn'), t=$('customExtra'); if(!i||!t) return;
   const v=i.value.trim(); if(!v) return; t.value=(t.value.trim()?(t.value.trim()+'\n'):'')+'- '+v; i.value=''; t.scrollTop=t.scrollHeight; }; }
 $('modeSave').onclick=()=>{
-  const sel=document.querySelector('#modeSeg button.on');
-  if(sel){
-    if(sel.dataset.tone==='__custom__'){ CM_KEYS.forEach(k=>{ cfg['cm_'+k]=parseInt($('cm_'+k).value); }); }
-    cfg.customExtra=($('customExtra')?$('customExtra').value:'').trim(); saveCfg();
-    setGameTone(sel.dataset.tone); updateModeBtn();
-  }
+  CM_KEYS.forEach(k=>{ const el=$('cm_'+k); if(el) cfg['cm_'+k]=parseInt(el.value); });   // 수치 저장
+  cfg.customExtra=($('customExtra')?$('customExtra').value:'').trim();
+  setGameTone('__custom__'); saveCfg(); updateModeBtn();
   $('modeOverlay').classList.remove('on');
 };
 updateModeBtn();
@@ -2945,19 +2919,15 @@ $('ctaStart').onclick=()=>{
 };
 
 /* ---------- 시작 상세 설정 팝업 ---------- */
-let setupScen='권력의 길', setupTone='진지+막장 혼합';
+let setupScen='권력의 길', setupTone='__custom__';   // 프리셋 폐지 — 항상 수치 다이얼
 document.querySelectorAll('#setupScen button').forEach(b=>b.onclick=()=>{
   setupScen=b.dataset.scen;
   document.querySelectorAll('#setupScen button').forEach(x=>x.classList.toggle('on',x===b));
 });
+loadSuCm();   // 시작 화면 톤 수치 다이얼 초기값 표시(항상 노출)
 function syncSuCmLabels(){ CM_KEYS.forEach(k=>{ const el=$('sucmv_'+k); if(el) el.textContent=CM_LABELS[k][cmIdxFromVal(k,$('su_cm_'+k).value)]||''; }); }
 function loadSuCm(){ CM_KEYS.forEach(k=>{ const el=$('su_cm_'+k); if(el) el.value=String(cmGet(k, CM_DEF[k])); }); syncSuCmLabels(); }
 CM_KEYS.forEach(k=>{ const el=$('su_cm_'+k); if(el) el.oninput=syncSuCmLabels; });
-document.querySelectorAll('#setupTone button').forEach(b=>b.onclick=()=>{
-  setupTone=b.dataset.tone;
-  document.querySelectorAll('#setupTone button').forEach(x=>x.classList.toggle('on',x===b));
-  const p=$('suCustomPanel'); if(p){ if(b.dataset.tone==='__custom__'){ loadSuCm(); p.style.display=''; } else p.style.display='none'; }
-});
 // 예시 칩 → 해당 입력칸 채우기
 document.querySelectorAll('#setupOverlay .ex button').forEach(b=>b.onclick=()=>{ const t=$(b.dataset.t); if(t){ t.value=b.dataset.v; t.focus(); } });
 function openSetup(){ $('setupOverlay').classList.add('on'); }
