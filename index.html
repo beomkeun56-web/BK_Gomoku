@@ -345,7 +345,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.61</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.62</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -402,6 +402,7 @@
     <button class="pill" id="btnMode" title="현재 드라마 모드 · 눌러서 변경">모드</button>
     <button class="pill" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화</button>
     <button class="pill" id="costBtn" title="추정 비용 보기">비용</button>
+    <button class="pill" id="btnScrollDown" title="맨 아래로 스크롤">↓</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
     <span id="costBadge" class="cost-badge" title="추정 비용" style="display:none"></span>
     <div class="spacer"></div>
@@ -1982,7 +1983,7 @@ function setMsgGuide(mdEl, content){
   const bubble=mdEl && mdEl.parentElement; if(!bubble) return;
   let el=bubble.querySelector('.md-guide');
   if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
-  el.innerHTML='<span class="gtag">지금</span>'+esc(g);
+  el.innerHTML='<span class="gtag">✦ 제안</span>'+esc(g);
 }
 // 하단바 '이어서/다시' 버튼: 직전이 GM 응답이고 생성 중이 아닐 때만 활성
 function updateActionBtns(){
@@ -2450,7 +2451,7 @@ function recentArcText(acc){
   parts.push(sanitizeBody(splitChoices(acc).body));
   return parts.join('\n\n--- 다음 장면 ---\n\n');
 }
-function autoLabel(){ const n=autoEveryRaw(); return n<=0?'삽화 끔': n===1?'삽화 매턴':'삽화 '+n+'턴'; }
+function autoLabel(){ const n=autoEveryRaw(); return n<=0?'삽화 끔': n===1?'매턴': n+'턴'; }
 function updateAutoIllustBtn(){ const b=$('btnAutoIllust'); if(b){ b.textContent=autoLabel(); b.classList.toggle('on', autoActive());
   b.title='자동 삽화 빈도 — 누를 때마다 끔→매턴→2턴→3턴→4턴 순환'; } }
 // 툴바 '삽화' 버튼: 누를 때마다 끔/매턴/2/3/4턴 순환(현재 상태가 글자로 보임)
@@ -2958,6 +2959,7 @@ driveBadge(driveAuto?'켜짐':'꺼짐', driveAuto?'ok':'err');
 costBadge();   // 추정 비용 배지 초기화
 // '비용' 버튼: 누르면 추정 비용 표시(확인 누르면 누적 초기화)
 { const cbtn=$('costBtn'); if(cbtn) cbtn.onclick=()=>{ if(confirm(costText()+'\n\n[확인]을 누르면 누적을 0으로 초기화합니다.')) resetCost(); }; }
+{ const sb=$('btnScrollDown'); if(sb) sb.onclick=()=>scrollDown(); }
 // 하단바 '이어서/다시' 버튼
 { const c=$('btnCont2'); if(c) c.onclick=continueGen; const r=$('btnRegen2'); if(r) r.onclick=regen; updateActionBtns(); }
 refreshDriveBar();
