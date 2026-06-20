@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.14</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.15</span></div>
 </div>
 
 <div id="hud">
@@ -2961,8 +2961,9 @@ $('setupGo').onclick=()=>{
   if(g('suAidePersona'))aide.push('페르소나 '+g('suAidePersona'));
   if(aide.length) lines.push('- 핵심 보좌관/측근: '+aide.join(', '));
   if(g('suExtra')) lines.push('- 추가 설정: '+g('suExtra'));
-  const hot=/막장|코믹/.test(setupTone);
-  lines.push('이 설정으로 첫 상황 브리핑과 선택지를 출력해줘. '+(hot?'첫 턴부터 이 톤(막장/코믹)답게 사건·반전·긴장(또는 웃음)을 강하게 살려서 — 잔잔하게 시작하지 말 것.':'전개는 천천히·현실적으로.'));
+  const iv=parseInt(($('su_cm_intensity')||{}).value)||CM_DEF.intensity, ev=parseInt(($('su_cm_event')||{}).value)||CM_DEF.event;
+  const hot = iv>=5 || ev>=5;   // 프리셋 폐지 — 자극/충격 수치로 첫 턴 강도 결정
+  lines.push('이 설정으로 첫 상황 브리핑과 선택지를 출력해줘. '+(hot?'첫 턴부터 설정 수치답게 사건·반전·긴장(또는 웃음)을 강하게 살려서 — 잔잔하게 시작하지 말 것.':'전개는 천천히·현실적으로.'));
   $('setupOverlay').classList.remove('on');
   // 새 게임으로 시작(기존 진행 초기화)
   history=[]; stats={}; summary=''; summaryUpto=0; illusts=[]; saveHistory(); saveStats(); persistSummary(); saveIllusts();
