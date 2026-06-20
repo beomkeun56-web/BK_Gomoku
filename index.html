@@ -131,13 +131,17 @@
   .md-committed>*:last-child{margin-bottom:0}
 
   /* ===== Choices (회색 말풍선 + 연필) — 본문과 함께 스크롤 ===== */
-  #choices{max-width:820px; margin:0 auto; padding:6px 0 10px; font-size:var(--fs); text-align:left}
+  #choices{max-width:820px; margin:16px auto 0; padding:6px 0 10px; font-size:var(--fs); text-align:left}
   #choices.empty{display:none}
   /* 현재 상황 가이드 — 선택지 바로 위 고정 영역(턴이 바뀌어도 안 사라지고 교체됨) */
   #guideBar{max-width:820px; margin:0 auto; padding:18px 0 16px; font-size:.9em; color:#9298a3;
     line-height:1.55; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
   #guideBar.hidden{display:none}
   #guideBar .gtag{color:#6b6f78; margin-right:6px}
+  /* 턴마다 메시지에 영구히 붙는 가이드 줄(지난 턴 것도 안 사라짐) — 위·아래 구분선 */
+  .md-guide{margin-top:16px; padding:15px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    color:#9298a3; font-size:.9em; line-height:1.55}
+  .md-guide .gtag{color:#6b6f78; margin-right:6px}
   .choices-head{display:none}
   .choice-row{display:flex; gap:6px; align-items:flex-start; margin-bottom:10px}
   .choice-row .edit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%;
@@ -341,7 +345,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.56</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.57</span></div>
   <div class="top-actions">
     <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
     <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
@@ -1918,6 +1922,7 @@ async function runAssistant(){
     } else {
       history.push({role:'assistant', content:clean}); saveHistory();
       parseStats(clean); renderChoices(choices);
+      setMsgGuide(mdEl, clean);   // 이 턴 가이드를 이 메시지에 영구히 붙임
       addGmFooter(mdEl.closest('.msg'));
       if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
       // GM이 [IMG] 프롬프트를 안 준 턴(예: 일부 모델)에도, 자동 삽화 차례면 본문으로 생성(폴백)
@@ -1959,12 +1964,17 @@ function extractGuide(text){
   }
   return '';
 }
-// 턴 종료 UI: 가이드 갱신 + 하단바의 이어서/다시 버튼 상태 갱신(메시지 안에 버튼을 더 만들지 않는다)
+// 턴 종료 UI: 하단바의 이어서/다시 버튼 상태 갱신(가이드는 메시지마다 setMsgGuide로 영구 표시)
 function addGmFooter(msgWrap){
-  const last=(history.length && history[history.length-1].role==='assistant') ? history[history.length-1].content : '';
-  const guide=extractGuide(last);
-  if(guide) setGuide(guide);   // 없으면 직전 가이드 유지(사라지지 않음)
   updateActionBtns();
+}
+// 가이드를 '해당 GM 메시지 안'에 영구히 붙인다(매 턴 남고, 지난 턴 것도 안 사라짐)
+function setMsgGuide(mdEl, content){
+  const g=extractGuide(content); if(!g) return;
+  const bubble=mdEl && mdEl.parentElement; if(!bubble) return;
+  let el=bubble.querySelector('.md-guide');
+  if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
+  el.innerHTML='<span class="gtag">지금</span>'+esc(g);
 }
 // 하단바 '이어서/다시' 버튼: 직전이 GM 응답이고 생성 중이 아닐 때만 활성
 function updateActionBtns(){
@@ -1993,6 +2003,7 @@ async function continueGen(){
   history[history.length-1].content=acc;
   const {body, choices}=splitChoices(acc);
   renderGm(mdEl, sanitizeBody(body), false);
+  setMsgGuide(mdEl, acc);
   saveHistory(); parseStats(acc); renderChoices(choices);
   addGmFooter(gm); busy=false; sendBtn.disabled=false;
   recordTurnCost();
@@ -3126,7 +3137,7 @@ function restore(){
     let lastAssistant=null;
     history.forEach((m, i)=>{
       if(m.role==='user'){ addMessage('user', m.content); }
-      else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(displayClean(m.content)); mdEl.innerHTML=mdToHtml(sanitizeBody(body)); lastAssistant=displayClean(m.content);
+      else { const {mdEl}=addMessage('assistant','',true); const {body}=splitChoices(displayClean(m.content)); renderGm(mdEl, sanitizeBody(body), false); setMsgGuide(mdEl, m.content); lastAssistant=displayClean(m.content);
         // 이 턴에 저장된 삽화를 생성 위치(pos)에 맞게 복원
         const imgs=illusts.filter(x=>x.idx===i);
         if(imgs.length){
@@ -3144,7 +3155,6 @@ function restore(){
       const {choices}=splitChoices(lastAssistant); renderChoices(choices);
       addGmFooter([...logEl.querySelectorAll('.msg.gm')].pop());
     }
-    refreshGuideFromHistory();   // 새로고침/복원 후 최근 가이드 복구
     updateActionBtns();
     buildHud();   // 데이터만 준비(자동 표시는 안 함)
     scrollDown();
