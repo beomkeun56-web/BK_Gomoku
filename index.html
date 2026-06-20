@@ -373,7 +373,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.68</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.69</span></div>
 </div>
 
 <div id="hud">
@@ -427,7 +427,7 @@
     <button class="pill" id="btnAsk" title="현재 상황 질문·예측 도우미">정리</button>
     <button class="pill" id="btnMode" title="현재 드라마 모드 · 눌러서 변경">모드</button>
     <button class="pill" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화</button>
-    <button class="pill" id="btnIllust" title="현재 장면을 삽화로 생성">삽화생성</button>
+    <button class="pill" id="btnIllust" title="현재 장면을 삽화로 생성">삽화</button>
     <button class="pill" id="costBtn" title="추정 비용 보기">비용</button>
     <button class="pill" id="btnScrollDown" title="맨 아래로 스크롤">↓</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
@@ -896,14 +896,14 @@
       </div>
     </div>
     <div class="field" id="customPanel" style="display:none">
-      <label>커스텀 수치 <span style="color:var(--dim)">— 각 항목을 1(낮음)~8(높음) 숫자로 입력. '커스텀' 선택 시 이 수치대로 톤이 만들어집니다</span></label>
+      <label>커스텀 수치</label>
       <div class="cm-row"><span class="cm-label">진지 ↔ 자극</span><input type="number" id="cm_intensity" min="1" max="8" step="1"><span class="cm-val" id="cmv_intensity"></span></div>
       <div class="cm-row"><span class="cm-label">충격·반전 빈도</span><input type="number" id="cm_event" min="1" max="8" step="1"><span class="cm-val" id="cmv_event"></span></div>
       <div class="cm-row"><span class="cm-label">웃음·코믹</span><input type="number" id="cm_comic" min="1" max="8" step="1"><span class="cm-val" id="cmv_comic"></span></div>
       <div class="cm-row"><span class="cm-label">사이다(통쾌)</span><input type="number" id="cm_cider" min="1" max="8" step="1"><span class="cm-val" id="cmv_cider"></span></div>
       <div class="cm-row"><span class="cm-label">치정·로맨스</span><input type="number" id="cm_romance" min="1" max="8" step="1"><span class="cm-val" id="cmv_romance"></span></div>
       <div style="margin-top:14px">
-        <label style="display:block; margin-bottom:4px">내 추가 지시 <span style="color:var(--dim)">— 자유 입력(예: 욕설은 줄여줘). 계속 누적됩니다</span></label>
+        <label style="display:block; margin-bottom:4px">내 추가 지시</label>
         <div style="display:flex; gap:6px">
           <input type="text" id="modeExtraIn" placeholder="추가할 지시 입력 후 [+ 추가]" style="flex:1">
           <button class="mini-btn" id="modeExtraAdd" type="button">+ 추가</button>
@@ -1635,7 +1635,7 @@ function renderChoices(choices){
     b.onclick=()=>{ if(busy) return; sendMessage(b.dataset.n, b.dataset.disp); };
   });
   choicesEl.querySelectorAll('.edit').forEach(b=>{
-    b.onclick=()=>{ inp.value=b.dataset.edit; autoGrow(); inp.focus(); };
+    b.onclick=()=>{ $('inputRow').classList.remove('hidden'); inp.value=b.dataset.edit; autoGrow(); inp.focus(); };
   });
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -1975,13 +1975,13 @@ async function streamGemini(model,key,onToken,msgs){
 }
 
 // 비스트리밍 1회 호출(요약 등 내부용)
-async function callOnce(messages, sys, modelOverride){
+async function callOnce(messages, sys, modelOverride, maxTok){
   const c=resolveCfg(); const provider=c.provider, key=c.key;
-  const model=(modelOverride&&modelOverride.trim())||c.model;
+  const model=(modelOverride&&modelOverride.trim())||c.model; const mt=maxTok||1200;
   if(provider==='anthropic'){
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model, max_tokens:1200, system:sys, messages})});
+      body:JSON.stringify({model, max_tokens:mt, system:sys, messages})});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json(); return (j.content||[]).map(c=>c.text||'').join('');
   }
@@ -1990,14 +1990,14 @@ async function callOnce(messages, sys, modelOverride){
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({system_instruction:{parts:[{text:sys}]},
         contents:messages.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]})),
-        generationConfig:{maxOutputTokens:1200, temperature:0.4}})});
+        generationConfig:{maxOutputTokens:mt, temperature:0.4}})});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json(); return (j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
   }
   // openrouter
   const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':location.origin,'X-Title':'Age of Nations'},
-    body:JSON.stringify({model, max_tokens:1200, temperature:0.4, messages:[{role:'system',content:sys},...messages]})});
+    body:JSON.stringify({model, max_tokens:mt, temperature:0.4, messages:[{role:'system',content:sys},...messages]})});
   if(!r.ok) throw new Error('HTTP '+r.status);
   const j=await r.json(); return j.choices?.[0]?.message?.content||'';
 }
@@ -2813,7 +2813,7 @@ function appendExtraChoices(extra){
   const old=$('suggestBox'); if(old) old.remove();
   choicesEl.appendChild(box);
   box.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{ if(busy) return; sendMessage(b.dataset.act, b.dataset.disp); });
-  box.querySelectorAll('.edit').forEach(b=>b.onclick=()=>{ inp.value=b.dataset.edit; autoGrow(); inp.focus(); });
+  box.querySelectorAll('.edit').forEach(b=>b.onclick=()=>{ $('inputRow').classList.remove('hidden'); inp.value=b.dataset.edit; autoGrow(); inp.focus(); });
 }
 function showSuggestLoading(on){
   let el=$('suggestBox');
@@ -3138,7 +3138,7 @@ function buildAskContext(){
     if(!cfg.provider||!key||!(cfg.model||cfg.modelManual)){ $('askOut').innerHTML='<span class="hint">먼저 설정에서 제공사·모델·API 키를 입력하세요.</span>'; return; }
     const out=$('askOut'); out.innerHTML='<span class="hint">생각 중…</span>'; $('askActions').style.display='none';
     const sys='너는 이 한국 정치 시뮬레이션 게임의 도우미다. 현재 진행 맥락을 바탕으로 플레이어의 질문에 한국어로 사실적·구체적으로 답한다. ① 정보·제도 질문(원내대표 선출 방식, 당 조직 구조 등)은 현실 한국 정치에 근거해 명확히 설명한다. ② "이렇게 하면 어떻게 되나?" 류의 예측 질문은 현재 상황 기준으로 가능한 전개·리스크·득실을 현실적으로 미리 예측해 준다. 게임을 진행시키지 말 것(턴·날짜·스탯을 바꾸지 말고 설명·조언만). 핵심 위주로 너무 길지 않게.';
-    try{ const a=await callOnce([{role:'user', content:'[현재 진행 맥락]\n'+buildAskContext()+'\n\n[질문]\n'+q}], sys);
+    try{ const a=await callOnce([{role:'user', content:'[현재 진행 맥락]\n'+buildAskContext()+'\n\n[질문]\n'+q}], sys, '', 6000);
       out.innerHTML=mdToHtml(a||'(답변 없음)'); $('askActions').style.display='flex';
     }catch(e){ out.innerHTML='<span class="hint">실패: '+esc(e.message)+'</span>'; }
   }
