@@ -144,8 +144,11 @@
   /* 제안: 라벨 고정 + 텍스트 2단 정렬(줄바꿈 시 본문 밑으로만 접힘) */
   .md-guide .g-line{display:flex; gap:7px; align-items:baseline}
   .md-guide .gtag{flex:0 0 auto; color:#6b6f78}
-  /* 제안 글자: 회색 음영(강조) 처리 */
-  .md-guide .gtxt{flex:1; min-width:0; background:#2a2d36; color:#dfe3ea; padding:2px 7px; border-radius:6px;
+  /* 제안: 문장마다 한 줄, 회색 음영은 글자 뒤에만 */
+  .md-guide .gtxt{flex:1; min-width:0; line-height:1.9}
+  .md-guide .gtxt>div{margin-bottom:5px}
+  .md-guide .gtxt>div:last-child{margin-bottom:0}
+  .md-guide .gtxt-i{background:#2a2d36; color:#dfe3ea; padding:2px 7px; border-radius:6px;
     box-decoration-break:clone; -webkit-box-decoration-break:clone}
   .md-guide .md-progline{margin-top:9px; color:#6b6f78; font-size:.86em; letter-spacing:.01em}
   /* 비용 팝업 */
@@ -386,7 +389,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.76</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.77</span></div>
 </div>
 
 <div id="hud">
@@ -1246,7 +1249,7 @@ function activeToneReminder(){
     + '\n\n[★출력 골격 — 매 턴 이 순서·요소를 절대 빠뜨리지 말 것] 아래 6요소를 정확히 이 순서로 출력한다:\n'
     + '1) 제목: "# **{국기} 핵심사건**" (한 줄)\n'
     + '2) 진행줄: "<prog>신분·소속 │ {현재날짜 YYYY/MM/DD} │ 현재 막 │ 다음 ▷ 일정명 {일정날짜 YYYY/MM/DD}</prog>" (한 줄. ★D-NN 쓰지 말 것 — 앱이 두 날짜로 계산. 현재날짜는 흐름대로 전진, 일정날짜는 고정)\n'
-    + '3) 제안: "<guide>지금 상황 + 그래서 나아갈 큰 전략 방향(눈앞 한 수에 그치지 말고 큰 그림. \'목표\' 같은 표현은 금지)</guide>" (한 줄)\n'
+    + '3) 제안: "<guide>지금 상황(한 문장) + 그래서 나아갈 큰 전략 방향(한 문장)</guide>". ★눈앞의 한 수·즉각 행동만 적지 말 것 — 이 사건이 \'세력 확장·판 재편·다음 공식 일정\' 같은 더 큰 그림에서 어디로 이어져야 하는지 방향을 반드시 담아라(예: 당장 X를 하되, 그것으로 Y 국면을 연다). \'목표\' 같은 메타 표현 금지.\n'
     + '4) 요약: "> 한 문장 결과 요약" (인용 한 줄 — 절대 생략 금지)\n'
     + '5) 본문: "## 소제목"(짧은 명사구) + 그 아래 내용 — 소제목은 1~2개 반드시, 반드시 마크다운 "## "로(굵은 글씨·평문 대체 금지). 소제목 없이 본문만 쓰지 말 것.\n'
     + '6) 선택지: "## **✦ 어떻게 하시겠습니까?**" + 1인칭 대사 3개.\n'
@@ -2171,7 +2174,11 @@ function setMsgGuide(mdEl, content){
   let el=bubble.querySelector('.md-guide');
   if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
   let html='';
-  if(g) html+='<div class="g-line"><span class="gtag">✦ 제안</span><span class="gtxt">'+esc(g)+'</span></div>';
+  if(g){
+    const sents=g.split(/(?<=[.!?。])\s+/).map(x=>x.trim()).filter(Boolean);   // 문장마다 줄바꿈
+    const inner=(sents.length?sents:[g]).map(x=>'<div><span class="gtxt-i">'+esc(x)+'</span></div>').join('');
+    html+='<div class="g-line"><span class="gtag">✦ 제안</span><div class="gtxt">'+inner+'</div></div>';
+  }
   if(prog) html+='<div class="md-progline">✦ '+esc(progWithDday(prog))+'</div>';   // 진행줄은 제안 밑에(✦, D-day는 날짜로 계산)
   el.innerHTML=html;
 }
