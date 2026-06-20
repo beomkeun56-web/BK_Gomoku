@@ -386,7 +386,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.74</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.75</span></div>
 </div>
 
 <div id="hud">
@@ -445,6 +445,7 @@
     <button class="pill" id="btnScrollDown" title="맨 아래로 스크롤">↓</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
     <span id="turnBadge" class="drive-badge" title="현재 게임 누적 턴수"></span>
+    <span id="balBadge" class="drive-badge" title="OpenRouter 잔액(매 턴 갱신)"></span>
     <span id="costBadge" class="cost-badge" title="추정 비용" style="display:none"></span>
     <div class="spacer"></div>
     <button class="pill" id="btnCont2" title="직전 응답을 이어서 생성" disabled>이어서</button>
@@ -2138,7 +2139,15 @@ function extractGuide(text){
 }
 // 턴 종료 UI: 하단바의 이어서/다시 버튼 상태 갱신(가이드는 메시지마다 setMsgGuide로 영구 표시)
 function addGmFooter(msgWrap){
-  updateActionBtns(); updateTurnBadge();
+  updateActionBtns(); updateTurnBadge(); updateBalBadge();
+}
+// 하단바 OpenRouter 잔액 배지 — 매 턴 갱신(줄어드는 대로 반영). OpenRouter 제공사일 때만.
+async function updateBalBadge(){
+  const b=$('balBadge'); if(!b) return;
+  if(cfg.provider!=='openrouter'){ b.textContent=''; return; }
+  try{ const c=await fetchORCredits(); const bal=(isFinite(c.total)&&isFinite(c.used))?(c.total-c.used):null;
+    if(bal!=null) b.textContent='잔액 $'+bal.toFixed(2); }
+  catch(e){ /* 키 없음/네트워크 → 직전 값 유지 */ }
 }
 // 가이드를 '해당 GM 메시지 안'에 영구히 붙인다(매 턴 남고, 지난 턴 것도 안 사라짐)
 function extractProg(text){ const m=(text||'').match(/<prog>([\s\S]*?)<\/prog>/i); return m?m[1].replace(/\s+/g,' ').trim():''; }
@@ -3159,6 +3168,7 @@ driveBadge(driveAuto?'켜짐':'꺼짐', driveAuto?'ok':'err');
 costBadge();   // 추정 비용 배지 초기화
 try{ refreshRate(); }catch(e){}   // 환율 비동기 갱신(무음)
 updateTurnBadge();   // 누적 턴수 배지 초기화
+try{ updateBalBadge(); }catch(e){}   // OpenRouter 잔액 배지 초기화
 // '비용' 버튼: 누르면 추정 비용 표시(확인 누르면 누적 초기화)
 { const cbtn=$('costBtn'); if(cbtn) cbtn.onclick=openCostModal; }
 { const cc=$('costClose'); if(cc) cc.onclick=()=>$('costOverlay').classList.remove('on');
