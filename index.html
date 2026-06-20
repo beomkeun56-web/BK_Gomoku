@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.98</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.99</span></div>
 </div>
 
 <div id="hud">
@@ -1307,7 +1307,9 @@ function stratReminder(){
   if(!stratStep) return '';
   return '\n\n[★현재 전략 수순 — GM 내부 지침(본문에 드러내지 말 것)] 지금 목표를 향한 큰 전략 3축은 「'+stratStep+'」다. 한 축(예: 약점·비자금 캐기)에만 매달려 늘어지지 말고, 표 규합·견제·명분 등 이 축들을 번갈아 다루며 이야기를 목표(공식 일정)로 수렴시켜라. 한 서브사안이 매듭나면 다음 축으로 자연스럽게 넘어간다. (플레이어 입력은 늘 우선.) ★이 수순·축은 GM의 머릿속 계획일 뿐이다 — 본문에 \'이제 부수는 건 끝났다\', \'건설적인 한 수를 둘 타이밍\', \'다음 단계는 명분 쌓기\' 같은 메타·설계 용어로 절대 노출하지 말고, 오직 구체적 사건·대사·행동으로만 보여줘라. 또한 지금 이야기가 이 3축 중 몇 번째를 진행 중인지 진행줄 근처에 <stepidx>1~3 중 현재 축 번호</stepidx>로 한 줄 표시하라(화면에서 그 축이 강조됨, 본문엔 안 보임).';
 }
-function sysText(){ return SYSTEM_PROMPT + '\n\n' + activeToneReminder() + stratReminder(); }
+// 시스템 프롬프트는 '고정'만 둔다(캐시 prefix 유지). 매 턴 바뀌는 톤·수순 지시는 buildApiMessages가
+// 마지막 메시지 끝에 붙인다 — 시스템이 바뀌면 그 뒤 대화기록 전체가 캐시에서 빠져 비용이 폭증하기 때문.
+function sysText(){ return SYSTEM_PROMPT; }
 let cfg = loadCfg();
 let history = loadHistory();   // [{role:'user'|'assistant', content}] — 전체 기록(표시·복원용)
 let stats = loadStats();       // {국력,경제,...} last known
@@ -1916,7 +1918,7 @@ function buildApiMessages(){
   }
   // 활성 드라마 톤 지시를 '가장 최근 메시지'에 합쳐 주입(가장 강하게 반영). 히스토리엔 저장 안 함.
   // user 메시지 연속을 만들지 않도록, 마지막이 user 문자열이면 그 뒤에 덧붙인다.
-  const tr=activeToneReminder();
+  const tr=activeToneReminder()+stratReminder();   // 톤+수순 지시를 맨 끝에(시스템 prefix 캐시 보존)
   if(tr && msgs.length){
     const last=msgs[msgs.length-1];
     if(last && last.role==='user' && typeof last.content==='string'){
@@ -1996,10 +1998,9 @@ async function streamOpenAI(model,key,onToken,msgs){
   });
 }
 
-// Anthropic system: cache_control로 프롬프트 캐싱(반복되는 규칙부 토큰 절감)
-// 캐시 친화: 고정 SYSTEM_PROMPT를 먼저(여기에 cache_control 브레이크포인트) + 가변 톤 리마인더는 그 뒤(캐시 밖).
-// → 톤을 바꿔도 캐시된 프리픽스(SYSTEM_PROMPT)는 그대로 재사용된다.
-function anthropicSystem(){ const arr=[{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]; const tr=activeToneReminder(); if(tr) arr.push({type:'text', text:tr}); return arr; }
+// Anthropic system: 고정 SYSTEM_PROMPT만(cache_control 브레이크포인트). 가변 톤·수순 지시는
+// buildApiMessages가 마지막 메시지 끝에 붙이므로 시스템은 완전히 고정·캐시된다.
+function anthropicSystem(){ return [{type:'text', text:SYSTEM_PROMPT, cache_control:{type:'ephemeral'}}]; }
 
 async function streamAnthropic(model,key,onToken,msgs){
   const body={model, max_tokens:outMax(model), system:anthropicSystem(), stream:true,
