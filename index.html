@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.00</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.01</span></div>
 </div>
 
 <div id="hud">
@@ -2047,15 +2047,17 @@ async function geminiCacheName(model,key){
 async function streamGemini(model,key,onToken,msgs){
   model=gemModelId(model);
   const contents=msgs.map(m=>({role:m.role==='assistant'?'model':'user', parts:[{text:m.content}]}));
-  let cacheName=''; try{ cacheName=await geminiCacheName(model,key); }catch(e){}
-  const body={contents, generationConfig:{maxOutputTokens:outMax(model), temperature:0.9}};
-  if(cacheName) body.cachedContent=cacheName;                   // 명시 캐시 사용(시스템은 캐시에 들어있음)
-  else body.system_instruction={parts:[{text:sysText()}]};      // 폴백: 인라인 시스템(암묵 캐시)
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
-  const res=await fetch(url,{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  });
+  const send=async(useCache)=>{
+    let cacheName='';
+    if(useCache){ try{ cacheName=await geminiCacheName(model,key); }catch(e){} }
+    const body={contents, generationConfig:{maxOutputTokens:outMax(model), temperature:0.9}};
+    if(cacheName) body.cachedContent=cacheName;                 // 명시 캐시 사용(시스템은 캐시에 들어있음)
+    else body.system_instruction={parts:[{text:sysText()}]};    // 인라인 시스템(암묵 캐시)
+    return fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  };
+  let res=await send(cfg.geminiCache!==false);
+  if(!res.ok && _gemCache){ _gemCache=null; res=await send(false); }   // 캐시로 실패하면 캐시 버리고 인라인으로 1회 재시도(연결 안 끊기게)
   await readSSE(res,(data)=>{
     try{ const j=JSON.parse(data);
       const parts=j.candidates?.[0]?.content?.parts; if(parts) for(const p of parts) if(p.text) onToken(p.text);
@@ -3497,7 +3499,12 @@ function selectProv(p){
 }
 document.querySelectorAll('#provSeg button').forEach(b=>b.onclick=()=>{
   ensureKeys()[selProv]=$('apiKey').value.trim();   // 현재 키 보관 후 전환
-  selectProv(b.dataset.prov); $('modelSel').innerHTML='<option value="">— 모델 불러오기 —</option>'; });
+  selectProv(b.dataset.prov);
+  $('modelSel').innerHTML='<option value="">— 모델 불러오기 —</option>';
+  $('modelManual').value='';   // 직접 입력 모델도 비운다 — 안 그러면 직전 제공사 모델 id가 우선 적용돼 에러
+  // 새 제공사 대표 모델을 바로 고를 수 있게 채워둔다
+  fillModelOptions(FALLBACK_MODELS[b.dataset.prov]||[], '');
+});
 
 function setCfgStatus(msg,cls){ const e=$('cfgStatus'); e.textContent=msg; e.className='status-line '+(cls||''); }
 function ensureOption(v){ const sel=$('modelSel'); if(![...sel.options].some(o=>o.value===v)){ const o=document.createElement('option'); o.value=v;o.textContent=v; sel.appendChild(o);} }
