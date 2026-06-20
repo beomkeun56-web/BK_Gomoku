@@ -153,6 +153,12 @@
   .cost-tbl th{color:var(--dim); font-weight:600}
   .cost-tbl td{color:#dfe3ea}
   .cost-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; font-size:.8rem; color:var(--dim); flex-wrap:wrap}
+  /* 정리 도우미 답변 영역 */
+  .ask-out{margin-top:12px; max-height:48vh; overflow:auto; font-size:.92rem; line-height:1.7}
+  .ask-out:empty{display:none}
+  /* 페르소나 표 */
+  .persona-tbl td{text-align:left!important; white-space:normal!important; vertical-align:top}
+  .persona-tbl input{width:100%; background:#16171c; border:1px solid var(--line); color:#fff; border-radius:6px; padding:6px 8px; font-family:inherit; font-size:.84rem; box-sizing:border-box}
   .choices-head{display:none}
   .choice-row{display:flex; gap:6px; align-items:flex-start; margin-bottom:10px}
   .choice-row .edit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%;
@@ -264,7 +270,8 @@
   .field > label{display:block; font-size:.8rem; font-weight:700; color:var(--mut); margin-bottom:7px}
   .seg{display:flex; gap:6px}
   .seg button{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--mut);
-    border-radius:10px; padding:10px 6px; font-weight:700; font-size:.85rem; cursor:pointer; transition:.15s}
+    border-radius:10px; padding:10px 6px; font-weight:700; font-size:.85rem; cursor:pointer; transition:.15s;
+    white-space:normal; word-break:keep-all; line-height:1.2}
   .seg button.on{background:var(--gold); color:#1a1206; border-color:var(--gold)}
   input[type=text],input[type=password],select{
     width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--txt);
@@ -356,12 +363,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.66</span></div>
-  <div class="top-actions">
-    <button class="icon-btn" id="btnFs" title="글자 크기">가 크기</button>
-    <button class="icon-btn" id="btnSave" title="진행 저장(스냅샷)">⬇ 저장</button>
-    <button class="icon-btn" id="btnCfg" title="API 설정">⚙ 설정</button>
-  </div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.67</span></div>
 </div>
 
 <div id="hud">
@@ -396,8 +398,13 @@
   <div class="cmdrow hidden" id="cmdRow">
     <button class="chip" data-cmd="상태">상태</button>
     <button class="chip" data-cmd="국정과제">국정과제</button>
-    <button class="chip" data-cmd="새 게임">새 게임</button>
+    <button class="chip" id="btnAddSit">상황</button>
+    <button class="chip" id="btnSuggest">답변</button>
+    <button class="chip" id="btnPersona" title="주요 인물 페르소나 설정">페르소나</button>
+    <button class="chip" id="btnFs" title="글자 크기">글자크기</button>
+    <button class="chip" id="btnCfg" title="API 설정">설정</button>
     <button class="chip" id="btnIllust" title="현재 장면을 애니 화풍 삽화로 생성(Gemini)">삽화</button>
+    <button class="chip" data-cmd="새 게임">새 게임</button>
     <button class="chip" id="btnBarSave" title="저장(드라이브/파일)">Save</button>
     <button class="chip" id="btnBarLoad" title="불러오기(드라이브/파일)">Load</button>
   </div>
@@ -408,13 +415,13 @@
   <div class="toolrow">
     <button class="pill" id="btnMenu" title="메뉴 · 명령어">☰</button>
     <button class="pill" id="btnInput" title="입력창 열기">입력</button>
-    <button class="pill" id="btnAddSit">상황</button>
-    <button class="pill" id="btnSuggest">답변</button>
+    <button class="pill" id="btnAsk" title="현재 상황 질문·예측 도우미">정리</button>
     <button class="pill" id="btnMode" title="현재 드라마 모드 · 눌러서 변경">모드</button>
     <button class="pill" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화</button>
     <button class="pill" id="costBtn" title="추정 비용 보기">비용</button>
     <button class="pill" id="btnScrollDown" title="맨 아래로 스크롤">↓</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
+    <span id="turnBadge" class="drive-badge" title="현재 게임 누적 턴수"></span>
     <span id="costBadge" class="cost-badge" title="추정 비용" style="display:none"></span>
     <div class="spacer"></div>
     <button class="pill" id="btnCont2" title="직전 응답을 이어서 생성" disabled>이어서</button>
@@ -675,10 +682,35 @@
 <div class="overlay" id="costOverlay">
   <div class="modal" style="max-width:520px">
     <div style="display:flex; align-items:center">
-      <h2>💰 사용 비용</h2>
+      <h2><span class="mark">✦</span> 사용 비용</h2>
       <button class="modal-x" id="costClose">✕</button>
     </div>
     <div id="costBody"></div>
+  </div>
+</div>
+
+<div class="overlay" id="askOverlay">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex; align-items:center">
+      <h2>📋 정리 · 도우미</h2>
+      <button class="modal-x" id="askClose">✕</button>
+    </div>
+    <p class="desc">지금 상황에서 모르는 걸 묻거나(예: 원내대표는 어떻게 뽑나? 당 조직은?), "이렇게 하면 어떻게 될까?" 예측을 물어보세요. 게임은 진행되지 않습니다(설명·예측만).</p>
+    <textarea id="askIn" rows="2" placeholder="궁금한 것·예측 (예: 지금 오병호를 치면 어떻게 되나?)"></textarea>
+    <button class="save-btn" id="askGo">묻기</button>
+    <div id="askOut" class="ask-out md"></div>
+  </div>
+</div>
+
+<div class="overlay" id="personaOverlay">
+  <div class="modal" style="max-width:600px">
+    <div style="display:flex; align-items:center">
+      <h2>👥 인물 페르소나</h2>
+      <button class="modal-x" id="personaClose">✕</button>
+    </div>
+    <p class="desc">주인공 주변 인물의 역할·이름과 성격(페르소나)을 정해두면 이야기·삽화가 그대로 일관되게 반영합니다. 빈 칸은 무시.</p>
+    <div id="personaRows"></div>
+    <button class="save-btn" id="personaSave">저장</button>
   </div>
 </div>
 
@@ -775,7 +807,7 @@
         <button data-tone="진지한 정치 스릴러(하우스 오브 카드 톤)">정치</button>
         <button data-tone="막장 드라마(자극·반전·치정·배신)">막장</button>
         <button data-tone="코믹 정치 드라마(풍자·블랙코미디·병맛 유머)">코믹</button>
-        <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+코믹</button>
+        <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+<br>코믹</button>
         <button data-tone="진지+막장 혼합" class="on">혼합</button>
         <button data-tone="__custom__">커스텀</button>
       </div>
@@ -842,7 +874,7 @@
         <button data-tone="진지한 정치 스릴러(하우스 오브 카드 톤)">정치</button>
         <button data-tone="막장 드라마(자극·반전·치정·배신)">막장</button>
         <button data-tone="코믹 정치 드라마(풍자·블랙코미디·병맛 유머)">코믹</button>
-        <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+코믹</button>
+        <button data-tone="진지+코믹 혼합(하우스 오브 카드식 권력 게임 + 풍자·유머)">진지+<br>코믹</button>
         <button data-tone="진지+막장 혼합">혼합</button>
         <button data-tone="__custom__">커스텀</button>
       </div>
@@ -854,6 +886,14 @@
       <div class="cm-row"><span class="cm-label">웃음·코믹</span><input type="number" id="cm_comic" min="1" max="8" step="1"><span class="cm-val" id="cmv_comic"></span></div>
       <div class="cm-row"><span class="cm-label">사이다(통쾌)</span><input type="number" id="cm_cider" min="1" max="8" step="1"><span class="cm-val" id="cmv_cider"></span></div>
       <div class="cm-row"><span class="cm-label">치정·로맨스</span><input type="number" id="cm_romance" min="1" max="8" step="1"><span class="cm-val" id="cmv_romance"></span></div>
+      <div style="margin-top:14px">
+        <label style="display:block; margin-bottom:4px">내 추가 지시 <span style="color:var(--dim)">— 자유 입력(예: 욕설은 줄여줘). 계속 누적됩니다</span></label>
+        <div style="display:flex; gap:6px">
+          <input type="text" id="modeExtraIn" placeholder="추가할 지시 입력 후 [+ 추가]" style="flex:1">
+          <button class="mini-btn" id="modeExtraAdd" type="button">+ 추가</button>
+        </div>
+        <textarea id="customExtra" rows="3" placeholder="누적된 내 지시 (직접 편집·삭제 가능)" style="margin-top:6px; width:100%; box-sizing:border-box"></textarea>
+      </div>
     </div>
     <button class="save-btn" id="modeSave">이 모드로 변경</button>
   </div>
@@ -1126,6 +1166,8 @@ function buildCustomToneText(){
   if(rv>=2) p+='★치정·로맨스 라인을 적극적으로 전개한다. ';
   else if(rv>=1) p+='치정·로맨스는 가볍게 양념으로. ';
   p+='이전 턴까지 진지·잔잔했더라도 분위기를 끌고 가지 말고 지금 턴부터 즉시 이 톤으로 전환하라. 단 인과·개연성과 장면 밀도는 유지. 톤은 다시 묻지 말 것.';
+  const extra=(cfg.customExtra||'').trim();
+  if(extra) p+='\n\n[★사용자 추가 지시 — 위 수치와 함께 반드시 반영, 최우선]\n'+extra;
   return p;
 }
 function presetMandate(t){
@@ -1157,6 +1199,13 @@ function lenMandate(){
   const s=lenSpec();
   return '\n\n[★출력 분량 — 엄수] 이번 턴 본문 전체를 공백 포함 '+s.chars+' 범위로 쓴다. 이 상한을 넘겨 길게 늘어뜨리지 말 것(수식·곁가지·중복 묘사 절제, 핵심 장면만). 선택지 텍스트는 이 분량 계산에서 제외한다.';
 }
+// 페르소나 표(cfg.cast)를 텍스트 전개에도 반영 — 매 턴 주입
+function castPersonaText(){
+  const cast=(cfg.cast||[]).filter(c=>c && (c.role||c.desc));
+  if(!cast.length) return '';
+  return '\n\n[★고정 인물 — 일관 유지] 아래 인물은 매 등장 시 성격·말투·외모·관계를 그대로 반영한다(임의로 바꾸지 말 것): '
+    + cast.map(c=>(c.role||'인물')+(c.desc?(' — '+c.desc):'')).join(' / ')+'.';
+}
 function activeToneReminder(){
   const t=currentTone();
   const base = (t==='__custom__')
@@ -1173,7 +1222,8 @@ function activeToneReminder(){
     + '★특히 4)요약(>)과 5)소제목(##)을 자주 빠뜨리는데, 매 턴 반드시 넣어 레이아웃을 일정하게 유지하라.'
     + '\n\n[★장면 연속성] 직전 턴이 끝난 바로 그 장소·순간에서 곧장 이어서 시작하라. 내가 고른 대사는 이미 말한 것이니 그 대사를 따옴표로 다시 복창하지 말고(같은 줄 반복 금지), 그 말 직후의 상대 반응·상황부터 곧장 이어서 써라. 다른 장소·시간으로 점프하지 말 것 — 옮겨야 하면 이동·전환을 한 문장으로 연결한 뒤 넘어가라.'
     + '\n\n[★찰진 입말] 대사는 딱딱한 문어체 말고 실제 한국 사람처럼 찰지고 생동감 있게 — 능청·비아냥·떠보기·거친 농담·반어를 상황·인물에 맞게 살리고, 인물마다 말투를 다르게.'
-    + '\n\n[★대사 형식] 모든 인물 발언은 한 줄씩 \'> 이름 "대사"\' 형식으로 — 화자 이름을 한 칸 띄우고 따옴표 앞에 꼭 붙여라(예: > 지범근 "판부터 봅시다."). 이름 없이 따옴표만 쓰지 말 것.';
+    + '\n\n[★대사 형식] 모든 인물 발언은 한 줄씩 \'> 이름 "대사"\' 형식으로 — 화자 이름을 한 칸 띄우고 따옴표 앞에 꼭 붙여라(예: > 지범근 "판부터 봅시다."). 이름 없이 따옴표만 쓰지 말 것.'
+    + castPersonaText();
 }
 // 캐시 친화: 크고 고정된 SYSTEM_PROMPT를 맨 앞(불변 프리픽스)에 두고, 설정에 따라 바뀌는 톤 리마인더는 뒤로.
 // → 톤·길이를 바꿔도 앞쪽 프리픽스가 그대로라 암묵적 캐시가 유지된다(변하는 부분은 끝으로).
@@ -1641,14 +1691,21 @@ function addMessage(role, text, streaming){
 }
 function scrollDown(){ logEl.scrollTop=logEl.scrollHeight; }
 // 메시지만 제거(#choices·#welcome 등 구조 요소는 보존)
-function clearLog(){ logEl.querySelectorAll('.msg, .gm-footer').forEach(e=>e.remove()); const sb=$('suggestBox'); if(sb) sb.remove(); renderChoices([]); clearGuide(); }
+function clearLog(){ logEl.querySelectorAll('.msg, .gm-footer').forEach(e=>e.remove()); const sb=$('suggestBox'); if(sb) sb.remove(); renderChoices([]); clearGuide(); updateTurnBadge(); }
 // 사용자가 위로 올려 읽는 중이면 자동 스크롤하지 않음(끊김·튐 방지)
 function maybeScroll(){
   if(logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 140) logEl.scrollTop=logEl.scrollHeight;
 }
 
 /* ---------- 사용 비용 추정 ---------- */
-const USD_KRW=1400;                 // 대략 환율(추정치)
+let usdKrw=parseFloat(localStorage.getItem(LS+'_fx')||'')||1400;     // USD→KRW 환율(실시간 갱신, 실패 시 기본 1400)
+let usdKrwAt=parseInt(localStorage.getItem(LS+'_fxat')||'0')||0;
+async function refreshRate(){
+  if(usdKrw && (Date.now()-usdKrwAt) < 6*3600*1000) return usdKrw;   // 6시간 캐시
+  try{ const r=await fetch('https://open.er-api.com/v6/latest/USD'); const j=await r.json();
+    const v=j&&j.rates&&j.rates.KRW; if(v>0){ usdKrw=v; usdKrwAt=Date.now(); localStorage.setItem(LS+'_fx',String(v)); localStorage.setItem(LS+'_fxat',String(usdKrwAt)); } }catch(e){}
+  return usdKrw;
+}
 const PRICE={                       // 100만 토큰당 [입력$, 출력$]
   'claude-opus':[15,75], 'claude-sonnet':[3,15], 'claude-3-5-haiku':[0.8,4], 'claude-haiku':[1,5],
   'gemini-3-pro':[2,12], 'gemini-3-flash':[0.5,3],
@@ -1671,7 +1728,7 @@ function usageCostUSD(model,u){
   return ((u.inTok||0)*p[0] + (u.outTok||0)*p[1]
     + (u.cacheRead||0)*p[0]*0.1 + (u.cacheWrite||0)*p[0]*1.25)/1e6;
 }
-function krw(v){ return Math.round(v*USD_KRW).toLocaleString('ko-KR')+'원'; }
+function krw(v){ return Math.round(v*usdKrw).toLocaleString('ko-KR')+'원'; }
 function costBadge(){ const b=$('costBadge'); if(!b) return;
   if(!(costTotal>0||turnCount>0)){ b.textContent=''; return; }
   const avg = turnCount>0 ? costTotal/turnCount : 0;
@@ -1700,25 +1757,25 @@ function fmtTok(n){ return (n||0).toLocaleString('ko-KR'); }
 function usd(n){ return '$'+(Number(n)||0).toFixed(Math.abs(n)>=1?2:4); }
 async function openCostModal(){
   const ov=$('costOverlay'); if(!ov) return; ov.classList.add('on');
+  await refreshRate();
   const body=$('costBody');
   const rows=costLog.slice(-15).reverse();
   let html='<div id="orCredits" class="cost-sum">불러오는 중…</div>';
   if(rows.length){
-    html+='<table class="cost-tbl"><thead><tr><th>모델</th><th>입력</th><th>출력</th><th>비용</th></tr></thead><tbody>';
-    rows.forEach(r=>{ html+='<tr><td>'+esc(String(r.model||'').split('/').pop())+'</td><td>'+fmtTok(r.inTok)+'</td><td>'+fmtTok(r.outTok)+'</td><td>'+krw(r.usd)+'</td></tr>'; });
+    html+='<table class="cost-tbl"><thead><tr><th>모델</th><th>입력</th><th>출력</th><th>비용</th><th>$비용</th></tr></thead><tbody>';
+    rows.forEach(r=>{ html+='<tr><td>'+esc(String(r.model||'').split('/').pop())+'</td><td>'+fmtTok(r.inTok)+'</td><td>'+fmtTok(r.outTok)+'</td><td>'+krw(r.usd)+'</td><td>$'+(Number(r.usd)||0).toFixed(3)+'</td></tr>'; });
     html+='</tbody></table>';
   } else html+='<div class="hint" style="margin:10px 0">아직 기록된 턴이 없습니다.</div>';
-  const avg = turnCount>0 ? costTotal/turnCount : 0;
-  html+='<div class="cost-foot"><span>로컬 누적 '+krw(costTotal)+' · '+turnCount+'턴 · 1턴 평균 '+krw(avg)+'</span><button id="costReset" class="mini-btn">초기화</button></div>';
+  html+='<div class="cost-foot"><span>현재 환율 : '+Math.round(usdKrw).toLocaleString('ko-KR')+'원 / $1</span><button id="costReset" class="mini-btn">초기화</button></div>';
   body.innerHTML=html;
   $('costReset').onclick=()=>{ if(confirm('로컬 누적 비용·턴·기록을 0으로 초기화할까요?')){ resetCost(); openCostModal(); } };
   const cdiv=$('orCredits');
-  if(cfg.provider!=='openrouter'){ cdiv.innerHTML='<span class="hint">누적·잔액 실시간 조회는 OpenRouter 제공사일 때만 됩니다(현재 '+esc(cfg.provider||'?')+'). 아래는 앱이 기록한 값입니다.</span>'; return; }
+  if(cfg.provider!=='openrouter'){ cdiv.innerHTML='<span class="hint">잔액·누적 실시간 조회는 OpenRouter 제공사일 때만 됩니다(현재 '+esc(cfg.provider||'?')+'). 아래는 앱이 기록한 값입니다.</span>'; return; }
   try{
     const c=await fetchORCredits();
     const bal=(isFinite(c.total)&&isFinite(c.used))?(c.total-c.used):null;
-    cdiv.innerHTML='<b>구매액</b> '+usd(c.total)+' ('+krw(c.total)+') &nbsp;·&nbsp; <b>누적 사용</b> '+usd(c.used)+' ('+krw(c.used)+')'
-      +(bal!=null?(' &nbsp;·&nbsp; <b>잔액</b> '+usd(bal)+' ('+krw(bal)+')'):'');
+    cdiv.innerHTML=(bal!=null?('<b>1. 잔액</b> : '+usd(bal)+' ('+krw(bal)+')<br>'):'')
+      +'<b>2. 누적 사용</b> : '+usd(c.used)+' ('+krw(c.used)+')';
   }catch(e){
     cdiv.innerHTML='<span class="hint">OpenRouter 잔액 조회 실패('+esc(e.message)+') — 브라우저 CORS 또는 키 문제일 수 있습니다. 아래 로컬 기록은 정상입니다.</span>';
   }
@@ -1739,7 +1796,9 @@ function recordTurnCost(){   // 텍스트(스토리) 비용 합산 + 턴별 기�
     try{ localStorage.setItem(LS+'_costlog', JSON.stringify(costLog)); }catch(e){}
   }
 }
-function bumpTurn(){ turnCount++; localStorage.setItem(LS+'_turns',String(turnCount)); }
+function bumpTurn(){ turnCount++; localStorage.setItem(LS+'_turns',String(turnCount)); updateTurnBadge(); }
+// 하단바: 현재 게임(맨 위 시작점)부터 지금까지의 턴수(= GM 응답 수)
+function updateTurnBadge(){ const b=$('turnBadge'); if(!b) return; const n=history.filter(m=>m&&m.role==='assistant').length; b.textContent=n>0?(n+'턴'):''; }
 function resetCost(){ costTotal=0; costLastTurn=0; costImgTotal=0; turnCount=0; costLog=[];
   localStorage.setItem(LS+'_cost','0'); localStorage.setItem(LS+'_costimg','0'); localStorage.setItem(LS+'_turns','0'); localStorage.setItem(LS+'_costlog','[]'); costBadge(); }
 
@@ -2047,7 +2106,7 @@ function extractGuide(text){
 }
 // 턴 종료 UI: 하단바의 이어서/다시 버튼 상태 갱신(가이드는 메시지마다 setMsgGuide로 영구 표시)
 function addGmFooter(msgWrap){
-  updateActionBtns();
+  updateActionBtns(); updateTurnBadge();
 }
 // 가이드를 '해당 GM 메시지 안'에 영구히 붙인다(매 턴 남고, 지난 턴 것도 안 사라짐)
 function setMsgGuide(mdEl, content){
@@ -2445,12 +2504,14 @@ $('fontSel').onchange=()=>applyFontFamily($('fontSel').value);
   t.checked=summarizeOn;
   t.onchange=()=>{ summarizeOn=t.checked; localStorage.setItem(LS+'_sumon', t.checked?'1':'0'); };
 })();
-document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+document.querySelectorAll('.chip[data-cmd]').forEach(c=>c.onclick=()=>{
   $('cmdRow').classList.add('hidden');
   if(c.dataset.cmd==='새 게임'){ newGame(); return; }   // 명령 전송이 아니라 이력 초기화 + 메인으로
   if(c.dataset.cmd==='상태') showHud();   // 상태 누를 때만 스탯 HUD 표시
   if(c.dataset.cmd) sendMessage(c.dataset.cmd);
 });
+// data-cmd 없는 칩(설정·글자크기·상황·답변·페르소나 등)은 자기 핸들러를 쓰되, 누르면 메뉴는 닫는다
+document.querySelectorAll('#cmdRow .chip:not([data-cmd])').forEach(c=>c.addEventListener('click',()=>$('cmdRow').classList.add('hidden')));
 
 /* 하단 도구 버튼 */
 // 햄버거: 상단 메뉴바 + 명령어 칩(구 '/')을 함께 토글
@@ -2483,6 +2544,7 @@ function loadCmToForm(){ CM_KEYS.forEach(k=>{ const el=$('cm_'+k); if(el) el.val
 function openModePopup(){
   document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on', x.dataset.tone===currentTone()));
   loadCmToForm(); showCustomPanel(currentTone()==='__custom__');
+  { const ce=$('customExtra'); if(ce) ce.value=cfg.customExtra||''; }
   $('modeOverlay').classList.add('on');
 }
 document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{
@@ -2493,10 +2555,14 @@ CM_KEYS.forEach(k=>{ const el=$('cm_'+k); if(el) el.oninput=syncCmLabels; });
 $('btnMode').onclick=openModePopup;
 $('modeClose').onclick=()=>$('modeOverlay').classList.remove('on');
 $('modeOverlay').addEventListener('click',e=>{ if(e.target===$('modeOverlay')) $('modeOverlay').classList.remove('on'); });
+// 커스텀 추가 지시: [+추가] → 입력 줄을 누적 textarea에 붙임
+{ const add=$('modeExtraAdd'); if(add) add.onclick=()=>{ const i=$('modeExtraIn'), t=$('customExtra'); if(!i||!t) return;
+  const v=i.value.trim(); if(!v) return; t.value=(t.value.trim()?(t.value.trim()+'\n'):'')+'- '+v; i.value=''; t.scrollTop=t.scrollHeight; }; }
 $('modeSave').onclick=()=>{
   const sel=document.querySelector('#modeSeg button.on');
   if(sel){
-    if(sel.dataset.tone==='__custom__'){ CM_KEYS.forEach(k=>{ cfg['cm_'+k]=parseInt($('cm_'+k).value); }); saveCfg(); }
+    if(sel.dataset.tone==='__custom__'){ CM_KEYS.forEach(k=>{ cfg['cm_'+k]=parseInt($('cm_'+k).value); }); }
+    cfg.customExtra=($('customExtra')?$('customExtra').value:'').trim(); saveCfg();
     setGameTone(sel.dataset.tone); updateModeBtn();
   }
   $('modeOverlay').classList.remove('on');
@@ -2778,11 +2844,11 @@ async function applySaveCode(code){
     set('_font',u.font); set('_fs',u.fs); set('_uifs',u.uifs); set('_speed',u.speed); set('_sumon',u.sumon); }
 }
 function snapMsg(t,cls){ $('snapStatus').textContent=t; $('snapStatus').className='status-line '+(cls||''); }
-$('btnSave').onclick=()=>{
+{ const _bs=$('btnSave'); if(_bs) _bs.onclick=()=>{
   if(busy){ alert('응답 생성 중에는 잠시 후 시도하세요.'); return; }
   try{ $('snapText').value=makeSaveCode(); }catch(e){ $('snapText').value=''; }
   snapMsg(''); $('snapOverlay').classList.add('on');
-};
+}; }
 $('snapCopy').onclick=()=>{
   const t=$('snapText'); t.select(); t.setSelectionRange(0,99999);
   try{ if(navigator.clipboard) navigator.clipboard.writeText(t.value); else document.execCommand('copy'); }catch(e){ document.execCommand('copy'); }
@@ -3029,11 +3095,55 @@ $('btnBarLoad').onclick=()=>{
 // 시작 시 자동저장 상태 배지·버튼 초기화 (항상 표시)
 driveBadge(driveAuto?'켜짐':'꺼짐', driveAuto?'ok':'err');
 costBadge();   // 추정 비용 배지 초기화
+try{ refreshRate(); }catch(e){}   // 환율 비동기 갱신(무음)
+updateTurnBadge();   // 누적 턴수 배지 초기화
 // '비용' 버튼: 누르면 추정 비용 표시(확인 누르면 누적 초기화)
 { const cbtn=$('costBtn'); if(cbtn) cbtn.onclick=openCostModal; }
 { const cc=$('costClose'); if(cc) cc.onclick=()=>$('costOverlay').classList.remove('on');
   const ov=$('costOverlay'); if(ov) ov.onclick=(e)=>{ if(e.target===ov) ov.classList.remove('on'); }; }
 { const sb=$('btnScrollDown'); if(sb) sb.onclick=()=>scrollDown(); }
+
+/* ---------- 정리 · 도우미(질문/예측, 턴 진행 없음) ---------- */
+function buildAskContext(){
+  const parts=[]; let cnt=0;
+  for(let i=history.length-1;i>=0 && cnt<6;i--){ const m=history[i]; if(!m) continue;
+    if(m.role==='assistant'){ parts.unshift('[GM] '+sanitizeBody(splitChoices(m.content).body).slice(0,1200)); cnt++; }
+    else if(m.role==='user'){ parts.unshift('[나] '+String(m.content).slice(0,300)); } }
+  if(typeof summary==='string' && summary) parts.unshift('[줄거리 요약]\n'+summary);
+  return parts.join('\n\n');
+}
+{ const ov=$('askOverlay');
+  const open=()=>{ $('askIn').value=''; $('askOut').innerHTML=''; ov.classList.add('on'); setTimeout(()=>{ try{$('askIn').focus();}catch(e){} },50); };
+  const b=$('btnAsk'); if(b) b.onclick=open;
+  const c=$('askClose'); if(c) c.onclick=()=>ov.classList.remove('on');
+  if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
+  const go=$('askGo'); if(go) go.onclick=async()=>{
+    const q=$('askIn').value.trim(); if(!q) return;
+    const key=((cfg.keys&&cfg.keys[cfg.provider])||cfg.key||'').trim();
+    if(!cfg.provider||!key||!(cfg.model||cfg.modelManual)){ $('askOut').innerHTML='<span class="hint">먼저 설정에서 제공사·모델·API 키를 입력하세요.</span>'; return; }
+    const out=$('askOut'); out.innerHTML='<span class="hint">생각 중…</span>';
+    const sys='너는 이 한국 정치 시뮬레이션 게임의 도우미다. 현재 진행 맥락을 바탕으로 플레이어의 질문에 한국어로 사실적·구체적으로 답한다. ① 정보·제도 질문(원내대표 선출 방식, 당 조직 구조 등)은 현실 한국 정치에 근거해 명확히 설명한다. ② "이렇게 하면 어떻게 되나?" 류의 예측 질문은 현재 상황 기준으로 가능한 전개·리스크·득실을 현실적으로 미리 예측해 준다. 게임을 진행시키지 말 것(턴·날짜·스탯을 바꾸지 말고 설명·조언만). 핵심 위주로 너무 길지 않게.';
+    try{ const a=await callOnce([{role:'user', content:'[현재 진행 맥락]\n'+buildAskContext()+'\n\n[질문]\n'+q}], sys);
+      out.innerHTML=mdToHtml(a||'(답변 없음)');
+    }catch(e){ out.innerHTML='<span class="hint">실패: '+esc(e.message)+'</span>'; }
+  };
+}
+
+/* ---------- 페르소나 표(주요 인물 성격 — 텍스트·삽화에 반영) ---------- */
+function openPersona(){
+  const cast=cfg.cast||[]; let html='<table class="cost-tbl persona-tbl"><thead><tr><th>역할·이름</th><th>페르소나(성격·말투·외모)</th></tr></thead><tbody>';
+  for(let i=0;i<6;i++){ const c=cast[i]||{}; html+='<tr><td><input class="pr-role" value="'+esc(c.role||'')+'" placeholder="예: 보좌관 이채영"></td><td><input class="pr-desc" value="'+esc(c.desc||'')+'" placeholder="예: 30대, 능청·직설, 추진력 강함"></td></tr>'; }
+  html+='</tbody></table>'; $('personaRows').innerHTML=html; $('personaOverlay').classList.add('on');
+}
+{ const b=$('btnPersona'); if(b) b.onclick=openPersona;
+  const c=$('personaClose'); if(c) c.onclick=()=>$('personaOverlay').classList.remove('on');
+  const ov=$('personaOverlay'); if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
+  const s=$('personaSave'); if(s) s.onclick=()=>{
+    const roles=[...document.querySelectorAll('#personaRows .pr-role')], descs=[...document.querySelectorAll('#personaRows .pr-desc')];
+    const cast=[]; roles.forEach((r,idx)=>{ const role=r.value.trim(), desc=(descs[idx]?descs[idx].value.trim():''); if(role||desc) cast.push({role,desc}); });
+    cfg.cast=cast; saveCfg(); $('personaOverlay').classList.remove('on');
+  };
+}
 // 하단바 '이어서/다시' 버튼
 { const c=$('btnCont2'); if(c) c.onclick=continueGen; const r=$('btnRegen2'); if(r) r.onclick=regen; updateActionBtns(); }
 refreshDriveBar();
