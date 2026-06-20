@@ -384,7 +384,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.72</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.73</span></div>
 </div>
 
 <div id="hud">
@@ -701,7 +701,7 @@
 
 <!-- ===== Illustration timing modal ===== -->
 <div class="overlay" id="costOverlay">
-  <div class="modal" style="max-width:680px">
+  <div class="modal" style="max-width:760px">
     <div style="display:flex; align-items:center">
       <h2><span class="mark">✦</span> 사용 비용</h2>
       <button class="modal-x" id="costClose">✕</button>
@@ -1783,6 +1783,7 @@ async function fetchORCredits(){
   return {total:Number(d.total_credits), used:Number(d.total_usage)};
 }
 function fmtTok(n){ return (n||0).toLocaleString('ko-KR'); }
+function fmtTs(ts){ if(!ts) return ''; const d=new Date(ts); const p=x=>String(x).padStart(2,'0'); return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
 function usd(n){ return '$'+(Number(n)||0).toFixed(Math.abs(n)>=1?2:4); }
 async function openCostModal(){
   const ov=$('costOverlay'); if(!ov) return; ov.classList.add('on');
@@ -1791,8 +1792,8 @@ async function openCostModal(){
   const rows=costLog.slice(-15).reverse();
   let html='<div id="orCredits" class="cost-sum">불러오는 중…</div>';
   if(rows.length){
-    html+='<table class="cost-tbl"><thead><tr><th>모델</th><th>입력</th><th>출력</th><th>비용</th><th>$비용</th></tr></thead><tbody>';
-    rows.forEach(r=>{ html+='<tr><td>'+esc(String(r.model||'').split('/').pop())+'</td><td>'+fmtTok(r.inTok)+'</td><td>'+fmtTok(r.outTok)+'</td><td>'+krw(r.usd)+'</td><td>$'+(Number(r.usd)||0).toFixed(3)+'</td></tr>'; });
+    html+='<table class="cost-tbl"><thead><tr><th>모델</th><th>입력</th><th>출력</th><th>비용</th><th>$비용</th><th>일시</th></tr></thead><tbody>';
+    rows.forEach(r=>{ html+='<tr><td>'+esc(String(r.model||'').split('/').pop())+'</td><td>'+fmtTok(r.inTok)+'</td><td>'+fmtTok(r.outTok)+'</td><td>'+krw(r.usd)+'</td><td>$'+(Number(r.usd)||0).toFixed(3)+'</td><td>'+fmtTs(r.ts)+'</td></tr>'; });
     html+='</tbody></table>';
   } else html+='<div class="hint" style="margin:10px 0">아직 기록된 턴이 없습니다.</div>';
   html+='<div class="cost-foot"><span>현재 환율 : '+Math.round(usdKrw).toLocaleString('ko-KR')+'원 / $1</span><button id="costReset" class="mini-btn">초기화</button></div>';
