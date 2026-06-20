@@ -153,12 +153,22 @@
   .cost-tbl th{color:var(--dim); font-weight:600}
   .cost-tbl td{color:#dfe3ea}
   .cost-foot{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; font-size:.8rem; color:var(--dim); flex-wrap:wrap}
-  /* 정리 도우미 답변 영역 */
-  .ask-out{margin-top:12px; max-height:48vh; overflow:auto; font-size:.92rem; line-height:1.7}
+  /* 정리 도우미 답변 영역 — 잘리지 않고 전부 표시(모달이 늘어남) */
+  #askIn{ display:block; flex:1 1 auto; min-width:0; resize:none; box-sizing:border-box;
+    background:#16171c; border:1px solid var(--line); color:var(--txt);
+    border-radius:12px; padding:9px 14px; font-size:var(--fs); line-height:1.45; height:44px; max-height:120px; font-family:inherit; scrollbar-width:none }
+  #askIn::-webkit-scrollbar{display:none}
+  #askIn:focus{outline:none; border-color:var(--accent)}
+  .ask-out{margin-top:14px; font-size:.92rem; line-height:1.7}
   .ask-out:empty{display:none}
-  /* 페르소나 표 */
+  .ask-actions{display:flex; gap:8px; margin-top:12px}
+  /* 페르소나 표 — 이름 열 좁게 */
   .persona-tbl td{text-align:left!important; white-space:normal!important; vertical-align:top}
+  .persona-tbl td:first-child,.persona-tbl th:first-child{width:34%}
   .persona-tbl input{width:100%; background:#16171c; border:1px solid var(--line); color:#fff; border-radius:6px; padding:6px 8px; font-family:inherit; font-size:.84rem; box-sizing:border-box}
+  /* 모드 커스텀 추가 입력 — 검은색 디자인 */
+  #customExtra,#modeExtraIn{background:#16171c; border:1px solid var(--line); color:#fff; border-radius:8px; padding:9px 12px; font-family:inherit; font-size:.88rem; box-sizing:border-box}
+  #customExtra:focus,#modeExtraIn:focus{outline:none; border-color:var(--accent)}
   .choices-head{display:none}
   .choice-row{display:flex; gap:6px; align-items:flex-start; margin-bottom:10px}
   .choice-row .edit{flex:0 0 auto; margin-top:9px; width:26px; height:26px; border-radius:50%;
@@ -363,7 +373,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.67</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v4.68</span></div>
 </div>
 
 <div id="hud">
@@ -403,7 +413,6 @@
     <button class="chip" id="btnPersona" title="주요 인물 페르소나 설정">페르소나</button>
     <button class="chip" id="btnFs" title="글자 크기">글자크기</button>
     <button class="chip" id="btnCfg" title="API 설정">설정</button>
-    <button class="chip" id="btnIllust" title="현재 장면을 애니 화풍 삽화로 생성(Gemini)">삽화</button>
     <button class="chip" data-cmd="새 게임">새 게임</button>
     <button class="chip" id="btnBarSave" title="저장(드라이브/파일)">Save</button>
     <button class="chip" id="btnBarLoad" title="불러오기(드라이브/파일)">Load</button>
@@ -418,6 +427,7 @@
     <button class="pill" id="btnAsk" title="현재 상황 질문·예측 도우미">정리</button>
     <button class="pill" id="btnMode" title="현재 드라마 모드 · 눌러서 변경">모드</button>
     <button class="pill" id="btnAutoIllust" title="매 턴 끝에 삽화 자동 생성(켜짐/꺼짐)">삽화</button>
+    <button class="pill" id="btnIllust" title="현재 장면을 삽화로 생성">삽화생성</button>
     <button class="pill" id="costBtn" title="추정 비용 보기">비용</button>
     <button class="pill" id="btnScrollDown" title="맨 아래로 스크롤">↓</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
@@ -696,9 +706,15 @@
       <button class="modal-x" id="askClose">✕</button>
     </div>
     <p class="desc">지금 상황에서 모르는 걸 묻거나(예: 원내대표는 어떻게 뽑나? 당 조직은?), "이렇게 하면 어떻게 될까?" 예측을 물어보세요. 게임은 진행되지 않습니다(설명·예측만).</p>
-    <textarea id="askIn" rows="2" placeholder="궁금한 것·예측 (예: 지금 오병호를 치면 어떻게 되나?)"></textarea>
-    <button class="save-btn" id="askGo">묻기</button>
+    <div class="inputrow" id="askRow" style="margin-top:4px">
+      <textarea id="askIn" rows="1" placeholder="궁금한 것·예측 (예: 지금 오병호를 치면 어떻게 되나?)"></textarea>
+      <button class="send-circle" id="askGo">묻기</button>
+    </div>
     <div id="askOut" class="ask-out md"></div>
+    <div id="askActions" class="ask-actions" style="display:none">
+      <button class="mini-btn" id="askClear">삭제</button>
+      <button class="mini-btn" id="askAgain">재질문</button>
+    </div>
   </div>
 </div>
 
@@ -892,7 +908,7 @@
           <input type="text" id="modeExtraIn" placeholder="추가할 지시 입력 후 [+ 추가]" style="flex:1">
           <button class="mini-btn" id="modeExtraAdd" type="button">+ 추가</button>
         </div>
-        <textarea id="customExtra" rows="3" placeholder="누적된 내 지시 (직접 편집·삭제 가능)" style="margin-top:6px; width:100%; box-sizing:border-box"></textarea>
+        <textarea id="customExtra" rows="3" placeholder="누적된 내 지시 (직접 편집·삭제 가능)" style="margin-top:12px; width:100%; box-sizing:border-box"></textarea>
       </div>
     </div>
     <button class="save-btn" id="modeSave">이 모드로 변경</button>
@@ -3113,20 +3129,23 @@ function buildAskContext(){
   return parts.join('\n\n');
 }
 { const ov=$('askOverlay');
-  const open=()=>{ $('askIn').value=''; $('askOut').innerHTML=''; ov.classList.add('on'); setTimeout(()=>{ try{$('askIn').focus();}catch(e){} },50); };
+  const open=()=>{ $('askIn').value=''; $('askOut').innerHTML=''; $('askActions').style.display='none'; ov.classList.add('on'); setTimeout(()=>{ try{$('askIn').focus();}catch(e){} },50); };
   const b=$('btnAsk'); if(b) b.onclick=open;
   const c=$('askClose'); if(c) c.onclick=()=>ov.classList.remove('on');
   if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
-  const go=$('askGo'); if(go) go.onclick=async()=>{
-    const q=$('askIn').value.trim(); if(!q) return;
+  async function runAsk(q){
     const key=((cfg.keys&&cfg.keys[cfg.provider])||cfg.key||'').trim();
     if(!cfg.provider||!key||!(cfg.model||cfg.modelManual)){ $('askOut').innerHTML='<span class="hint">먼저 설정에서 제공사·모델·API 키를 입력하세요.</span>'; return; }
-    const out=$('askOut'); out.innerHTML='<span class="hint">생각 중…</span>';
+    const out=$('askOut'); out.innerHTML='<span class="hint">생각 중…</span>'; $('askActions').style.display='none';
     const sys='너는 이 한국 정치 시뮬레이션 게임의 도우미다. 현재 진행 맥락을 바탕으로 플레이어의 질문에 한국어로 사실적·구체적으로 답한다. ① 정보·제도 질문(원내대표 선출 방식, 당 조직 구조 등)은 현실 한국 정치에 근거해 명확히 설명한다. ② "이렇게 하면 어떻게 되나?" 류의 예측 질문은 현재 상황 기준으로 가능한 전개·리스크·득실을 현실적으로 미리 예측해 준다. 게임을 진행시키지 말 것(턴·날짜·스탯을 바꾸지 말고 설명·조언만). 핵심 위주로 너무 길지 않게.';
     try{ const a=await callOnce([{role:'user', content:'[현재 진행 맥락]\n'+buildAskContext()+'\n\n[질문]\n'+q}], sys);
-      out.innerHTML=mdToHtml(a||'(답변 없음)');
+      out.innerHTML=mdToHtml(a||'(답변 없음)'); $('askActions').style.display='flex';
     }catch(e){ out.innerHTML='<span class="hint">실패: '+esc(e.message)+'</span>'; }
-  };
+  }
+  let lastAskQ='';
+  const go=$('askGo'); if(go) go.onclick=()=>{ const q=$('askIn').value.trim(); if(!q) return; lastAskQ=q; runAsk(q); };
+  const cl=$('askClear'); if(cl) cl.onclick=()=>{ $('askOut').innerHTML=''; $('askIn').value=''; $('askActions').style.display='none'; try{$('askIn').focus();}catch(e){} };
+  const ag=$('askAgain'); if(ag) ag.onclick=()=>{ if(lastAskQ) runAsk(lastAskQ); };
 }
 
 /* ---------- 페르소나 표(주요 인물 성격 — 텍스트·삽화에 반영) ---------- */
