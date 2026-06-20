@@ -406,7 +406,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.13</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.14</span></div>
 </div>
 
 <div id="hud">
@@ -2348,27 +2348,45 @@ function replayPanel(uptoIdx){
   stepCur=Math.min(stepCur, cnt);
   return {goal, step, loose, stepCur};
 }
+// 지표 문자열 → {세력:30, 민심:48, ...}
+function parseStatMap(s){ const m={}; if(!s) return m;
+  s.split(/\s*[│|]\s*/).forEach(it=>{ const x=it.match(/([가-힣]+)\s*([+\-]?\d{1,3})/); if(x) m[x[1]]=parseInt(x[2]); }); return m; }
+// 목표 문자열에서 '(통과: 민심 50·명분 45)' 파싱 → {clean, req}
+function parseGoalReq(g){ let clean=g||'', req={};
+  const m=(g||'').match(/\(?\s*통과\s*[:：]\s*([^)]*)\)?/);
+  if(m){ clean=(g||'').replace(m[0],'').trim();
+    m[1].split(/[·,]/).forEach(p=>{ const x=p.match(/([가-힣]+)\s*[≥>]?\s*(\d{1,3})/); if(x) req[x[1]]=parseInt(x[2]); }); }
+  return {clean, req}; }
+const ACTION_HINT={세력:'계파·동맹 규합으로 지지 확보', 민심:'지역구 민생·여론전으로 지지율↑', 명분:'정책·입법·연설로 명분 쌓기', 리스크:'스캔들 방어로 리스크 관리'};
 function setMsgGuide(mdEl, content, idx){
   const prog=extractProg(content);
-  const stat=pickTag(content,'stat');                 // 지표만 이번 턴 값(매 턴 변동)
-  const {goal, step:modelStep, loose, stepCur}=replayPanel(idx);   // 목표·누락 누적, stepCur=현재 축(①부터 순차)
-  // 수순: 앱이 목표만 떼어 뽑은 '큰 전략 3축'을 우선(이 국면용이 있으면), 없으면 모델의 전술 step 폴백
-  const step=(stratStep && goal && goalCore(goal)===stratGoal) ? stratStep : modelStep;
-  if(!prog && !goal && !step && !stat && !loose.length) return;
+  const now=pickTag(content,'now');                   // 지금: 이번 턴 진행 중인 일
+  const stat=pickTag(content,'stat');                 // 지표(이번 턴 값)
+  const {goal, loose}=replayPanel(idx);               // 목표·누락 누적
+  if(!prog && !goal && !now && !stat && !loose.length) return;
   const bubble=mdEl && mdEl.parentElement; if(!bubble) return;
   let el=bubble.querySelector('.md-guide');
   if(!el){ el=document.createElement('div'); el.className='md-guide'; bubble.appendChild(el); }
   const row=(tag,inner,cls)=>'<div class="g-line"><span class="gtag">✦ '+tag+'</span><span class="gtxt'+(cls?' '+cls:'')+'">'+inner+'</span></div>';
+  const cur=parseStatMap(stat);
+  const {clean:goalClean, req}=parseGoalReq(goal);
   let html='';
   if(prog) html+=row('종합','<span class="gtxt-meta">'+esc(progWithDday(prog))+'</span>');
-  if(goal) html+=row('목표','<span class="gtxt-i">'+esc(goal)+'</span>');
-  if(step){
-    const circ='①②③④⑤⑥⑦⑧⑨⑩';
-    const cur=stepCur;   // 현재 진행 중인 축(①부터 순차, 점프 없음) — 그 칸을 강조
-    const steps=step.replace(/^수순\s*[:：]?\s*/,'').split(/\s*(?:→|->|;|＞)\s*/)
-      .map(x=>x.replace(/^[①-⑩\d]+[).．]?\s*/,'').trim()).filter(Boolean);
-    const sh=steps.map((x,i)=>'<span class="g-step'+(i+1===cur?' g-step-cur':'')+'">'+(circ[i]||(i+1)+'.')+' '+esc(x)+'</span>').join('<span class="g-arr">→</span>');
-    html+=row('수순',sh,'gnext');
+  if(goalClean) html+=row('목표','<span class="gtxt-i">'+esc(goalClean)+'</span>');
+  if(now) html+=row('지금',esc(now));
+  const reqKeys=Object.keys(req);
+  if(reqKeys.length){
+    const reqTxt=reqKeys.map(k=>esc(k)+' '+req[k]).join('<span class="stat-sep">·</span>');
+    const lacks=reqKeys.filter(k=>(cur[k]||0)<req[k]);
+    const need = lacks.length
+      ? '<span class="stat-bad">부족: '+lacks.map(k=>esc(k)+' −'+(req[k]-(cur[k]||0))).join(', ')+'</span>'
+      : '<span class="stat-good">통과조건 충족 ✓</span>';
+    html+=row('필요','<span class="gstat">'+reqTxt+' <span class="g-arr">→</span> '+need+'</span>');
+    let todo;
+    if(lacks.length){ lacks.sort((a,b)=>(req[b]-(cur[b]||0))-(req[a]-(cur[a]||0)));
+      const top=lacks[0]; todo=top+' 부족 → '+(ACTION_HINT[top]||(top+' 올리는 선택에 집중')); }
+    else todo='통과조건 충족 — 관문 굳히기·방어에 집중';
+    html+=row('할일',esc(todo));
   }
   if(stat) html+=row('지표','<span class="gstat">'+renderStat(stat)+'</span>');
   if(loose.length) html+=row('누락','<span class="gloose">'+loose.slice(0,3).map(esc).join('<span class="g-dot"> · </span>')+'</span>');
