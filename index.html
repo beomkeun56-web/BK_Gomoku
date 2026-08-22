@@ -423,7 +423,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.54</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.55</span></div>
 </div>
 
 <div id="hud">
@@ -2255,7 +2255,7 @@ async function brainImage(prompt){
   // 화풍은 기존 이미지 설정(드라마 스틸컷 등, styleFragment)을 그대로 쓰고,
   // 추가 기준 칸(brainImgStyle)이 있으면 뒤에 덧붙인다(범근님 2026-08-22: 기존 화풍 재사용, 생성처만 그록).
   // 화풍은 이제 기준문(buildIllustPrompt) 안에 포함돼 오므로 여기선 추가기준만 접두한다(중복 방지)
-  const body={prompt:(st?(st+', '):'')+String(prompt||'').slice(0,8000), engine};
+  const body={prompt:(st?(st+', '):'')+fitIllustPrompt(prompt, 7600), engine};
   if(cfg.brainCharRefs===true) body.use_char_refs=true;   // 맥 bk_game_chars 폴더의 인물 초상으로 얼굴 고정
   const r=await fetch(brainEndpoint()+'/game_image',{method:'POST',
     headers:{'Content-Type':'application/json','X-BK-KEY':brainKey()},
@@ -2862,40 +2862,40 @@ function styleFragment(){
   return IMG_STYLES[s] || IMG_STYLES.anime;
 }
 function buildIllustPrompt(story, hasRef){
+  // 총량 예산: 규칙+시트 합계를 xAI 상한(8000자) 아래로 유지해야 [SCENE]·조명 규칙이 안 잘린다(2026-08-22 품질저하 실측 — 절사가 원인).
   let p='';
-  p+='[HARD RULES] Photorealistic and anatomically correct. Each person: exactly one head, two arms, two hands with five fingers each, two legs — no extra, duplicated, merged or deformed limbs or hands, and no extra/duplicate people. '
-    +'Simple, clear, uncluttered composition: subjects fully visible and clearly separated, never blocked by foreground objects (steering wheels, hands, etc.). '
-    +'Hands and gestures must be purposeful — if pointing, point at a real specific spot (e.g., a line on a document); eyes look naturally at the other person or the object being viewed. '
-    +'Absolutely no text, letters, captions, subtitles, speech bubbles or watermark anywhere in the image. '
-    +'[GAZE & ACTION LOCK — top priority] Every person\'s eyes, face direction and body orientation MUST match what they are doing in the scene: someone using or reading a laptop looks AT the laptop screen with the screen facing them; someone reading a document looks AT that document; someone speaking looks AT the person being addressed; someone listening faces the speaker. NEVER render vacant stares, eyes pointed off-target, or a person turned away from the object/person they are interacting with. Hands must physically engage the described object correctly (typing = fingers on the keyboard, holding a phone = phone at natural reading/call position, pouring tea = teapot tilted over the cup). If the scene says an action, draw the person mid-action with correct posture, not posing beside the object. ';
+  p+='[HARD RULES] Photorealistic, anatomically correct. Each person: exactly one head, two arms, two hands with five fingers, two legs — no extra, merged or deformed limbs, no duplicate people. Simple, clear composition; subjects fully visible, not blocked by foreground objects. Absolutely no text, letters, captions, speech bubbles or watermarks anywhere, including on laptop/phone screens (no readable UI). ';
+  p+='[GAZE & ACTION LOCK — top priority] Eyes, face and body orientation MUST match each person\'s action: using or reading a laptop = looking AT its screen with the screen facing them; reading a document = eyes ON the document; speaking = looking at the person addressed; listening = facing the speaker. NEVER vacant or off-target stares, never turned away from the object/person being interacted with. Hands physically engage the described object (typing = fingers on the keys, phone held at natural position, pouring = teapot tilted over the cup). Draw people mid-action with correct, physically natural posture — not posing beside the object. ';
   if(hasRef){
-    p+='[REFERENCE IMAGES] Reference #1 shows ONLY the FACE and identity of this story\'s fixed characters — render them as the SAME people (same face, same hairstyle, same body type). But do NOT copy its composition, poses, OR clothing: give each character a NEW outfit appropriate to THIS scene\'s situation/place/time, different from the reference and from previous images. The face stays the same, the clothes change every scene. '
-      +'Reference #2 (if present) shows the PREVIOUS scene\'s location — if the story stays in the same place, keep that same background, interior and lighting and only change the camera angle; if the [SCENE] moves to a new place, use the correct new location instead. '
-      +'If a reference background contradicts the scene context (e.g., it should be a formal office but looks like a derelict room), ignore that reference and build the correct location. Never copy reference poses/limbs (this causes extra hands). ';
+    p+='[REFERENCE IMAGES] Reference #1 shows ONLY the face/identity of this story\'s fixed characters — render the SAME people (same face, hairstyle, body type), but do NOT copy its composition, poses or clothing: give each a NEW outfit fitting THIS scene\'s place/time, different from the reference and from previous images. Reference #2 (if present) shows the previous scene\'s location — keep that background only if the story stays in the same place; otherwise build the correct new location. If a reference contradicts the scene context, ignore it. Never copy reference poses/limbs. ';
   }
   p+='Art style: '+styleFragment()+'. ';
   const cast=(cfg.cast||[]).filter(c=>c && (c.desc||c.role));
   if(cast.length){
-    p+='[FIXED CHARACTERS — render them identically in every illustration; apply every described trait, do not omit or make them plain] ';
+    p+='[FIXED CHARACTERS — render identically in every illustration; apply every described trait] ';
     cast.forEach(c=>{ p+='- '+((c.role||'character').trim())+': '+((c.desc||'').trim())+'. '; });
-    p+='Match each character\'s gender, age, body type, hair, overall vibe and charm exactly as described (keep it tasteful and clothed — no nudity or explicit content). For clothing, treat any outfit in the description as a default style only — vary the actual outfit each scene to fit the situation, place and time (formal office wear, casual, evening, etc.) instead of repeating the same clothes. Whenever such a character appears in the scene, draw them per their described identity. ';
+    p+='Match each character\'s gender, age, body type, hair and overall charm exactly as described (tasteful, fully clothed). Outfits in descriptions are default styles only — vary actual clothing each scene to fit situation, place and time. ';
   }
-  p+='[AIDE FIGURE — applies ONLY to the player\'s aide/secretary character (the 보좌관/비서 listed in [FIXED CHARACTERS]); do NOT apply this to any other woman] Render the aide/secretary as strikingly glamorous and gorgeous, like a supermodel or pin-up actress: a very curvy, voluptuous hourglass figure with a large full bust, a tiny cinched waist, wide curvy hips and long legs, a beautiful seductive face with flawless skin and full lips. This bombshell figure is mandatory and must be obvious for HER in every illustration (this OVERRIDES any reference image — even if a reference shows a plain or slim body, render her glamorous), never toned down to average/slim. She wears tight, form-fitting, body-hugging outfits (e.g., a snug fitted blouse, a tight pencil skirt, a clingy tailored dress, a slim figure-hugging suit) that emphasize the hourglass silhouette, while still fully clothed, tasteful and elegant (no nudity, no underwear, no explicit or sexual content). Keep her body type consistent across illustrations. ';
-  p+='[OTHER WOMEN] Every OTHER adult woman (colleagues, officials, reporters, passersby, family, elderly women, etc.) is rendered realistically and naturally according to her actual age, role and the situation — ordinary, varied, believable bodies and context-appropriate clothing. Do NOT force the glamorous bombshell figure on them. ';
-  p+='[SHOT VARIETY] Choose the single most impactful shot for this moment and use a different angle/shot size from the previous image: for dialogue/confrontation/mind-games use a face close-up to emphasize expression and tension; for a meal show the food and the act of eating; for movement/action capture the decisive moment. Do not repeat the same composition (e.g., two people facing each other) every turn; vary close-up / medium / wide by content. ';
-  p+='[REALISM] Poses, actions and hand positions must match how people really behave in that situation, physically natural. In a briefing/meeting, documents and laptops sit on the desk or are held naturally — never shoved awkwardly into someone\'s face. Avoid distorted fingers/limbs and unrealistic prop use; no text or UI on screens (laptops/phones). ';
-  p+='[LOCATION & SITUATION ACCURACY — very important] First infer from the text WHAT place, WHAT status of people and WHAT situation this is, then match background, architecture, furniture, lighting, crowd, clothing and props exactly to that real context. '
-    +'Render each location exactly as it really looks in Korea (its grade, purpose, era, mood) and fitting the characters\' status. Avoid generic/wrong backgrounds, mismatched shabbiness or excessive luxury, and ruin/warehouse/interrogation-room mistakes (unless the text explicitly says so). '
-    +'This applies to every location (member\'s office, government office, National Assembly chamber, hearing room, press conference, fine Korean restaurant, street food tent, hospital, prosecutor\'s office, street, home, etc.). '
-    +'In particular, a Korean National Assembly member\'s office is a clean, modern office inside the Members\' Office Building: carpeted floor, a large wooden desk and leather chair, bookshelves and documents, the national flag, a sofa set — lit cinematically with motivated light (window daylight, warm desk lamps, or moody low-key light when the scene is tense), NOT a flat, evenly over-bright fluorescent look, and NEVER a dim concrete room with peeling walls, cardboard boxes or a metal-desk interrogation/storage/derelict look. ';
-  p+='[FAITHFUL TO SCENE] The [SCENE] below is the exact CURRENT moment of this turn. Match the characters, place, time of day, actions and mood precisely; do not invent an unrelated situation. Include the objects/food that should naturally be present (e.g., a Korean restaurant scene must have actual side dishes, soup and rice on the table) — no empty tables or missing props. ';
-  p+='[ROLES & HIERARCHY — common sense] Reflect each character\'s status and role from the text through posture, gaze, position and attitude; never invert the hierarchy. '
-    +'If an aide reports to / serves a lawmaker, the lawmaker (superior) looks central and composed with authority while the aide presents/explains respectfully (the aide must not command, dominate or look down on the lawmaker). If the lawmaker is giving orders, the lawmaker leads. Make it instantly clear who speaks, who listens, who reports/pressures/requests. ';
-  p+='[LIGHTING & MOOD — important] Use motivated, directional cinematic lighting with real depth: gentle shadows, contrast and a clear key light, balanced exposure. Do NOT make the image flat, evenly lit, washed-out or over-bright/over-exposed. Match brightness and color temperature to the scene\'s time of day and emotional tone — tense/secret/confrontational moments use lower-key, moodier, higher-contrast lighting; calm daytime scenes can be brighter but still filmic, never blown out. Keep skin tones natural (not pale/glowing). Expressions and the situation must stay clearly readable. ';
-  if(cfg.wide16) p+='[ASPECT] Wide 16:9 horizontal cinematic frame — compose for a widescreen movie still, generous horizontal space, balanced widescreen framing. ';
-  if(cfg.cinBoost) p+='[QUALITY] Ultra-detailed, sharp focus, professional cinematic photography, dramatic motivated lighting, rich filmic color grading, subtle film grain, high dynamic range, lifelike skin and fabric texture, crisp micro-detail, no blur or artifacts. ';
+  p+='[AIDE FIGURE — ONLY the player\'s aide/secretary from [FIXED CHARACTERS]; never any other woman] Render her strikingly glamorous, like a supermodel or pin-up actress: very curvy voluptuous hourglass figure, large full bust, tiny cinched waist, wide hips, long legs, a beautiful seductive face with flawless skin and full lips. This bombshell figure is mandatory and obvious in EVERY illustration and OVERRIDES any reference body — never toned down to slim or average. She wears tight, form-fitting outfits (snug fitted blouse, tight pencil skirt, clingy tailored dress, slim figure-hugging suit) emphasizing the silhouette, yet fully clothed, tasteful, elegant — no nudity, no explicit content. Keep her body type consistent. ';
+  p+='[OTHER WOMEN] Every other woman looks realistic and natural for her actual age, role and situation — ordinary, varied, believable bodies and context-appropriate clothing; never force the bombshell figure on them. ';
+  p+='[FAITHFUL TO SCENE] The [SCENE] below is the exact current moment of this turn: match its characters, place, time of day, actions and mood precisely; do not invent an unrelated situation; include the props/food naturally present (a Korean restaurant table has real side dishes, soup and rice — never an empty table). ';
+  p+='[LOCATION ACCURACY] First infer from the text WHAT place, WHAT status of people and WHAT situation this is, then match architecture, furniture, lighting, crowd and props exactly to that real Korean context and grade — no generic or wrong backgrounds, no mismatched shabbiness or excess luxury, never a derelict/warehouse/interrogation-room look unless the text says so. A National Assembly member\'s office is a clean modern office: carpet, large wooden desk, leather chair, bookshelves, documents, the national flag, a sofa set. ';
+  p+='[LIGHTING & MOOD] Motivated, directional cinematic lighting with real depth: a clear key light, gentle shadows, balanced exposure — never flat, evenly lit, washed-out or blown out. Match brightness and color temperature to the scene\'s time of day and emotion: tense/secret/confrontational moments are low-key, moody, high-contrast; calm daytime is brighter but still filmic. Natural skin tones; expressions clearly readable. ';
+  p+='[ROLES & HIERARCHY] Show each person\'s status from the text through posture, gaze and position; never invert the hierarchy — a lawmaker looks central and composed with authority while an aide reports or presents respectfully. Make it instantly clear who speaks, who listens, who reports or pressures. ';
+  p+='[SHOT] Pick the single most impactful shot for this moment and vary angle/size from the previous image: face close-up for dialogue/confrontation tension, food visible for meals, the decisive moment for action. Do not repeat the same two-people-facing composition every turn. ';
+  if(cfg.wide16) p+='[ASPECT] Wide 16:9 horizontal cinematic frame — compose for a widescreen movie still. ';
+  if(cfg.cinBoost) p+='[QUALITY] Ultra-detailed, sharp focus, professional cinematic photography, rich filmic color grading, subtle film grain, high dynamic range, lifelike skin and fabric texture — no blur or artifacts. ';
   p+='\n\n[SCENE]\n'+plainScene(story);
   return p;
+}
+// [SCENE] 통째 보존 절사 — 상한 초과 시 규칙문 꼬리만 깎는다(단순 slice는 장면 묘사부터 잘라먹는다, 2026-08-22 품질저하 원인).
+function fitIllustPrompt(p, budget){
+  budget=budget||7600; p=String(p||'');
+  if(p.length<=budget) return p;
+  const i=p.lastIndexOf('\n\n[SCENE]');
+  if(i<0) return p.slice(0,budget);
+  const scene=p.slice(i), head=p.slice(0,i);
+  return head.slice(0, Math.max(600, budget-scene.length)) + scene;
 }
 // 핵심: 스토리로 이미지 생성 → {src} 반환, 비용은 누적에 합산
 function withTimeout(p, ms, label){
