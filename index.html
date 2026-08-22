@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.43</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.44</span></div>
 </div>
 
 <div id="hud">
@@ -3931,10 +3931,10 @@ $('cfgSave').onclick=()=>{
   { const bm=$('brainModelSel');
     if(bm && bm.value!==brainModel()){ cfg.brainModel=(bm.value==='opus'?'opus':'sonnet'); brainSetSyncN(-1); }   // 모델 변경 → 다음 턴에 reset+replay로 재구축(즉시 적용)
   }
-  { const bi=$('brainIllust'); if(bi) cfg.brainIllust=bi.checked; }
+  { const bi=$('brainIllust'); if(bi){ const nv=bi.checked; if(nv!==(cfg.brainIllust===true)) brainSetSyncN(-1); cfg.brainIllust=nv; } }   // 삽화 토글 변경 → 세션 재구축(진행 중에도 [IMG] 규칙 반영, 2026-08-22 실사용 신고 수리)
   { const be=$('brainImgEngine'); if(be) cfg.brainImgEngine=(be.value==='google'?'google':'grok'); }
   { const bv=$('brainImgEvery'); if(bv) cfg.brainImgEvery=parseInt(bv.value)||1; }
-  { const bs=$('brainImgStyle'); if(bs) cfg.brainImgStyle=bs.value.trim(); }
+  { const bs=$('brainImgStyle'); if(bs){ const v=bs.value.trim(); if(v!==(cfg.brainImgStyle||'')) brainSetSyncN(-1); cfg.brainImgStyle=v; } }
   cfg.effort=$('effortSel').value;   // 사고 강도(effort)
   cfg.outLen=$('lenSel').value;      // 출력 분량
   cfg.maxTokens=$('maxTokIn').value.trim();   // 최대 출력 토큰(직접 입력)
