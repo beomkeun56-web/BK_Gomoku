@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.44</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.45</span></div>
 </div>
 
 <div id="hud">
@@ -2225,8 +2225,8 @@ async function brainImage(prompt){
   const engine=brainImgEngine(), st=brainImgStyle();
   // 화풍은 기존 이미지 설정(드라마 스틸컷 등, styleFragment)을 그대로 쓰고,
   // 추가 기준 칸(brainImgStyle)이 있으면 뒤에 덧붙인다(범근님 2026-08-22: 기존 화풍 재사용, 생성처만 그록).
-  const pre=[styleFragment(), st].filter(Boolean).join(', ');
-  const body={prompt:(pre?(pre+', '):'')+String(prompt||'').slice(0,4000), engine};
+  // 화풍은 이제 기준문(buildIllustPrompt) 안에 포함돼 오므로 여기선 추가기준만 접두한다(중복 방지)
+  const body={prompt:(st?(st+', '):'')+String(prompt||'').slice(0,8000), engine};
   const r=await fetch(brainEndpoint()+'/game_image',{method:'POST',
     headers:{'Content-Type':'application/json','X-BK-KEY':brainKey()},
     body:JSON.stringify(body)});
@@ -2402,7 +2402,9 @@ async function runAssistant(){
   const startImg=(prompt)=>{ if(imgStarted) return; imgStarted=true;
     imgBox=document.createElement('div'); imgBox.className='illust loading'; imgBox.textContent='🎨 삽화 생성 중…';
     const bub=mdEl.parentElement; if(bub) bub.appendChild(imgBox); else mdEl.appendChild(imgBox); maybeScroll();
-    imgP=(brainImg ? withTimeout(brainImage(prompt), 90000, '삽화 생성') : fetchIllust(prompt, true)).then(r=>r).catch(e=>({err:e.message}));   // GM 프롬프트 그대로(요약 생략) — r={src,model,ms,usd}
+    // 그록/구글(맥 구독)도 기존 이미지 기준문 전체(하드룰·화풍·고정인물·구도·위계)를 싣는다 —
+    // GM의 [IMG] 프롬프트는 [SCENE] 자리에 들어간다(2026-08-22 범근님: 제미나이와 같은 기준으로).
+    imgP=(brainImg ? withTimeout(brainImage(buildIllustPrompt(prompt,false)), 150000, '삽화 생성') : fetchIllust(prompt, true)).then(r=>r).catch(e=>({err:e.message}));
     imgP.then(fillImgBox); };   // 준비되는 즉시(텍스트 타이핑 도중이라도) 바로 표시
   const feed=()=>{ const s=stripImgTag(acc); const m=s.match(HEAD_DETECT); typer.setTarget(sanitizeBody(m?s.slice(0,m.index):s));
     const {choices}=splitChoices(s); if(choices.length>=2) renderChoices(choices);
