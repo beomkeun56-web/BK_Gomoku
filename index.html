@@ -32,6 +32,9 @@
     font-family:var(--font);
     -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility;
     display:flex; flex-direction:column; height:100dvh; overflow:hidden;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top, 0px);      /* 전체화면 시 첫 제목·현황이 노치·상태바 밑으로 들어가던 잘림 수리(2026-08-22) */
+    padding-bottom:env(safe-area-inset-bottom, 0px);
   }
 
   /* ===== Top bar ===== */
@@ -427,7 +430,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.68</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.69</span></div>
 </div>
 
 <div id="hud">
