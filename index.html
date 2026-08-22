@@ -81,7 +81,7 @@
   }
 
   /* ===== Chat log ===== */
-  #log{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain;
+  #log{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; overflow-anchor:none;
     padding:16px 14px 10px; font-size:var(--fs)}
   #log::-webkit-scrollbar{width:8px} #log::-webkit-scrollbar-thumb{background:#2a2d36; border-radius:8px}
   #newBadge{position:fixed; left:50%; transform:translateX(-50%); z-index:60; display:none;
@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.57</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.58</span></div>
 </div>
 
 <div id="hud">
@@ -1675,7 +1675,7 @@ function streamTyper(mdEl, initial){
       committedEl.appendChild(wrap); committed=b;
     }
     activeEl.innerHTML=mdToHtml(target.slice(committed,shown)); decorateSec(activeEl);
-    // 생성 중에는 자동 스크롤하지 않음 — 사용자가 읽으면서 직접 내려감
+    maybeScroll();   // 글자가 찍힐 때마다 따라가기(따라가기 꺼짐이면 배지만) — 토큰 도착 시점만 걸던 탓에 타이핑 구간에서 안 내려가던 결함 수리
   };
   const tick=()=>{
     if(shown<target.length){
@@ -1952,10 +1952,9 @@ logEl.addEventListener('wheel', e=>{ if(e.deltaY<0) stopFollow(); }, {passive:tr
 let _touchY=0;
 logEl.addEventListener('touchstart', e=>{ _touchY=e.touches[0].clientY; }, {passive:true});
 logEl.addEventListener('touchmove', e=>{ const y=e.touches[0].clientY; if(y>_touchY+6) stopFollow(); _touchY=y; }, {passive:true});
+logEl.addEventListener('mousedown', ()=>stopFollow());   // 데스크톱: 글 선택·스크롤바 드래그 즉시 양보
 logEl.addEventListener('scroll', ()=>{
-  const dist=logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight;
-  if(followBottom){ if(dist>240 && Math.abs(logEl.scrollTop-_lastProg)>60) stopFollow(); }
-  else if(dist<40){ resumeFollow(); }   // 손으로 맨 아래 도달 → 자동 재개
+  if(!followBottom && (logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight)<40) resumeFollow();   // 손으로 맨 아래 도달 → 자동 재개
 }, {passive:true});
 window.addEventListener('resize', ()=>{ updateNewBadge(); });
 if(window.visualViewport) visualViewport.addEventListener('resize', ()=>{ updateNewBadge(); });
