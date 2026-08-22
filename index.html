@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.46</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.47</span></div>
 </div>
 
 <div id="hud">
@@ -1329,6 +1329,9 @@ function buildCustomToneText(){
   if(rv>=3) p+='★치정·로맨스·관능을 농밀하고 과감하게 전개한다 — 끈적한 긴장·플러팅·스킨십·잠자리 분위기를 적극 묘사(단 성행위의 해부학적·하드코어 묘사는 감각·호흡·분위기 위주로, 결정적 순간은 암시/페이드로 마무리). ';
   else if(rv>=2) p+='★치정·로맨스 라인을 적극적으로 — 관능적 긴장·플러팅을 살리되 노골적 행위는 암시. ';
   else if(rv>=1) p+='치정·로맨스는 가볍게 양념으로. ';
+  const rawIv=cmGet('intensity',4), rawCv=cmGet('comic',3);
+  if(rawIv>=6) p+='★[수위 MAX — 자극 '+rawIv+'/8] 점잖은 보고서식 문장 금지. 대사의 상당수를 거친 입말·육두문자·직설로(한국 드라마 상한선까지, 별표 없이), 매 턴 최소 1회 감정 폭발·독설·면전 충돌. 서술도 건조하게 정리하지 말고 땀·숨소리·정적·긴장이 만져지게 써라. ';
+  if(rawCv>=5) p+='★[코믹 강화 — 코믹 '+rawCv+'/8] 매 턴 명백히 웃긴 장면을 2개 이상 + 대사에 드립·능청을 섞어라(진지한 장면 한복판에도 한 끗 위트). 웃기다 마는 수준 금지. ';
   p+='이전 턴까지 진지·잔잔했더라도 분위기를 끌고 가지 말고 지금 턴부터 즉시 이 톤으로 전환하라. 단 인과·개연성과 장면 밀도는 유지. 톤은 다시 묻지 말 것.';
   const extra=(cfg.customExtra||'').trim();
   if(extra) p+='\n\n[★사용자 추가 지시 — 위 수치와 함께 반드시 반영, 최우선]\n'+extra;
@@ -2317,9 +2320,16 @@ async function streamGemini(model,key,onToken,msgs){
 // 비스트리밍 1회 호출(요약 등 내부용)
 async function callOnce(messages, sys, modelOverride, maxTok){
   const c=resolveCfg(); const provider=c.provider, key=c.key;
-  // 맥 구독(brain)은 게임 세션 전용(/game) 이라 부수 호출(요약·추천·장면요약) 경로가 없다.
-  // 호출부들이 모두 실패를 흡수하도록 되어 있어 게임 진행은 막히지 않는다.
-  if(provider==='brain') throw new Error('맥 구독(소넷) 모드에서는 보조 호출(요약·추천)을 지원하지 않습니다.');
+  // 맥 구독(brain): 보조 호출(요약·질문·추천·장면요약)도 구독으로 처리한다 —
+  // 게임 세션과 분리된 일회용 aux 세션(reset)이라 본 게임 문맥을 오염시키지 않는다(2026-08-22).
+  if(provider==='brain'){
+    const acc=[];
+    await brainCall({sid:brainSid()+'-aux', model:'sonnet', reset:true,
+                     system:(sys&&String(sys).trim())||'간결하고 정확하게 답하라.',
+                     replay:[], user:(messages||[]).map(m=>String((m&&m.content)==null?'':m.content)).join('\n\n')},
+                    brainKey(), t=>acc.push(t));
+    return acc.join('');
+  }
   const model=(modelOverride&&modelOverride.trim())||c.model; const mt=maxTok||1200;
   if(provider==='anthropic'){
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
