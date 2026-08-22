@@ -423,7 +423,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.51</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.52</span></div>
 </div>
 
 <div id="hud">
@@ -2860,7 +2860,8 @@ function buildIllustPrompt(story, hasRef){
   p+='[HARD RULES] Photorealistic and anatomically correct. Each person: exactly one head, two arms, two hands with five fingers each, two legs — no extra, duplicated, merged or deformed limbs or hands, and no extra/duplicate people. '
     +'Simple, clear, uncluttered composition: subjects fully visible and clearly separated, never blocked by foreground objects (steering wheels, hands, etc.). '
     +'Hands and gestures must be purposeful — if pointing, point at a real specific spot (e.g., a line on a document); eyes look naturally at the other person or the object being viewed. '
-    +'Absolutely no text, letters, captions, subtitles, speech bubbles or watermark anywhere in the image. ';
+    +'Absolutely no text, letters, captions, subtitles, speech bubbles or watermark anywhere in the image. '
+    +'[GAZE & ACTION LOCK — top priority] Every person\'s eyes, face direction and body orientation MUST match what they are doing in the scene: someone using or reading a laptop looks AT the laptop screen with the screen facing them; someone reading a document looks AT that document; someone speaking looks AT the person being addressed; someone listening faces the speaker. NEVER render vacant stares, eyes pointed off-target, or a person turned away from the object/person they are interacting with. Hands must physically engage the described object correctly (typing = fingers on the keyboard, holding a phone = phone at natural reading/call position, pouring tea = teapot tilted over the cup). If the scene says an action, draw the person mid-action with correct posture, not posing beside the object. ';
   if(hasRef){
     p+='[REFERENCE IMAGES] Reference #1 shows ONLY the FACE and identity of this story\'s fixed characters — render them as the SAME people (same face, same hairstyle, same body type). But do NOT copy its composition, poses, OR clothing: give each character a NEW outfit appropriate to THIS scene\'s situation/place/time, different from the reference and from previous images. The face stays the same, the clothes change every scene. '
       +'Reference #2 (if present) shows the PREVIOUS scene\'s location — if the story stays in the same place, keep that same background, interior and lighting and only change the camera angle; if the [SCENE] moves to a new place, use the correct new location instead. '
