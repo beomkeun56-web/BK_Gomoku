@@ -10,7 +10,7 @@
  * ★게임 API(두뇌서버 /game·/game_image, 구글 드라이브, LLM 제공사)는 절대 가로채지 않는다.
  *   fetch 핸들러는 same-origin GET 만 처리하고, POST·교차출처는 respondWith 자체를 하지 않는다.
  */
-const CACHE_VER = 'g3';
+const CACHE_VER = 'g40';
 const CACHE = 'reign-' + CACHE_VER;
 const PRECACHE = ['./index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
@@ -46,7 +46,7 @@ self.addEventListener('fetch', (e) => {
 
   if (isDoc(req, url)) {                                  // network-first
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'no-cache' })                 // GitHub Pages HTTP 캐시(10분) 우회 — 배포 즉시 새 버전(ETag 재검증)
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put('./index.html', copy)).catch(() => {});
