@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.56</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.57</span></div>
 </div>
 
 <div id="hud">
@@ -1933,6 +1933,7 @@ function stopFollow(){ if(!followBottom) return; followBottom=false; newWhilePau
 function resumeFollow(){ followBottom=true; newWhilePaused=false; updateNewBadge(); requestFollow(); }
 function updateNewBadge(){
   const b=$('newBadge'); if(!b) return;
+  if(!b._wired){ b._wired=true; b.onclick=()=>resumeFollow(); }   // 배지 요소가 스크립트보다 뒤에 있어 첫 호출 때 배선(문서 순서 무관)
   const show=!followBottom && newWhilePaused;
   if(show){ const r=logEl.getBoundingClientRect(); b.style.top=(r.bottom-46)+'px'; }
   b.style.display=show?'block':'none';
