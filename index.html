@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.67</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.68</span></div>
 </div>
 
 <div id="hud">
@@ -3364,15 +3364,14 @@ $('ctaReload').onclick=()=>location.reload();
     if(document.fullscreenElement){ document.exitFullscreen(); }
     else{ (document.documentElement.requestFullscreen?document.documentElement.requestFullscreen({navigationUI:'hide'}):Promise.reject()).catch(()=>{}); }
   }catch(e){} };
-  // ★전체화면 높이 보정 — 안드로이드가 fullscreen 전환 시 100dvh를 갱신하지 않아
-  //   하단 도구줄이 화면 밖으로 밀려 통째로 안 보이던 실사고(2026-08-22) 수리.
-  //   전체화면 동안은 body 높이를 실제 innerHeight(px)로 못 박고, 해제 시 원복.
-  function fsFix(){ try{
-    if(document.fullscreenElement){ document.body.style.height=window.innerHeight+'px'; }
-    else{ document.body.style.height=''; }
-  }catch(e){} }
+  // ★화면 높이 보정(상시) — 안드로이드가 전체화면 전환·새로고침 후 100dvh를 갱신하지 않아
+  //   하단 도구줄이 화면 밖으로 밀리던 실사고 2건(전체화면 2026-08-22 → 새로고침 후에도 재발) 수리.
+  //   100dvh를 신뢰하지 않고 항상 실측 innerHeight(px)로 못 박는다(회전·키보드·전체화면 모두 resize로 따라감).
+  function fsFix(){ try{ document.body.style.height=window.innerHeight+'px'; }catch(e){} }
+  fsFix(); setTimeout(fsFix,300);                                   // 부팅 직후 + UI 정착 후 한 번 더
   document.addEventListener('fullscreenchange', ()=>{ fsFix(); setTimeout(fsFix,300); });
-  window.addEventListener('resize', ()=>{ if(document.fullscreenElement) fsFix(); });
+  window.addEventListener('resize', ()=>{ fsFix(); setTimeout(fsFix,250); });
+  window.addEventListener('orientationchange', ()=>{ setTimeout(fsFix,300); });
 })();
 $('ctaSave').onclick=()=>$('btnBarSave').click();   // 하단 Save와 동일(드라이브 슬롯/스냅샷)
 $('ctaLoad').onclick=()=>$('btnBarLoad').click();   // 하단 Load와 동일
