@@ -423,7 +423,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.53</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.54</span></div>
 </div>
 
 <div id="hud">
@@ -593,7 +593,7 @@
         <option value="vshort">매우 짧게 (~400자 · 가장 저렴)</option>
         <option value="short">짧게 (~700자)</option>
         <option value="normal">보통 (~1,100자)</option>
-        <option value="long">길게 (~2,000자 · 가장 비쌈)</option>
+        <option value="long">길게 (~1,500자)</option>
       </select>
       <div class="hint">한 턴 본문 길이를 직접 정합니다. 짧을수록 출력 토큰↓ → <b>비용·시간 절감</b>. 비용이 부담되면 <b>짧게</b>를 권장합니다.</div>
     </div>
@@ -1360,7 +1360,7 @@ function lenSpec(){
   switch(cfg.outLen){
     case 'vshort': return {chars:'350~450자', max:1500};
     case 'short':  return {chars:'600~800자', max:2200};
-    case 'long':   return {chars:'1800~2200자', max:5000};
+    case 'long':   return {chars:'1400~1600자', max:4000};
     case 'normal':
     default:       return {chars:'1000~1200자', max:3000};
   }
