@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.45</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.46</span></div>
 </div>
 
 <div id="hud">
@@ -480,6 +480,7 @@
     <button class="pill" id="costBtn" title="추정 비용 보기">비용</button>
     <button class="pill" id="btnScrollDown" title="맨 아래로 스크롤">↓</button>
     <button class="pill" id="btnReload" title="앱 새로고침 (전체화면 앱에는 주소창 새로고침이 없음 · 기록·설정은 그대로)">↻</button>
+    <button class="pill" id="btnFull" title="전체화면 켜기/끄기 (상태표시줄 숨김)">⛶</button>
     <span id="driveBadge" class="drive-badge" title="구글 드라이브 자동 저장 상태"></span>
     <span id="turnBadge" class="drive-badge" title="현재 게임 누적 턴수"></span>
     <span id="balBadge" class="drive-badge" title="OpenRouter 잔액(매 턴 갱신)"></span>
@@ -3253,6 +3254,13 @@ $('setupGo').onclick=()=>{
 $('ctaContinue').onclick=hideWelcome;
 $('ctaCfg').onclick=openCfg;
 $('ctaReload').onclick=()=>location.reload();
+// 전체화면 토글 — manifest fullscreen을 무시하는 브라우저(삼성 인터넷 등) 대응. 사용자 제스처에서만 동작.
+(function(){ const b=$('btnFull'); if(!b) return;
+  b.onclick=()=>{ try{
+    if(document.fullscreenElement){ document.exitFullscreen(); }
+    else{ (document.documentElement.requestFullscreen?document.documentElement.requestFullscreen({navigationUI:'hide'}):Promise.reject()).catch(()=>{}); }
+  }catch(e){} };
+})();
 $('ctaSave').onclick=()=>$('btnBarSave').click();   // 하단 Save와 동일(드라이브 슬롯/스냅샷)
 $('ctaLoad').onclick=()=>$('btnBarLoad').click();   // 하단 Load와 동일
 
