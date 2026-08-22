@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.58</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.59</span></div>
 </div>
 
 <div id="hud">
@@ -2087,6 +2087,17 @@ function ddFromProg(p){ const d=(p||'').match(/\d{4}\/\d{1,2}\/\d{1,2}/g)||[]; i
   const toD=s=>{const a=s.split('/').map(Number);return new Date(a[0],a[1]-1,a[2]);};
   return Math.round((toD(d[d.length-1])-toD(d[0]))/86400000); }
 // 통과조건 이미 충족 + 관문 멀면(D-21+) → 이번 턴 시간 점프 강제 지시(앱이 직접 감지해 주입)
+// 자유 입력(선택지 밖) 턴 감지 — 선택지 클릭은 숫자만 전송되므로 숫자·시스템 명령이 아니면 자유 입력이다.
+// 그 턴에만 "그 방향 전개 + 큰 틀 인과 연결" 지침을 붙인다(2026-08-22 범근님 승인, 평시 토큰 0).
+function freeInputDirective(){
+  const last=history[history.length-1];
+  if(!last || last.role!=='user') return '';
+  const t=String(last.content||'').trim();
+  if(!t || /^[0-9]{1,2}$/.test(t)) return '';
+  if(/^(상태|국정과제|과제|저장|이어하기|시작)$/.test(t)) return '';
+  if(history.filter(m=>m.role==='assistant').length<1) return '';
+  return '\n\n[★선택지 밖 자유 입력 — 이번 턴 지침] 방금 입력은 제시된 선택지 밖의 자유 행동이다. 기존 규칙대로 즉시 이 방향으로 전개하되, 그 결과·파장을 현재 막의 목표·다음 관문·진행 중 사안과 인과로 엮어라. 관문 일정과 세계는 그동안에도 그대로 굴러간다 — 딴 길을 가도 시간·정적들·일정은 멈추지 않는다. 자유 전개가 3턴 넘게 본류와 무관하게 표류하지 않도록, 새 사건의 결과가 자연스럽게 본류(목표·관문)에 영향을 주게 연결하라. 강제 회귀·훈계는 금지 — 연결은 인과로만. (입력이 행동이 아니라 질문이면 기존 질문 규칙대로 처리한다.)';
+}
 function jumpDirective(){
   for(let i=history.length-1;i>=0;i--){ if(history[i].role!=='assistant') continue;
     const c=history[i].content||'';
@@ -2121,7 +2132,7 @@ function buildApiMessages(){
   }
   // 활성 드라마 톤 지시를 '가장 최근 메시지'에 합쳐 주입(가장 강하게 반영). 히스토리엔 저장 안 함.
   // user 메시지 연속을 만들지 않도록, 마지막이 user 문자열이면 그 뒤에 덧붙인다.
-  const tr=activeToneReminder()+stratReminder()+jumpDirective()+providerStyle()+imgReminder();   // 톤+수순+시간점프+모델별 보정+삽화 상기를 맨 끝에(시스템 prefix 캐시 보존)
+  const tr=activeToneReminder()+stratReminder()+jumpDirective()+providerStyle()+imgReminder()+freeInputDirective();   // 톤+수순+시간점프+모델별 보정+삽화 상기+자유입력 지침을 맨 끝에(시스템 prefix 캐시 보존)
   if(tr && msgs.length){
     const last=msgs[msgs.length-1];
     if(last && last.role==='user' && typeof last.content==='string'){
