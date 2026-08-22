@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.60</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.61</span></div>
 </div>
 
 <div id="hud">
@@ -1248,7 +1248,7 @@ const SYSTEM_PROMPT = SYS_HEAD + SYS_IMG_RULE + SYS_REST;
 // ★GM은 삽화 토글이 켜져 있으면 '매 턴' [IMG]를 낸다. 실제로 몇 턴마다 그릴지는 앱이 고른다
 //   (빈도를 바꿔도 시스템 프롬프트가 안 바뀌므로 세션 재구축이 필요 없다).
 const IMG_RULE_BRAIN_BASE = `[삽화 프롬프트 — 맨 앞에 1회]
-모든 응답의 "가장 첫 줄"에 이번 장면의 이미지 생성용 영어 프롬프트를 [IMG] ... [/IMG] 한 줄로 먼저 출력하고 줄을 바꿔 본문을 쓴다(화면에 표시되지 않는 내부용). 내용: 실제 한국 배경의 장소, 인물은 역할로만 지칭(lawmaker, aide 등)하고 각자의 행동·자세·시선과 상하관계, 카메라 샷(close-up/medium/wide)과 단순·명확한 구도, 핵심 소품. 조명은 장면의 시간대·긴장도에 맞춰 — 긴장·밀담·대치는 저조도(low-key, moody), 평온한 낮만 밝게('flat'·'evenly lit' 금지). 얼굴·외모 상세는 쓰지 않는다. 영어 60~90단어. ★반드시 [/IMG] 로 닫는다 — 닫지 않으면 본문이 통째로 숨는다.`;
+모든 응답의 "가장 첫 줄"에 이번 장면의 이미지 생성용 영어 프롬프트를 [IMG] ... [/IMG] 한 줄로 먼저 출력하고 줄을 바꿔 본문을 쓴다(화면에 표시되지 않는 내부용). 내용: 실제 한국 배경의 장소, 인물은 역할로만 지칭(lawmaker, aide 등)하고 각자의 행동·자세와 상하관계, ★각 인물의 시선을 구체 영어 문구로 반드시 명시 — 대화면 'the two face each other in direct eye contact', 사물이면 'looking down at the document on the desk'처럼 누가 무엇을 보는지 인물마다 쓴다(시선 명시가 없는 프롬프트는 불량), 카메라 샷(close-up/medium/wide)과 단순·명확한 구도, 핵심 소품. 조명은 장면의 시간대·긴장도에 맞춰 — 긴장·밀담·대치는 저조도(low-key, moody), 평온한 낮만 밝게('flat'·'evenly lit' 금지). 얼굴·외모 상세는 쓰지 않는다. 영어 60~90단어. ★반드시 [/IMG] 로 닫는다 — 닫지 않으면 본문이 통째로 숨는다.`;
 // 스타일 기준이 있으면 규칙 끝에 한 줄 덧붙인다(설정에서 비우면 아무것도 안 붙음).
 function imgRuleBrain(){
   const st=brainImgStyle();
@@ -2923,7 +2923,7 @@ function buildIllustPrompt(story, hasRef){
   p+='[HARD RULES] Photorealistic, anatomically correct. Each person: exactly one head, two arms, two hands with five fingers, two legs — no extra, merged or deformed limbs, no duplicate people. Simple, clear composition; subjects fully visible, not blocked by foreground objects. Absolutely no text, letters, captions, speech bubbles or watermarks anywhere, including on laptop/phone screens (no readable UI). ';
   p+='[GAZE & ACTION LOCK — top priority] Eyes, face and body orientation MUST match each person\'s action: using or reading a laptop = looking AT its screen with the screen facing them; reading a document = eyes ON the document; speaking = looking at the person addressed; listening = facing the speaker. NEVER vacant or off-target stares, never turned away from the object/person being interacted with. Hands physically engage the described object (typing = fingers on the keys, phone held at natural position, pouring = teapot tilted over the cup). Draw people mid-action with correct, physically natural posture — not posing beside the object. ';
   if(hasRef){
-    p+='[REFERENCE IMAGES] Reference #1 shows ONLY the face/identity of this story\'s fixed characters — render the SAME people (same face, hairstyle, body type), but do NOT copy its composition, poses or clothing: give each a NEW outfit fitting THIS scene\'s place/time, different from the reference and from previous images. Reference #2 (if present) shows the previous scene\'s location — keep that background only if the story stays in the same place; otherwise build the correct new location. If a reference contradicts the scene context, ignore it. Never copy reference poses/limbs. ';
+    p+='[REFERENCE IMAGES] Reference #1 shows ONLY the face/identity of this story\'s fixed characters — render the SAME people (same face, hairstyle, body type), but do NOT copy its composition, poses or clothing: give each a NEW outfit fitting THIS scene\'s place/time, different from the reference and from previous images. Reference #2 (if present) shows the previous scene\'s location — keep that background only if the story stays in the same place; otherwise build the correct new location. If a reference contradicts the scene context, ignore it. Never copy reference poses/limbs — the references are FRONTAL portraits, so do NOT copy their camera-facing gaze or stiff posture: turn each character\'s head, eyes and body to engage the scene (eye contact with their conversation partner, or looking at the object they use). ';
   }
   p+='Art style: '+styleFragment()+'. ';
   const cast=(cfg.cast||[]).filter(c=>c && (c.desc||c.role));
@@ -2941,6 +2941,7 @@ function buildIllustPrompt(story, hasRef){
   p+='[SHOT] Pick the single most impactful shot for this moment and vary angle/size from the previous image: face close-up for dialogue/confrontation tension, food visible for meals, the decisive moment for action. Do not repeat the same two-people-facing composition every turn. ';
   if(cfg.wide16) p+='[ASPECT] Wide 16:9 horizontal cinematic frame — compose for a widescreen movie still. ';
   if(cfg.cinBoost) p+='[QUALITY] Ultra-detailed, sharp focus, professional cinematic photography, rich filmic color grading, subtle film grain, high dynamic range, lifelike skin and fabric texture — no blur or artifacts. ';
+  p+='[INTERACTION] In any dialogue scene the speakers FACE EACH OTHER with direct eye contact unless the scene states otherwise; every person\'s gaze is visibly locked on their conversation partner or the object in their hands — two people in the same frame are connected by gaze and body language, never each staring off in different directions. ';
   p+='\n\n[SCENE]\n'+plainScene(story);
   return p;
 }
