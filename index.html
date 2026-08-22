@@ -430,7 +430,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.73</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.74</span></div>
 </div>
 
 <div id="hud">
@@ -1447,10 +1447,37 @@ const SUMMARY_TRIGGER=24, WINDOW_KEEP=10;
 function loadCfg(){ try{return JSON.parse(localStorage.getItem(LS+'_cfg'))||{}}catch(e){return {}} }
 function saveCfg(){ localStorage.setItem(LS+'_cfg', JSON.stringify(cfg)); }
 function loadHistory(){ try{return JSON.parse(localStorage.getItem(LS+'_hist'))||[]}catch(e){return []} }
-function saveHistory(){ localStorage.setItem(LS+'_hist', JSON.stringify(history)); }
+// localStorage 포화 방어(2026-08-23 실사고: 이전 게임들의 고아 삽화가 영영 안 지워져 5MB 포화 →
+// 'gukga_v1_hist' setItem quota 오류로 턴 전송 자체가 죽음). 이미지는 IndexedDB·드라이브·서버에
+// 이중 보관되므로 LS 사본은 언제든 지워도 안전하다.
+function lsPurgeOrphanImgs(){
+  try{
+    const keep=new Set((illusts||[]).map(it=>LS+'_img_'+it.id));
+    const del=[];
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.indexOf(LS+'_img_')===0 && !keep.has(k)) del.push(k); }
+    del.forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
+    return del.length;
+  }catch(e){ return 0; }
+}
+function safeLSset(k, v){
+  try{ localStorage.setItem(k, v); return true; }
+  catch(e){
+    lsPurgeOrphanImgs();                                     // 1차: 옛 게임 고아 이미지 청소
+    try{ localStorage.setItem(k, v); return true; }
+    catch(e2){
+      for(const it of (illusts||[])){                        // 2차: 현재 게임 삽화 LS본도 오래된 순 제거
+        try{ localStorage.removeItem(LS+'_img_'+it.id); }catch(_){}
+        try{ localStorage.setItem(k, v); return true; }catch(__){}
+      }
+      return false;
+    }
+  }
+}
+function saveHistory(){ if(!safeLSset(LS+'_hist', JSON.stringify(history))) toast('저장 공간 부족 — 설정에서 오래된 게임 정리가 필요합니다', 5000); }
 // 삽화 보관 — 메타(idx,id,fileId)만 localStorage에 작게 보관.
 // 실제 이미지는 ① IndexedDB(이 기기, 토큰 불필요·즉시) ② 구글 드라이브(기기 간 동기화) 이중 저장.
 let illusts = (function(){ try{return JSON.parse(localStorage.getItem(LS+'_illust'))||[]}catch(e){return []} })();
+setTimeout(()=>{ const n=lsPurgeOrphanImgs(); if(n>0) console.log('[LS청소] 옛 게임 고아 삽화 '+n+'개 제거'); }, 500);   // 부팅 직후 저장소 확보
 const illustCache={};   // id → dataURL (이번 세션 메모리)
 let charAnchor=null;    // 인물 일관성 기준 이미지(첫 삽화, dataURL)
 let charSheetSrc=null;  // 캐릭터 시트(선생성한 인물 레퍼런스, dataURL)
@@ -1528,6 +1555,8 @@ function blobToDataUrl(blob){ return new Promise((res,rej)=>{ const fr=new FileR
 function imgLSset(id, src){
   try{ localStorage.setItem(LS+'_img_'+id, src); return true; }
   catch(e){
+    lsPurgeOrphanImgs();                                     // 옛 게임 고아 이미지부터 비운다
+    try{ localStorage.setItem(LS+'_img_'+id, src); return true; }catch(e2){}
     for(const it of illusts){ if(it.id && it.id!==id){ try{ localStorage.removeItem(LS+'_img_'+it.id); }catch(_){}
       try{ localStorage.setItem(LS+'_img_'+id, src); return true; }catch(__){} } }
     return false;
