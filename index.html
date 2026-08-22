@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.39</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.40</span></div>
 </div>
 
 <div id="hud">
@@ -3149,7 +3149,7 @@ document.querySelectorAll('#sitCats button').forEach(b=>b.onclick=()=>{
 });
 function openSituation(){
   if(busy) return;
-  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); return; }
+  if(!cfg.provider||!cfg.key||(!(cfg.model||cfg.modelManual)&&cfg.provider!=='brain')){ openCfg(); return; }
   $('sitManual').value='';
   $('sitOverlay').classList.add('on');
   loadSituations();
@@ -3189,7 +3189,7 @@ function parseSituations(text){
   return out;
 }
 $('ctaStart').onclick=()=>{
-  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); setCfgStatus('먼저 제공사·모델·API 키를 설정하세요.','err'); return; }
+  if(!cfg.provider||!cfg.key||(!(cfg.model||cfg.modelManual)&&cfg.provider!=='brain')){ openCfg(); setCfgStatus('먼저 제공사·모델·API 키를 설정하세요.','err'); return; }
   openSetup();
 };
 
@@ -3276,7 +3276,7 @@ function showSuggestTendency(){
   if(busy) return;
   const last=[...history].reverse().find(m=>m.role==='assistant');
   if(!last) return;
-  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); return; }
+  if(!cfg.provider||!cfg.key||(!(cfg.model||cfg.modelManual)&&cfg.provider!=='brain')){ openCfg(); return; }
   const tends=[['강하게','강경하게 정면돌파하는'],['약하게','온건·신중하게 한 발 물러서는'],['혁신적','파격적이고 창의적인'],['비리·공작','은밀한 비리·뒷거래·공작 등 어두운 수단의'],['상황대로','지금 상황에 가장 잘 맞는']];
   let box=$('suggestBox'); if(box) box.remove();
   box=document.createElement('div'); box.id='suggestBox';
@@ -3289,7 +3289,7 @@ async function suggestMore(tendency){
   if(busy) return;
   const last=[...history].reverse().find(m=>m.role==='assistant');
   if(!last){ return; }
-  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){ openCfg(); return; }
+  if(!cfg.provider||!cfg.key||(!(cfg.model||cfg.modelManual)&&cfg.provider!=='brain')){ openCfg(); return; }
   const {body, choices}=splitChoices(last.content);
   const existing=choices.map(c=>c.title).join(' / ');
   busy=true; sendBtn.disabled=true;
