@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.59</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.60</span></div>
 </div>
 
 <div id="hud">
@@ -1377,7 +1377,8 @@ function outMax(model){
 }
 function lenMandate(){
   const s=lenSpec();
-  return '\n\n[★출력 분량 — 엄수] 이번 턴 본문 전체를 공백 포함 '+s.chars+' 범위로 쓴다. 이 상한을 넘겨 길게 늘어뜨리지 말 것(수식·곁가지·중복 묘사 절제, 핵심 장면만). 선택지 텍스트는 이 분량 계산에서 제외한다.';
+  // ★분량은 '서사 본문'만 센다 — GM이 응답 전체(골격+IMG+선택지)로 세는 바람에 실제 이야기가 331자까지 쪼그라든 실측 사고(2026-08-22, 총 1419자 중 골격 629+선택지 181+IMG 278).
+  return '\n\n[★출력 분량 — 엄수] 이번 턴 \'서사 본문\'(장면 묘사+대사)을 공백 포함 '+s.chars+' 범위로 쓴다. ★분량 계산에서 반드시 제외: [IMG] 블록, 제목 줄, <prog>·<goal>·<stat> 줄, "> " 요약 줄, 선택지 전부 — 이것들은 분량에 포함하지 말고 별도로 낸다. 서사 본문이 하한에 못 미치면 미달이다: 장면 묘사·인물 대사·심리를 더 채워 하한을 반드시 넘겨라. 상한 초과도 금지(수식·중복 묘사 절제).';
 }
 // 페르소나 표(cfg.cast)를 텍스트 전개에도 반영 — 매 턴 주입
 function castPersonaText(){
