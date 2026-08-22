@@ -10,7 +10,7 @@
  * ★게임 API(두뇌서버 /game·/game_image, 구글 드라이브, LLM 제공사)는 절대 가로채지 않는다.
  *   fetch 핸들러는 same-origin GET 만 처리하고, POST·교차출처는 respondWith 자체를 하지 않는다.
  */
-const CACHE_VER = 'g41';
+const CACHE_VER = 'g42';
 const CACHE = 'reign-' + CACHE_VER;
 const PRECACHE = ['./index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 

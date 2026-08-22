@@ -430,7 +430,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.71</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.72</span></div>
 </div>
 
 <div id="hud">
@@ -2271,9 +2271,18 @@ function brainNote(msg){
 // /game 1회 호출. 반환 {emitted, needReplay}. err 프레임·HTTP 오류는 기존 오류 표시 경로로 throw.
 async function brainCall(body, key, onToken){
   const ac=(typeof AbortController!=='undefined')?new AbortController():null;
-  const res=await fetch(brainEndpoint()+'/game',{method:'POST',
-    headers:{'Content-Type':'application/json','X-BK-KEY':key||''},
-    body:JSON.stringify(body), signal:ac?ac.signal:undefined});
+  // 죽은 keep-alive 소켓 감시 — 턴 사이 몇 분 쉬면 통신사 NAT가 연결을 조용히 끊고,
+  // 브라우저가 그 죽은 소켓을 재사용하면 fetch가 영원히 안 풀린다(4턴째 무한 무응답 실사고 2건, 2026-08-23).
+  // 25초 내 응답 헤더가 없으면 끊고 BRAIN_TIMEOUT — streamBrain이 새 연결로 1회 자동 재시도한다.
+  let opened=false, hungUp=false;
+  const watchdog=setTimeout(()=>{ if(!opened){ hungUp=true; if(ac){ try{ ac.abort(); }catch(e){} } } }, 25000);
+  let res;
+  try{
+    res=await fetch(brainEndpoint()+'/game',{method:'POST',
+      headers:{'Content-Type':'application/json','X-BK-KEY':key||''},
+      body:JSON.stringify(body), signal:ac?ac.signal:undefined});
+  }catch(e){ clearTimeout(watchdog); throw new Error(hungUp?'BRAIN_TIMEOUT':(e&&e.message||'fetch 실패')); }
+  opened=true; clearTimeout(watchdog);
   let emitted=0, needReplay=false, err='', ended=false;
   const stop=()=>{ ended=true; if(ac){ try{ ac.abort(); }catch(e){} } };   // 서버가 연결을 안 닫아도 즉시 종료(다음 턴 막힘 방지)
   try{
@@ -2307,7 +2316,15 @@ async function streamBrain(onToken, msgs, key){
   const full={sid, model, reset:true, system:brainSystemText(), replay:prior, user};
   let body = (prior.length!==brainSyncN() || model!==brainSessModel()) ? full : {sid, model, user};
   for(let attempt=0; attempt<2; attempt++){
-    const r=await brainCall(body, key, onToken);
+    let r;
+    try{ r=await brainCall(body, key, onToken); }
+    catch(e){
+      if(String(e&&e.message)==='BRAIN_TIMEOUT'){
+        if(attempt===0){ brainNote('연결 무응답 — 새 연결로 재시도 중…'); continue; }
+        throw new Error('서버 연결 무응답(25초 2회) — 네트워크를 확인하고 같은 선택지를 다시 눌러 주세요.');
+      }
+      throw e;
+    }
     if(!r.needReplay){ brainSetSyncN(prior.length+2); setBrainSessModel(model); return; }   // 이번 user + GM 응답까지 데몬이 보유
     if(attempt>0 || r.emitted>0) throw new Error('두뇌서버 세션 복원에 실패했습니다. 다시 시도해 주세요.');
     brainNote('⏳ 세션 복원 중… (대화 기록을 두뇌서버에 다시 올리는 중)');
