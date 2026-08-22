@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.40</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.41</span></div>
 </div>
 
 <div id="hud">
@@ -443,6 +443,7 @@
       <button id="ctaLoad">불러오기</button>
       <button id="ctaSave">저장</button>
       <button id="ctaCfg">API 설정</button>
+      <button id="ctaReload" title="새로고침">↻ 새로고침</button>
     </div>
    </div>
   </div>
@@ -3240,6 +3241,7 @@ $('setupGo').onclick=()=>{
 };
 $('ctaContinue').onclick=hideWelcome;
 $('ctaCfg').onclick=openCfg;
+$('ctaReload').onclick=()=>location.reload();
 $('ctaSave').onclick=()=>$('btnBarSave').click();   // 하단 Save와 동일(드라이브 슬롯/스냅샷)
 $('ctaLoad').onclick=()=>$('btnBarLoad').click();   // 하단 Load와 동일
 
