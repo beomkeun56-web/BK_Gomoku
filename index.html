@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Reign of Nations — 텍스트 국가운영 시뮬레이션</title>
+<!-- PWA(홈 화면 설치) — 경로는 전부 상대경로(GitHub Pages 하위경로 배포) -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="권력의 길">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <style>
   :root{
     --bg:#000; --panel:#000; --panel2:#000; --line:#333;
@@ -410,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.37</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.38</span></div>
 </div>
 
 <div id="hud">
@@ -491,6 +500,7 @@
         <button data-prov="openrouter">OpenRouter</button>
         <button data-prov="gemini">Gemini</button>
         <button data-prov="anthropic">Claude</button>
+        <button data-prov="brain">맥 구독</button>
       </div>
       <div class="hint" id="provHint"></div>
     </div>
@@ -499,6 +509,17 @@
       <label>API 키</label>
       <input type="password" id="apiKey" placeholder="sk-... / AIza... 등" autocomplete="off">
       <div class="hint" id="keyHint"></div>
+    </div>
+
+    <!-- 맥 구독(brain) 전용 설정 — 제공사 '맥 구독'일 때만 표시 -->
+    <div class="field" id="brainBox" style="display:none">
+      <label>두뇌서버 주소 <span style="color:var(--dim)">— 비우면 기본값</span></label>
+      <input type="text" id="brainEp" placeholder="https://158-247-232-44.sslip.io" autocomplete="off">
+      <div class="hint">기본값 <b>https://158-247-232-44.sslip.io</b>. 나중에 다른 서버(난징 등)로 옮기면 여기만 바꾸면 됩니다. 모델은 서버가 <b>소넷 고정</b>이라 위 모델 칸은 비워도 됩니다.</div>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:12px">
+        <input type="checkbox" id="brainIllust" style="width:auto"> 삽화 생성 <span style="color:var(--dim)">— 장당 약 50원(구글)</span>
+      </label>
+      <div class="hint" style="margin-top:4px">켜면 매 턴 그 장면의 삽화 1장을 두뇌서버에서 만들어 본문 위에 붙입니다(<b>장당 약 50원(구글)</b>). 끄면 GM 프롬프트에 삽화 지시 자체가 들어가지 않아 토큰도 아낍니다. 생성 실패는 조용히 넘어가고 게임 진행은 멈추지 않습니다.</div>
     </div>
 
     <div class="field">
@@ -966,12 +987,17 @@
    ============================================================ */
 
 /* ---------- GM SYSTEM PROMPT (게임 규칙 v45) ---------- */
-const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 시대'의 게임 마스터(GM)다. 이 대화의 모든 것은 게임 진행이다. 아래 규칙을 절대 어기지 않는다. 모든 출력은 한국어로 한다.
+// 프롬프트는 3조각(머리말 + [삽화 프롬프트] 문단 + 나머지)으로 나눠 둔다.
+// 기존 프로바이더용 SYSTEM_PROMPT는 셋을 이어 붙여 종전과 100% 같은 문자열이고(캐시 프리픽스 보존),
+// 맥 구독(brain) 경로만 삽화 토글이 꺼졌을 때 삽화 문단을 빼고 조립한다(brainSystemText).
+const SYS_HEAD = `너는 텍스트 국가운영 시뮬레이션 '국가의 시대'의 게임 마스터(GM)다. 이 대화의 모든 것은 게임 진행이다. 아래 규칙을 절대 어기지 않는다. 모든 출력은 한국어로 한다.
 
-[삽화 프롬프트 — 맨 앞에 1회]
+`;
+const SYS_IMG_RULE = `[삽화 프롬프트 — 맨 앞에 1회]
 모든 응답의 "가장 첫 줄"에 이번 장면의 이미지 생성용 영어 프롬프트를 [IMG] ... [/IMG] 형식 한 줄로 먼저 출력한 뒤, 줄을 바꿔 본문을 쓴다(이 [IMG] 블록은 화면에 표시되지 않는 내부용이다). 내용: 장소(실제 한국 배경), 등장인물을 역할로 지칭(lawmaker, aide 등)하고 각자의 행동·자세·시선과 상하관계, 카메라 샷(close-up/medium/wide)과 단순·명확한 구도, 분위기·조명, 핵심 소품. 조명은 장면의 시간대·긴장도에 맞춰 영화처럼 — 늘 'bright/daytime'으로 쓰지 말고, 긴장·밀담·대치 장면은 어둡고 무드 있는 저조도(low-key, moody, high-contrast)로, 평온한 낮 장면만 밝게. 'flat'·'over-bright'·'evenly lit'은 피한다. 인물의 얼굴·외모 상세는 쓰지 않는다(따로 고정됨). 영어 60~90단어. 예) [IMG] Tense medium close-up inside a Korean National Assembly member's office at dusk; warm desk-lamp key light and cool window light, moody low-key cinematic grade; the lawmaker leans forward composed while the aide presents a document, charged silence. [/IMG]
 
-[핵심 출력 규칙 — 선택지]
+`;
+const SYS_REST = `[핵심 출력 규칙 — 선택지]
 매 턴 끝에 선택지 3개를 반드시 아래 형식(헤더 + 번호)으로 출력한다(첫 턴·일반 턴·이어하기 직후·상태/질문 응답 뒤 등 예외 없이). 각 선택지는 주인공(플레이어)의 1인칭 대사 한 줄 — 실제 입에서 나올 법한 발화체로, 큰따옴표로 감싸고 대략 15~35자:
 ## **✦ 어떻게 하시겠습니까?**
 1. "{주인공 1인칭 대사 한 줄}"
@@ -1162,6 +1188,15 @@ const SYSTEM_PROMPT = `너는 텍스트 국가운영 시뮬레이션 '국가의 
 [문장 강조] 그 턴에서 특히 긍정적·유리한 핵심 문장은 <good>문장</good>, 부정적·위험·나쁜 핵심 문장은 <bad>문장</bad> 태그로 감싸 강조한다. 매 턴 각 0~2개 정도만 꼭 필요한 곳에 쓰고 남용하지 않는다(평범한 문장은 감싸지 않음). 강조에는 이 두 태그만, 제목 아래 진행줄에는 <prog>, 상태판에는 <goal>·<stat> 태그만 쓴다 — 그 외 HTML 태그는 쓰지 않는다.
 
 응답을 끝내기 직전 반드시: (1) 이번 턴이 '한 장면/한 결정'만 다뤘는가(여러 날짜·사건 나열 금지) (2) 날짜가 자연스럽게 앞으로만 흘렀는가 (3) 스탯 변동을 -15~+15 안으로 지켰는가 (4) 비가역·중대 결정에 제동을 적용했는가 (5) 끝에 3개 선택지를 띄웠는가 — 를 확인한다.`;
+// 기존 프로바이더(OpenRouter/Gemini/Anthropic)가 쓰는 전문 — 조각을 이어 붙여 종전 문자열과 동일하다.
+const SYSTEM_PROMPT = SYS_HEAD + SYS_IMG_RULE + SYS_REST;
+// 맥 구독(brain) 전용 삽화 규칙(간결판 — game_system_prompt.txt [삽화 프롬프트] 절 축약).
+const IMG_RULE_BRAIN = `[삽화 프롬프트 — 맨 앞에 1회]
+모든 응답의 "가장 첫 줄"에 이번 장면의 이미지 생성용 영어 프롬프트를 [IMG] ... [/IMG] 한 줄로 먼저 출력하고 줄을 바꿔 본문을 쓴다(화면에 표시되지 않는 내부용). 내용: 실제 한국 배경의 장소, 인물은 역할로만 지칭(lawmaker, aide 등)하고 각자의 행동·자세·시선과 상하관계, 카메라 샷(close-up/medium/wide)과 단순·명확한 구도, 핵심 소품. 조명은 장면의 시간대·긴장도에 맞춰 — 긴장·밀담·대치는 저조도(low-key, moody), 평온한 낮만 밝게('flat'·'evenly lit' 금지). 얼굴·외모 상세는 쓰지 않는다. 영어 60~90단어.
+
+`;
+// 맥 구독 경로의 시스템 프롬프트 조립: 삽화 토글이 켜진 경우에만 [IMG] 규칙을 넣는다(꺼짐이면 지시 자체가 없음).
+function brainSystemText(){ return SYS_HEAD + (brainImgOn() ? IMG_RULE_BRAIN : '') + SYS_REST; }
 
 /* ---------- Provider config ---------- */
 const PROVIDERS = {
@@ -1180,7 +1215,27 @@ const PROVIDERS = {
     hint:'<a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> 에서 키 발급. 브라우저 직접 호출을 사용합니다.',
     keyHint:'sk-ant-... 형식',
   },
+  brain: {
+    name:'맥 구독(소넷)',
+    hint:'API 과금 없이 <b>맥미니 claude 구독(소넷)</b>을 두뇌서버 경유로 씁니다. 모델 선택은 필요 없습니다(서버가 소넷 고정). 대화 기억은 서버 세션이 갖고 있어 매 턴 전체 기록을 다시 보내지 않습니다.',
+    keyHint:'bk_key(두뇌서버 키) 입력',
+  },
 };
+
+/* ---------- 맥 구독(brain) 두뇌서버 ---------- */
+// 엔드포인트는 상수 한 곳 + localStorage 오버라이드(난징 등으로 옮기면 여기만 바뀐다).
+const BRAIN_EP_DEFAULT='https://158-247-232-44.sslip.io';
+const BRAIN_EP_KEY='gukga_v1_brain_ep';   // = LS+'_brain_ep' (LS는 아래에서 선언되므로 문자열 직기재)
+function brainEndpoint(){
+  let v=''; try{ v=(localStorage.getItem(BRAIN_EP_KEY)||'').trim(); }catch(e){}
+  return (v||BRAIN_EP_DEFAULT).replace(/\/+$/,'');
+}
+function setBrainEndpoint(v){ try{ v=(v||'').trim().replace(/\/+$/,''); if(v) localStorage.setItem(BRAIN_EP_KEY, v); else localStorage.removeItem(BRAIN_EP_KEY); }catch(e){} }
+function brainKey(){ return (((cfg.keys&&cfg.keys.brain)||'') || (cfg.provider==='brain'?(cfg.key||''):'')).trim(); }
+// 삽화 토글(기본 꺼짐). 켜졌을 때만 시스템 프롬프트에 [IMG] 규칙이 들어가고 /game_image를 호출한다.
+function brainImgOn(){ return cfg.brainIllust===true; }
+function useBrainIllust(){ return cfg.provider==='brain' && brainImgOn(); }
+const BRAIN_IMG_USD=0.036;   // 장당 약 50원(환율 1400 기준) — 비용 배지 표시용 추정치
 
 /* ---------- State ---------- */
 const LS='gukga_v1';
@@ -1886,6 +1941,7 @@ async function streamLLM(onToken){
   lastUsage=null;
   const {provider, model, key}=resolveCfg();
   const msgs=buildApiMessages();
+  if(provider==='brain') return streamBrain(onToken, msgs, key);
   if(provider==='gemini') return streamGemini(model,key,onToken,msgs);
   if(provider==='anthropic') return streamAnthropic(model,key,onToken,msgs);
   return streamOpenAI(model,key,onToken,msgs); // openrouter
@@ -1917,7 +1973,7 @@ function jumpDirective(){
 // 모델별 보정: Claude는 너무 점잖아서 풀고, Gemini는 묘사가 길어서 줄인다(애초에 적게 생성 → 토큰 절약)
 function providerStyle(){
   const p=(cfg.provider||''), model=(cfg.model||cfg.modelManual||'');
-  if(p==='anthropic') return '\n\n[★Claude 보정 — 세게 풀어쓰기] 너는 점잖고 코믹·욕설이 약하다(앞의 [묘사 절제]는 장황한 모델용이니 과의식 말 것). ★세게 풀어라: ①거친 입말·욕설을 현실 정치인처럼 강하게 살려라(상황·인물 맞게 비속어 적극 — 직속 상사에게만 톤 조절). ②젊은 인물(보좌관 등)엔 MZ식 말투·드립·밈·티키타카를 살려라. ③코믹을 코믹 수치대로 ★확실히, 더 세게 터뜨려라(Claude는 코믹이 특히 약하다) — 어이없는/황당한 상황 코미디, 그 장면 맥락에 맞는 상황 코믹, 빵 터지는 대사 코믹(드립·받아치기·티키타카)을 적극적으로. 매 턴 최소 한 번은 진짜 웃기게. ④인물 표정·심리도 생생히. 딱딱·밋밋·교과서체 금지(메인 구조·분량 상한만 유지).';
+  if(p==='anthropic'||p==='brain') return '\n\n[★Claude 보정 — 세게 풀어쓰기] 너는 점잖고 코믹·욕설이 약하다(앞의 [묘사 절제]는 장황한 모델용이니 과의식 말 것). ★세게 풀어라: ①거친 입말·욕설을 현실 정치인처럼 강하게 살려라(상황·인물 맞게 비속어 적극 — 직속 상사에게만 톤 조절). ②젊은 인물(보좌관 등)엔 MZ식 말투·드립·밈·티키타카를 살려라. ③코믹을 코믹 수치대로 ★확실히, 더 세게 터뜨려라(Claude는 코믹이 특히 약하다) — 어이없는/황당한 상황 코미디, 그 장면 맥락에 맞는 상황 코믹, 빵 터지는 대사 코믹(드립·받아치기·티키타카)을 적극적으로. 매 턴 최소 한 번은 진짜 웃기게. ④인물 표정·심리도 생생히. 딱딱·밋밋·교과서체 금지(메인 구조·분량 상한만 유지).';
   if(p==='gemini'||/gemini/i.test(model)) return '\n\n[★Gemini 보정 — 줄이기] 인물 외모·옷차림·관능 묘사는 ★한 턴에 한 줄(한 구절)로만. ★특히 같은 외모·옷차림 문구를 매 장면 반복(복붙) 절대 금지 — 묘사가 필요하면 매번 다른 내용으로(같은 디테일 두 번 금지). 아낀 분량은 사건·대사·전개에 써라.';
   return '';
 }
@@ -2041,6 +2097,84 @@ async function streamAnthropic(model,key,onToken,msgs){
   });
 }
 
+/* ---------- 맥 구독(brain): 두뇌서버 상주 세션 + SSE ---------- */
+// 세션 모델: sid 1개 = 데몬의 상주 claude 프로세스 1개(시스템 프롬프트는 세션 시작 때 한 번만 올라간다).
+// 평시 턴은 user(플레이어 입력)만 보낸다 — 대화 기억은 데몬이 갖고 있어 전체 히스토리를 재전송하지 않는다.
+// 데몬이 재시작돼 세션이 사라지면 need_replay가 오고, 앱이 보관한 전체 기록으로 자동·무손실 복원한다.
+const BRAIN_SID_KEY='gukga_v1_brain_sid', BRAIN_N_KEY='gukga_v1_brain_n';
+function brainNewSid(){
+  const s='g'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  try{ localStorage.setItem(BRAIN_SID_KEY,s); localStorage.setItem(BRAIN_N_KEY,'-1'); }catch(e){}   // -1 = 첫 턴에 reset+system 강제
+  return s;
+}
+function brainSid(){ let s=''; try{ s=localStorage.getItem(BRAIN_SID_KEY)||''; }catch(e){} return s||brainNewSid(); }
+// 데몬 세션이 보유한 메시지 수(앱 기록과 대조해 어긋나면 재구축)
+function brainSyncN(){ let n=0; try{ n=parseInt(localStorage.getItem(BRAIN_N_KEY)||'0'); }catch(e){} return isNaN(n)?0:n; }
+function brainSetSyncN(n){ try{ localStorage.setItem(BRAIN_N_KEY, String(n)); }catch(e){} }
+// 화면 한 줄 안내(복원 중 등) — 게임 본문·히스토리는 건드리지 않는다.
+function brainNote(msg){
+  try{ const el=document.createElement('div'); el.className='illust loading'; el.textContent=msg;
+    logEl.appendChild(el); maybeScroll(); setTimeout(()=>{ try{ el.remove(); }catch(e){} }, 15000); }catch(e){}
+}
+// /game 1회 호출. 반환 {emitted, needReplay}. err 프레임·HTTP 오류는 기존 오류 표시 경로로 throw.
+async function brainCall(body, key, onToken){
+  const ac=(typeof AbortController!=='undefined')?new AbortController():null;
+  const res=await fetch(brainEndpoint()+'/game',{method:'POST',
+    headers:{'Content-Type':'application/json','X-BK-KEY':key||''},
+    body:JSON.stringify(body), signal:ac?ac.signal:undefined});
+  let emitted=0, needReplay=false, err='', ended=false;
+  const stop=()=>{ ended=true; if(ac){ try{ ac.abort(); }catch(e){} } };   // 서버가 연결을 안 닫아도 즉시 종료(다음 턴 막힘 방지)
+  try{
+    await readSSE(res,(data)=>{
+      if(data==='[DONE]') return;
+      let j=null; try{ j=JSON.parse(data); }catch(e){ return; }
+      if(!j || typeof j!=='object') return;
+      if(typeof j.t==='string' && j.t){ emitted+=j.t.length; onToken(j.t); return; }
+      if(j.need_replay===true){ needReplay=true; stop(); return; }
+      if(j.err){ err=String(j.err); stop(); return; }
+      if(j.done===true){ stop(); return; }
+      if(j.usage) lastUsage={inTok:j.usage.in||0, outTok:j.usage.out||0};
+    });
+  }catch(e){
+    if(!ended) throw e;   // done/err/need_replay 이후의 abort는 정상 종료
+  }
+  if(err) throw new Error('두뇌서버: '+err);
+  return {emitted, needReplay};
+}
+async function streamBrain(onToken, msgs, key){
+  msgs = msgs || buildApiMessages();
+  key  = key || resolveCfg().key || brainKey();
+  const sid=brainSid();
+  const last=msgs.length?msgs[msgs.length-1]:null;
+  const user=(last && typeof last.content==='string')?last.content:'';
+  // 데몬에 이미 올라가 있어야 할 대화(= 이번 턴 입력 앞의 전부)
+  const prior=msgs.slice(0,-1).map(m=>({role:(m.role==='assistant'?'assistant':'user'), content:String(m.content==null?'':m.content)}));
+  // 앱 기록과 데몬 보유분이 어긋나면(새 게임·되감기·불러오기·이어서) 시스템+전체 기록으로 처음부터 세운다.
+  let body = (prior.length!==brainSyncN())
+    ? {sid, reset:true, system:brainSystemText(), replay:prior, user}
+    : {sid, user};
+  for(let attempt=0; attempt<2; attempt++){
+    const r=await brainCall(body, key, onToken);
+    if(!r.needReplay){ brainSetSyncN(prior.length+2); return; }   // 이번 user + GM 응답까지 데몬이 보유
+    if(attempt>0 || r.emitted>0) throw new Error('두뇌서버 세션 복원에 실패했습니다. 다시 시도해 주세요.');
+    brainNote('⏳ 세션 복원 중… (대화 기록을 두뇌서버에 다시 올리는 중)');
+    body={sid, reset:true, system:brainSystemText(), replay:prior, user};
+  }
+}
+// 삽화: 두뇌서버 /game_image (본문 스트리밍과 병행). 실패는 조용히 생략 — 게임 진행을 막지 않는다.
+async function brainImage(prompt){
+  const t0=Date.now();
+  const r=await fetch(brainEndpoint()+'/game_image',{method:'POST',
+    headers:{'Content-Type':'application/json','X-BK-KEY':brainKey()},
+    body:JSON.stringify({prompt:String(prompt||'').slice(0,4000)})});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j && j.err) throw new Error(String(j.err));
+  if(!j || !j.b64) throw new Error('빈 응답');
+  addCost(BRAIN_IMG_USD,'img');   // 장당 약 50원(구글) — 비용 배지에 반영
+  return {src:'data:'+(j.mime||'image/png')+';base64,'+j.b64, model:'두뇌서버 삽화', ms:Date.now()-t0, usd:BRAIN_IMG_USD};
+}
+
 // 구글 직접 API 모델 id 정리(OpenRouter식 'google/' 접두어 제거)
 function gemModelId(m){ return (m||'').replace(/^google\//i,'').trim(); }
 // 명시 캐싱(CachedContent): 거대한 고정 SYSTEM_PROMPT를 1시간 TTL로 캐시해, 수 분짜리 암묵 캐시보다
@@ -2116,6 +2250,9 @@ async function streamGemini(model,key,onToken,msgs){
 // 비스트리밍 1회 호출(요약 등 내부용)
 async function callOnce(messages, sys, modelOverride, maxTok){
   const c=resolveCfg(); const provider=c.provider, key=c.key;
+  // 맥 구독(brain)은 게임 세션 전용(/game) 이라 부수 호출(요약·추천·장면요약) 경로가 없다.
+  // 호출부들이 모두 실패를 흡수하도록 되어 있어 게임 진행은 막히지 않는다.
+  if(provider==='brain') throw new Error('맥 구독(소넷) 모드에서는 보조 호출(요약·추천)을 지원하지 않습니다.');
   const model=(modelOverride&&modelOverride.trim())||c.model; const mt=maxTok||1200;
   if(provider==='anthropic'){
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
@@ -2162,7 +2299,7 @@ async function maybeSummarize(){
 async function sendMessage(text, displayText){
   text=(text||'').trim();
   if(!text||busy) return;
-  if(!cfg.provider||!cfg.key||!(cfg.model||cfg.modelManual)){
+  if(!cfg.provider||!cfg.key||(!(cfg.model||cfg.modelManual) && cfg.provider!=='brain')){   // 맥 구독은 모델 선택 불필요(서버가 소넷 고정)
     openCfg(); setCfgStatus('먼저 제공사·모델·API 키를 설정하세요.','err'); return;
   }
   hideWelcome();
@@ -2183,17 +2320,20 @@ async function runAssistant(){
   const typer=streamTyper(mdEl,'');
   let acc='';
   // 자동 삽화: 트리거 턴이면, GM이 응답 맨 앞에 준 [IMG] 프롬프트가 도착하는 즉시 병렬 생성 → 텍스트 끝날 때 완성 → 본문 아래(선택지 위) 0대기 표시
-  const wantImg = autoActive() && ((imgSinceLast+1) >= autoEvery());
+  // 맥 구독(brain) 삽화: 설정 토글이 켜졌을 때만, 두뇌서버 /game_image 로 생성(기존 삽화 배관과 분리)
+  const brainImg = useBrainIllust();
+  const wantImg = (cfg.provider==='brain') ? brainImg : (autoActive() && ((imgSinceLast+1) >= autoEvery()));
   let imgStarted=false, imgP=null, imgBox=null;
   const fillImgBox=(r)=>{ if(!imgBox) return;
     if(r.src){ imgBox.className='illust'; imgBox.innerHTML='<img alt="삽화" src="'+r.src+'">'+illustCapHtml(r); }
+    else if(brainImg){ try{ imgBox.remove(); }catch(e){} imgBox=null; return; }   // 두뇌서버 삽화 실패는 조용히 생략(진행 차단 금지)
     else if(r.err==='NOKEY'){ imgBox.className='illust loading'; imgBox.textContent='⚠️ 삽화 설정에서 이미지 제공사·키를 입력하세요.'; }
     else { imgBox.className='illust loading'; imgBox.textContent='⚠️ 삽화 실패: '+(r.err||''); }
     maybeScroll(); };
   const startImg=(prompt)=>{ if(imgStarted) return; imgStarted=true;
     imgBox=document.createElement('div'); imgBox.className='illust loading'; imgBox.textContent='🎨 삽화 생성 중…';
     const bub=mdEl.parentElement; if(bub) bub.appendChild(imgBox); else mdEl.appendChild(imgBox); maybeScroll();
-    imgP=fetchIllust(prompt, true).then(r=>r).catch(e=>({err:e.message}));   // GM 프롬프트 그대로(요약 생략) — r={src,model,ms,usd}
+    imgP=(brainImg ? withTimeout(brainImage(prompt), 90000, '삽화 생성') : fetchIllust(prompt, true)).then(r=>r).catch(e=>({err:e.message}));   // GM 프롬프트 그대로(요약 생략) — r={src,model,ms,usd}
     imgP.then(fillImgBox); };   // 준비되는 즉시(텍스트 타이핑 도중이라도) 바로 표시
   const feed=()=>{ const s=stripImgTag(acc); const m=s.match(HEAD_DETECT); typer.setTarget(sanitizeBody(m?s.slice(0,m.index):s));
     const {choices}=splitChoices(s); if(choices.length>=2) renderChoices(choices);
@@ -2228,7 +2368,8 @@ async function runAssistant(){
       addGmFooter(mdEl.closest('.msg'));
       if(pendingIllust){ pendingIllust=false; await insertIllustUnderTitle(mdEl, sanitizeBody(body)); }
       // GM이 [IMG] 프롬프트를 안 준 턴(예: 일부 모델)에도, 자동 삽화 차례면 본문으로 생성(폴백)
-      if(wantImg && !imgStarted){
+      // 두뇌서버 삽화 경로는 폴백하지 않는다([IMG]가 없으면 그 턴은 삽화 없이 조용히 넘어감)
+      if(wantImg && !imgStarted && !brainImg){
         imgStarted=true;
         imgBox=document.createElement('div'); imgBox.className='illust loading'; imgBox.textContent='🎨 삽화 생성 중…';
         const bub=mdEl.parentElement; if(bub) bub.appendChild(imgBox); else mdEl.appendChild(imgBox); maybeScroll();
@@ -3026,6 +3167,7 @@ $('setupGo').onclick=()=>{
   // 새 게임으로 시작(기존 진행 초기화)
   history=[]; stats={}; summary=''; summaryUpto=0; illusts=[]; saveHistory(); saveStats(); persistSummary(); saveIllusts();
   stratStep=''; stratGoal=''; localStorage.removeItem(LS+'_strat'); localStorage.removeItem(LS+'_stratgoal');   // 큰 그림 수순도 초기화
+  brainNewSid();   // 맥 구독: 새 세션 id → 첫 턴에 reset:true + 시스템 프롬프트 전송
   clearLog(); $('hud').classList.remove('on');
   hideWelcome();
   sendMessage(lines.join('\n'), '게임 시작 · '+scen);
@@ -3055,6 +3197,7 @@ function newGame(){
   if(typeof charSheetSrc!=='undefined'){ charSheetSrc=null; charSheetKey=''; }
   if(typeof lastIllustSrc!=='undefined') lastIllustSrc=null;
   if(typeof imgSinceLast!=='undefined') imgSinceLast=0;   // 새 게임: 첫 턴엔 자동 삽화 없음
+  brainNewSid();   // 맥 구독: 새 세션 id → 첫 턴에 reset:true + 시스템 프롬프트 전송
   if(typeof recapReadySrc!=='undefined') recapReadySrc=null;
   pendingIllust=false; if(pendingNote){ pendingNote.remove(); pendingNote=null; }
   clearLog(); $('hud').classList.remove('on'); renderChoices([]);
@@ -3517,6 +3660,10 @@ function populateAllForm(){
   $('lenSel').value=cfg.outLen||'normal';
   $('maxTokIn').value=cfg.maxTokens||'';
   if(cfg.model){ ensureOption(cfg.model); $('modelSel').value=cfg.model; }
+  // 맥 구독(brain)
+  { let ep=''; try{ ep=localStorage.getItem(BRAIN_EP_KEY)||''; }catch(e){}
+    const e1=$('brainEp'); if(e1) e1.value=ep;
+    const e2=$('brainIllust'); if(e2) e2.checked=(cfg.brainIllust===true); }
   // 삽화 API(제공사·키·화질·모델)
   selectImgProv(cfg.imgProvider||'gemini');  // 삽화 키도 selectImgProv가 제공사별로 채움
   $('imgModel').value=cfg.imgModelManual||'';
@@ -3576,6 +3723,7 @@ function selectProv(p){
   $('provHint').innerHTML=PROVIDERS[p].hint;
   $('keyHint').textContent=PROVIDERS[p].keyHint;
   $('apiKey').value = ensureKeys()[p] || '';
+  const bb=$('brainBox'); if(bb) bb.style.display=(p==='brain')?'block':'none';   // 맥 구독 전용 설정 표시/숨김
 }
 document.querySelectorAll('#provSeg button').forEach(b=>b.onclick=()=>{
   ensureKeys()[selProv]=$('apiKey').value.trim();   // 현재 키 보관 후 전환
@@ -3692,8 +3840,11 @@ $('cfgSave').onclick=()=>{
   const model=$('modelSel').value.trim();
   const manual=$('modelManual').value.trim();
   if(!key){ setCfgStatus('API 키를 입력하세요.','err'); return; }
-  if(!model&&!manual){ setCfgStatus('모델을 선택하거나 직접 입력하세요.','err'); return; }
+  if(!model&&!manual&&selProv!=='brain'){ setCfgStatus('모델을 선택하거나 직접 입력하세요.','err'); return; }   // 맥 구독은 모델 불필요(서버가 소넷 고정)
   cfg.provider=selProv; cfg.key=key; cfg.model=model; cfg.modelManual=manual;
+  // 맥 구독(brain): 두뇌서버 주소 오버라이드 + 삽화 토글
+  { const ep=$('brainEp'); if(ep) setBrainEndpoint(ep.value); }
+  { const bi=$('brainIllust'); if(bi) cfg.brainIllust=bi.checked; }
   cfg.effort=$('effortSel').value;   // 사고 강도(effort)
   cfg.outLen=$('lenSel').value;      // 출력 분량
   cfg.maxTokens=$('maxTokIn').value.trim();   // 최대 출력 토큰(직접 입력)
@@ -3757,6 +3908,20 @@ function mkIllustBox(im, isRecap){
 restore();
 
 if(!cfg.provider||!cfg.key){ /* leave welcome */ }
+</script>
+
+<!-- PWA 서비스워커 등록(설치 가능 조건). 실패(file://·미지원·차단)는 조용히 무시 — 게임 동작에 영향 없음.
+     ★앱을 고쳐 배포할 땐 sw.js 의 CACHE_VER 도 함께 올릴 것(안 올리면 낡은 index.html이 캐시에서 나온다). -->
+<script>
+(function(){
+  try{
+    if(!('serviceWorker' in navigator)) return;
+    if(location.protocol!=='http:' && location.protocol!=='https:') return;   // file:// 에선 등록 불가
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(function(){});
+    });
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
