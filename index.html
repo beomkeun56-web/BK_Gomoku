@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.61</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.62</span></div>
 </div>
 
 <div id="hud">
@@ -1362,11 +1362,11 @@ function presetMandate(t){
 // 출력 분량 설정 — UI에서 사용자가 직접 선택. chars=프롬프트 목표치, max=max_tokens 안전 상한
 function lenSpec(){
   switch(cfg.outLen){
-    case 'vshort': return {chars:'350~450자', max:1500};
-    case 'short':  return {chars:'600~800자', max:2200};
-    case 'long':   return {chars:'1400~1600자', max:4000};
+    case 'vshort': return {chars:'350~450자', max:1500, para:'2개', dlg:'3줄'};
+    case 'short':  return {chars:'600~800자', max:2200, para:'3개', dlg:'5줄'};
+    case 'long':   return {chars:'1400~1600자', max:4000, para:'7개', dlg:'11줄'};
     case 'normal':
-    default:       return {chars:'1000~1200자', max:3000};
+    default:       return {chars:'1000~1200자', max:3000, para:'5개', dlg:'8줄'};
   }
 }
 // 한 턴 출력 토큰 상한: 사용자가 직접 입력했으면 그 값, 아니면 모델별 자동(Gemini는 생각 여유분 포함)
@@ -1377,8 +1377,8 @@ function outMax(model){
 }
 function lenMandate(){
   const s=lenSpec();
-  // ★분량은 '서사 본문'만 센다 — GM이 응답 전체(골격+IMG+선택지)로 세는 바람에 실제 이야기가 331자까지 쪼그라든 실측 사고(2026-08-22, 총 1419자 중 골격 629+선택지 181+IMG 278).
-  return '\n\n[★출력 분량 — 엄수] 이번 턴 \'서사 본문\'(장면 묘사+대사)을 공백 포함 '+s.chars+' 범위로 쓴다. ★분량 계산에서 반드시 제외: [IMG] 블록, 제목 줄, <prog>·<goal>·<stat> 줄, "> " 요약 줄, 선택지 전부 — 이것들은 분량에 포함하지 말고 별도로 낸다. 서사 본문이 하한에 못 미치면 미달이다: 장면 묘사·인물 대사·심리를 더 채워 하한을 반드시 넘겨라. 상한 초과도 금지(수식·중복 묘사 절제).';
+  // 글자수 지시만으론 모델이 상시 40% 미달(실측: 1400~1600 지시에 서사 1000자) → 지문 문단·대사 줄 최소치로 하한을 보증한다(2026-08-22).
+  return '\n\n[★출력 분량 — 엄수] 서사(지문+인물 대사)를 공백 포함 '+s.chars+' 범위로 쓴다. 모델은 분량을 늘 부족하게 쓰는 경향이 있으니 상한 쪽을 겨냥하라. ★하한 보증 — 이번 턴 반드시: 지문 문단 '+s.para+' 이상(각 2~4문장, 표정·몸짓·공기·주변 디테일·심리를 구체적으로), 인물 대사 '+s.dlg+' 이상. 이 최소치에 못 미치면 장면을 이어서 더 써서 채워라. ★분량 계산 제외(별도 출력): [IMG] 블록, 제목 줄, <prog>·<goal>·<stat> 줄, 첫 요약 "> " 줄, 선택지. 상한 초과도 금지(중복 묘사 절제).';
 }
 // 페르소나 표(cfg.cast)를 텍스트 전개에도 반영 — 매 턴 주입
 function castPersonaText(){
@@ -2923,7 +2923,7 @@ function buildIllustPrompt(story, hasRef){
   p+='[HARD RULES] Photorealistic, anatomically correct. Each person: exactly one head, two arms, two hands with five fingers, two legs — no extra, merged or deformed limbs, no duplicate people. Simple, clear composition; subjects fully visible, not blocked by foreground objects. Absolutely no text, letters, captions, speech bubbles or watermarks anywhere, including on laptop/phone screens (no readable UI). ';
   p+='[GAZE & ACTION LOCK — top priority] Eyes, face and body orientation MUST match each person\'s action: using or reading a laptop = looking AT its screen with the screen facing them; reading a document = eyes ON the document; speaking = looking at the person addressed; listening = facing the speaker. NEVER vacant or off-target stares, never turned away from the object/person being interacted with. Hands physically engage the described object (typing = fingers on the keys, phone held at natural position, pouring = teapot tilted over the cup). Draw people mid-action with correct, physically natural posture — not posing beside the object. ';
   if(hasRef){
-    p+='[REFERENCE IMAGES] Reference #1 shows ONLY the face/identity of this story\'s fixed characters — render the SAME people (same face, hairstyle, body type), but do NOT copy its composition, poses or clothing: give each a NEW outfit fitting THIS scene\'s place/time, different from the reference and from previous images. Reference #2 (if present) shows the previous scene\'s location — keep that background only if the story stays in the same place; otherwise build the correct new location. If a reference contradicts the scene context, ignore it. Never copy reference poses/limbs — the references are FRONTAL portraits, so do NOT copy their camera-facing gaze or stiff posture: turn each character\'s head, eyes and body to engage the scene (eye contact with their conversation partner, or looking at the object they use). ';
+    p+='[REFERENCE IMAGES] Reference #1 shows ONLY the FACE identity of this story\'s fixed characters — copy ONLY the face (facial features, skin, hairstyle) so they are recognizably the SAME person. Do NOT copy the reference\'s body type, figure, clothing, pose or composition: body type and figure follow the [FIXED CHARACTERS]/[AIDE FIGURE] descriptions (they OVERRIDE the reference body), and each character gets an outfit fitting THIS scene\'s situation/place/time, different from the reference and from previous images. Reference #2 (if present) shows the previous scene\'s location — keep that background only if the story stays in the same place; otherwise build the correct new location. If a reference contradicts the scene context, ignore it. Never copy reference poses/limbs — the references are FRONTAL portraits, so do NOT copy their camera-facing gaze or stiff posture: turn each character\'s head, eyes and body to engage the scene (eye contact with their conversation partner, or looking at the object they use). ';
   }
   p+='Art style: '+styleFragment()+'. ';
   const cast=(cfg.cast||[]).filter(c=>c && (c.desc||c.role));
