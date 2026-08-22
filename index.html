@@ -303,6 +303,10 @@
   .pill:disabled{opacity:.3; cursor:default; pointer-events:none}
   .pill.on{color:#fff; border-color:var(--accent); background:#1b2030; font-weight:700}
   .drive-badge{font-size:.74rem; color:var(--dim); white-space:nowrap; align-self:center; padding:0 4px}
+  /* 짧은 알림(서버 이어하기 등) */
+  .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom));
+    background:#1b2030; color:#fff; border:1px solid var(--accent); border-radius:20px;
+    padding:9px 16px; font-size:.86rem; z-index:9999; box-shadow:0 4px 18px rgba(0,0,0,.5); pointer-events:none}
   .drive-badge.ok{color:var(--green)} .drive-badge.load{color:var(--gold)} .drive-badge.err{color:var(--red)}
   .spacer{flex:1}
   .send-circle{
@@ -419,7 +423,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.48</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.49</span></div>
 </div>
 
 <div id="hud">
@@ -549,6 +553,11 @@
           <option value="5">5턴마다</option>
         </select>
         <div class="hint" style="margin-top:4px">앱이 턴 수를 세어 해당 턴에만 그립니다(GM은 매 턴 프롬프트를 주고 앱이 골라 씁니다 — 빈도를 바꿔도 세션은 그대로). '새 게임'이면 다시 1턴부터 셉니다.</div>
+
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:12px">
+          <input type="checkbox" id="brainCharRefs" style="width:auto"> 삽화 인물 참조 사용(맥 bk_game_chars 폴더)
+        </label>
+        <div class="hint" style="margin-top:4px">맥의 <b>pc_bridge_work/bk_game_chars/</b> 에 인물 초상(파일명=이름)을 넣어두면 같은 얼굴로 생성(장당 약 45초).</div>
 
         <label style="margin-top:10px">삽화 스타일 기준 <span style="color:var(--dim)">— 영어 권장</span></label>
         <textarea id="brainImgStyle" rows="2" placeholder="예: cinematic Korean drama style, muted colors, film grain" style="width:100%"></textarea>
@@ -2231,6 +2240,7 @@ async function brainImage(prompt){
   // 추가 기준 칸(brainImgStyle)이 있으면 뒤에 덧붙인다(범근님 2026-08-22: 기존 화풍 재사용, 생성처만 그록).
   // 화풍은 이제 기준문(buildIllustPrompt) 안에 포함돼 오므로 여기선 추가기준만 접두한다(중복 방지)
   const body={prompt:(st?(st+', '):'')+String(prompt||'').slice(0,8000), engine};
+  if(cfg.brainCharRefs===true) body.use_char_refs=true;   // 맥 bk_game_chars 폴더의 인물 초상으로 얼굴 고정
   const r=await fetch(brainEndpoint()+'/game_image',{method:'POST',
     headers:{'Content-Type':'application/json','X-BK-KEY':brainKey()},
     body:JSON.stringify(body)});
@@ -2462,7 +2472,7 @@ async function runAssistant(){
       if(imgP){
         imgSinceLast=0;
         const aidx=lastAssistantIndex();
-        imgP.then(r=>{ if(r && r.src) recordIllust(aidx, r.src, 'end', r); });
+        imgP.then(async r=>{ if(r && r.src){ await recordIllust(aidx, r.src, 'end', r); brainStatePush(); } });   // 삽화 완료 → 서버 이어하기 갱신
       } else if(autoActive()){ imgSinceLast++; }
     }
   } finally {
@@ -2471,6 +2481,7 @@ async function runAssistant(){
     bumpTurn();        // 누적 턴수 +1
     recordTurnCost();  // 이번 턴 추정 비용 누적
     autoDriveSave();   // 연결돼 있으면 드라이브 자동 저장(무음)
+    brainStatePush();  // 맥 구독: 서버 이어하기 상태 갱신(디바운스 3초·실패 무해)
   }
 }
 
@@ -2703,6 +2714,7 @@ async function continueGen(){
   addGmFooter(gm); busy=false; sendBtn.disabled=false;
   recordTurnCost();
   autoDriveSave();
+  brainStatePush();   // 맥 구독: '이어서'로 늘어난 본문도 서버에 반영
 }
 
 async function regen(){
@@ -3257,6 +3269,7 @@ $('setupGo').onclick=()=>{
   history=[]; stats={}; summary=''; summaryUpto=0; illusts=[]; saveHistory(); saveStats(); persistSummary(); saveIllusts();
   stratStep=''; stratGoal=''; localStorage.removeItem(LS+'_strat'); localStorage.removeItem(LS+'_stratgoal');   // 큰 그림 수순도 초기화
   brainNewSid();   // 맥 구독: 새 세션 id → 첫 턴에 reset:true + 시스템 프롬프트 전송
+  brainStatePush(true);   // 새 판 시작을 서버에 즉시 반영(다른 기기의 옛 판 되살아남 방지)
   clearLog(); $('hud').classList.remove('on');
   hideWelcome();
   sendMessage(lines.join('\n'), '게임 시작 · '+scen);
@@ -3308,6 +3321,7 @@ function newGame(){
   pendingIllust=false; if(pendingNote){ pendingNote.remove(); pendingNote=null; }
   clearLog(); $('hud').classList.remove('on'); renderChoices([]);
   $('cmdRow').classList.add('hidden');
+  brainStatePush(true);   // 새 게임: 빈 상태를 즉시 서버에 올려 다른 기기에서 옛 판이 되살아나지 않게
   showHome();   // 메인 화면으로
 }
 
@@ -3384,8 +3398,9 @@ function appendSuggestNote(msg){ let el=$('suggestBox'); if(!el){ el=document.cr
 const _btnNew=$('btnNew'); if(_btnNew) _btnNew.onclick=newGame;
 
 /* ---------- 기기 간 이어하기 (전체 진행 내보내기/가져오기) ---------- */
-function makeSaveCode(){
-  const data={ v:2, history, stats, summary, summaryUpto, illusts, tone: gameTone,
+// 상태 직렬화는 여기 한 곳뿐 — 저장코드·드라이브·서버 이어하기가 같은 형식을 쓴다(이중 구현 금지).
+function buildStateObj(){
+  return { v:2, history, stats, summary, summaryUpto, illusts, tone: gameTone,
     cost: costTotal, costImg: costImgTotal, turns: turnCount,   // 누적 비용(텍스트+이미지)·이미지누적·턴수 동기화
     costLog: costLog, askLog: askLog, fx: usdKrw,   // 턴별 비용기록·정리 질문기록·환율
     cfg: cfg,   // 모든 설정값(제공사·키·모델·삽화·화풍·인물·페르소나·커스텀 추가지시 등) 전체 저장
@@ -3394,6 +3409,9 @@ function makeSaveCode(){
          sumon:localStorage.getItem(LS+'_sumon') },
     // 하위호환
     provider:cfg.provider, model:cfg.model, modelManual:cfg.modelManual };
+}
+function makeSaveCode(){
+  const data=buildStateObj();
   // 유니코드 안전 base64 → 전송 안전한 base64url(+,/,= 제거)로 변환 + 접두어
   const b64=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
   return 'GUKGA1:'+b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -3403,7 +3421,10 @@ async function applySaveCode(code){
   c=c.replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/'); // 공백 제거 + base64url 복원
   while(c.length%4) c+='=';                            // 패딩 보정
   const json=decodeURIComponent(escape(atob(c)));
-  const d=JSON.parse(json);
+  return applyStateObj(JSON.parse(json));
+}
+// 상태 적용도 여기 한 곳뿐(저장코드·드라이브·서버 이어하기 공용).
+async function applyStateObj(d){
   if(!d || !Array.isArray(d.history)) throw new Error('형식 오류');
   history=d.history; stats=d.stats||{}; summary=d.summary||''; summaryUpto=d.summaryUpto||0;
   illusts=Array.isArray(d.illusts)?d.illusts:[];
@@ -3418,10 +3439,123 @@ async function applySaveCode(code){
   if(Array.isArray(d.askLog)){ askLog=d.askLog; localStorage.setItem(LS+'_asklog', JSON.stringify(askLog)); }
   if(typeof d.fx==='number'&&d.fx>0){ usdKrw=d.fx; localStorage.setItem(LS+'_fx', String(usdKrw)); }
   // 설정값 복원: v2는 전체 cfg, 구버전은 일부 필드
-  if(d.cfg && typeof d.cfg==='object'){ cfg=d.cfg; saveCfg(); }
+  if(d.cfg && typeof d.cfg==='object'){
+    // 키는 로컬에만 산다(서버 이어하기 상태에는 키가 아예 빠져 있다) → 들어온 cfg에 없으면 로컬 것을 유지
+    const keep={key:cfg.key, keys:cfg.keys, imgKey:cfg.imgKey, imgKeys:cfg.imgKeys};
+    cfg=d.cfg;
+    if(!cfg.key && keep.key) cfg.key=keep.key;
+    if(!cfg.keys && keep.keys) cfg.keys=keep.keys;
+    if(!cfg.imgKey && keep.imgKey) cfg.imgKey=keep.imgKey;
+    if(!cfg.imgKeys && keep.imgKeys) cfg.imgKeys=keep.imgKeys;
+    saveCfg();
+  }
   else if(d.provider){ cfg.provider=d.provider; cfg.model=d.model||''; cfg.modelManual=d.modelManual||''; saveCfg(); }
   if(d.ui){ const u=d.ui, set=(k,v)=>{ if(v!=null) localStorage.setItem(LS+k,v); };
     set('_font',u.font); set('_fs',u.fs); set('_uifs',u.uifs); set('_speed',u.speed); set('_sumon',u.sumon); }
+}
+/* ---------- 서버 이어하기(맥 구독 전용) — POST/GET {두뇌서버}/game_state ----------
+   폰·PC 어디서든 같은 bk_key로 열면 진행·삽화가 이어지게. 형식은 buildStateObj/applyStateObj 공용.
+   ★키는 절대 서버로 보내지 않는다(CLAUDE.md 절대규칙) — 푸시 직전 cfg에서 key/keys/imgKey/imgKeys를 뺀다. */
+// 서버 저장 상한은 25MiB이고 구글 삽화 1장이 최대 2.7MB다 → 장수가 아니라 '용량'으로 자른다.
+const BRAIN_STATE_IMG_BUDGET=15*1024*1024;   // 서버로 올릴 삽화 b64 합계 상한(최신부터 채우고 초과분은 오래된 것부터 제외)
+function brainSyncOn(){ return cfg.provider==='brain' && !!brainKey(); }
+// 서버로 보낼 상태 만들기: 키 제거 + 최신 삽화부터 예산껏 실제 이미지(src) 동봉
+// maxImgs를 주면 그 장수까지만(413 재시도용). 로컬 표시·저장에는 영향 없음 — 서버 세이브만 절사한다.
+async function buildServerState(maxImgs){
+  const s=buildStateObj();
+  if(s.cfg && typeof s.cfg==='object'){
+    const c=Object.assign({}, s.cfg);
+    delete c.key; delete c.keys; delete c.imgKey; delete c.imgKeys;   // ★키는 서버에 올리지 않는다
+    s.cfg=c;
+  }
+  const arr=Array.isArray(s.illusts)?s.illusts.slice():[];
+  const out=arr.map(x=>Object.assign({}, x));
+  const cap=(typeof maxImgs==='number')?Math.max(0,maxImgs):Infinity;
+  let budget=BRAIN_STATE_IMG_BUDGET, imgs=0;
+  for(let i=out.length-1;i>=0;i--){          // 최신 → 과거 순
+    if(imgs>=cap) break;
+    let src=null;
+    try{ src=await resolveIllustSrc(arr[i]); }catch(e){}
+    if(!src) continue;
+    if(src.length>budget) break;             // 예산 초과 → 여기서 끊는다(더 오래된 것도 제외)
+    out[i].src=src; budget-=src.length; imgs++;
+  }
+  s.illusts=out;
+  return {state:s, imgs};
+}
+// 서버에서 받은 상태의 삽화 이미지를 로컬 저장소로 옮기고 src는 떼어낸다(localStorage 폭발 방지)
+async function absorbIllustSrcs(d){
+  if(!d || !Array.isArray(d.illusts)) return;
+  for(const it of d.illusts){
+    if(!it || !it.src) continue;
+    if(!it.id) it.id='i'+Date.now()+Math.random().toString(36).slice(2,6);
+    illustCache[it.id]=it.src;
+    try{ imgLSset(it.id, it.src); }catch(e){}
+    try{ await imgPut(it.id, it.src); }catch(e){}
+    delete it.src;
+  }
+}
+let _brainPushT=null, _brainPushing=false;
+// 푸시(디바운스 3초). 실패는 콘솔만 — 게임 진행에 영향 없음.
+function brainStatePush(now){
+  if(!brainSyncOn()) return;
+  clearTimeout(_brainPushT);
+  const run=async()=>{
+    if(_brainPushing) return;
+    _brainPushing=true;
+    try{
+      const post=(state)=>fetch(brainEndpoint()+'/game_state',{method:'POST',
+        headers:{'Content-Type':'application/json','X-BK-KEY':brainKey()},
+        body:JSON.stringify({ts:Date.now(), turn:history.length, state})});
+      const b=await buildServerState();
+      let r=await post(b.state);
+      if(r.status===413 && b.imgs>0){        // 서버가 너무 크다고 거절 → 삽화 절반으로 줄여 1회 재시도
+        const half=Math.floor(b.imgs/2);
+        console.warn('[game_state] 413 — 삽화 '+b.imgs+'장 → '+half+'장으로 재시도');
+        const b2=await buildServerState(half);
+        r=await post(b2.state);
+      }
+      if(!r.ok) console.warn('[game_state] 푸시 실패 HTTP '+r.status);
+    }catch(e){ console.warn('[game_state] 푸시 실패:', e && e.message); }
+    finally{ _brainPushing=false; }
+  };
+  if(now) run(); else _brainPushT=setTimeout(run, 3000);
+}
+// 부팅 동기화: 서버가 더 앞서 있으면 자동 적용, 로컬이 더 앞서면 즉시 푸시, 같으면 무동작.
+async function brainStateBoot(){
+  if(!brainSyncOn()) return;
+  let j=null;
+  try{
+    const r=await fetch(brainEndpoint()+'/game_state',{headers:{'X-BK-KEY':brainKey()}});
+    if(!r.ok){ if(r.status!==404) console.warn('[game_state] 조회 실패 HTTP '+r.status); return; }
+    j=await r.json();
+  }catch(e){ console.warn('[game_state] 조회 실패:', e && e.message); return; }
+  const turn=(j && typeof j.turn==='number')?j.turn:-1;
+  const state=j && j.state;
+  // ★역행 방지: 서버가 로컬보다 앞설 때만 적용한다(같거나 뒤처지면 절대 덮어쓰지 않는다).
+  if(turn<=history.length){
+    if(history.length>turn) brainStatePush(true);   // 로컬이 더 새로움 → 즉시 올림
+    return;
+  }
+  if(state && Array.isArray(state.history) && state.history.length>=history.length){
+    if(busy) return;   // 생성 중이면 건드리지 않는다
+    try{
+      await absorbIllustSrcs(state);
+      await applyStateObj(state);
+      brainSetSyncN(-1);   // 데몬 세션은 다음 턴에 need_replay 자동복원 경로가 재구축한다
+      sessionStorage.setItem('__brainSyncToast', String(turn));
+      location.reload();
+    }catch(e){ console.warn('[game_state] 적용 실패:', e && e.message); }
+    return;
+  }
+  console.warn('[game_state] turn은 앞서지만 state가 부실 — 적용하지 않음');   // 역행·손상 상태 방어
+}
+function toast(msg, ms){
+  try{
+    const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+    document.body.appendChild(el);
+    setTimeout(()=>{ try{ el.remove(); }catch(e){} }, ms||5000);
+  }catch(e){}
 }
 function snapMsg(t,cls){ $('snapStatus').textContent=t; $('snapStatus').className='status-line '+(cls||''); }
 { const _bs=$('btnSave'); if(_bs) _bs.onclick=()=>{
@@ -3776,7 +3910,8 @@ function populateAllForm(){
     const e3=$('brainModelSel'); if(e3) e3.value=brainModel();
     const e4=$('brainImgEngine'); if(e4) e4.value=brainImgEngine();
     const e5=$('brainImgEvery'); if(e5) e5.value=String(brainImgEvery());
-    const e6=$('brainImgStyle'); if(e6) e6.value=cfg.brainImgStyle||''; }
+    const e6=$('brainImgStyle'); if(e6) e6.value=cfg.brainImgStyle||'';
+    const e7=$('brainCharRefs'); if(e7) e7.checked=(cfg.brainCharRefs===true); }
   // 삽화 API(제공사·키·화질·모델)
   selectImgProv(cfg.imgProvider||'gemini');  // 삽화 키도 selectImgProv가 제공사별로 채움
   $('imgModel').value=cfg.imgModelManual||'';
@@ -3964,6 +4099,7 @@ $('cfgSave').onclick=()=>{
   { const be=$('brainImgEngine'); if(be) cfg.brainImgEngine=(be.value==='google'?'google':'grok'); }
   { const bv=$('brainImgEvery'); if(bv) cfg.brainImgEvery=parseInt(bv.value)||1; }
   { const bs=$('brainImgStyle'); if(bs){ const v=bs.value.trim(); if(v!==(cfg.brainImgStyle||'')) brainSetSyncN(-1); cfg.brainImgStyle=v; } }
+  { const bc=$('brainCharRefs'); if(bc) cfg.brainCharRefs=bc.checked; }
   cfg.effort=$('effortSel').value;   // 사고 강도(effort)
   cfg.outLen=$('lenSel').value;      // 출력 분량
   cfg.maxTokens=$('maxTokIn').value.trim();   // 최대 출력 토큰(직접 입력)
@@ -4025,6 +4161,10 @@ function mkIllustBox(im, isRecap){
 }
 // 시작: 저장된 게임 복원
 restore();
+// 서버 이어하기: 직전 부팅에서 서버 상태를 적용했으면 안내 한 줄, 아니면 서버와 대조(무음·비동기)
+{ let t=null; try{ t=sessionStorage.getItem('__brainSyncToast'); sessionStorage.removeItem('__brainSyncToast'); }catch(e){}
+  if(t) toast('서버에서 이어하기 ('+t+'턴)');
+  else setTimeout(()=>{ try{ brainStateBoot(); }catch(e){} }, 300); }
 
 if(!cfg.provider||!cfg.key){ /* leave welcome */ }
 </script>

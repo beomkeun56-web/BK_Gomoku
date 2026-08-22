@@ -22,6 +22,7 @@ PNG_1X1 = ('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8'
            'z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
 
 SESS = {}            # sid -> {'system':str, 'n':int}
+STATE_STORE = {}     # 'game_state' 에코 저장소: {'ts':int,'turn':int,'state':{...}}
 LOCK = threading.Lock()
 ARGS = None
 STATE = {'replay_fired': False}
@@ -97,6 +98,19 @@ class H(SimpleHTTPRequestHandler):
             return {}
 
     def do_GET(self):
+        if self.path.split('?')[0] == '/game_state':
+            key = self.headers.get('X-BK-KEY') or ''
+            if not key:
+                self._json({'err': 'no key'}, 401)
+                return
+            cur = STATE_STORE.get('cur')
+            print('[mock] GET /game_state → %s' % ('turn=%d ts=%d' % (cur['turn'], cur['ts']) if cur else '없음(404)'),
+                  file=sys.stderr)
+            if not cur:
+                self._json({'err': 'no state'}, 404)
+                return
+            self._json(cur)
+            return
         if self.path.split('?')[0] == '/ping':
             self._json({'ok': True, 'ver': VER, 'sessions': list(SESS)})
             return
@@ -108,6 +122,8 @@ class H(SimpleHTTPRequestHandler):
             return self.do_game()
         if path == '/game_image':
             return self.do_image()
+        if path == '/game_state':
+            return self.do_state()
         self._json({'err': 'unknown path ' + path}, 404)
 
     # ---- /game (SSE) ----
@@ -167,8 +183,9 @@ class H(SimpleHTTPRequestHandler):
     def do_image(self):
         key = self.headers.get('X-BK-KEY') or ''
         b = self._body()
-        print('[mock] /game_image key=%s engine=%s prompt=%r'
-              % (('있음' if key else '없음'), b.get('engine'), (b.get('prompt') or '')[:70]), file=sys.stderr)
+        print('[mock] /game_image key=%s engine=%s use_char_refs=%s prompt=%r'
+              % (('있음' if key else '없음'), b.get('engine'), b.get('use_char_refs'),
+                 (b.get('prompt') or '')[:60]), file=sys.stderr)
         if not key:
             self._json({'err': 'no key'}, 401)
             return
@@ -178,6 +195,42 @@ class H(SimpleHTTPRequestHandler):
         time.sleep(0.3)
         self._json({'b64': PNG_1X1, 'mime': 'image/png'})
 
+    # ---- /game_state (에코 저장소) ----
+    def do_state(self):
+        key = self.headers.get('X-BK-KEY') or ''
+        b = self._body()
+        if not key:
+            self._json({'err': 'no key'}, 401)
+            return
+        st = b.get('state') or {}
+        raw = json.dumps(b, ensure_ascii=False).encode()
+        # 413 시나리오: 삽화가 실린 첫 푸시는 거절하고, 줄여서 다시 오면 받는다
+        if ARGS.scenario == 'state413':
+            n_src0 = sum(1 for x in ((st.get('illusts') or []) if isinstance(st, dict) else [])
+                         if isinstance(x, dict) and x.get('src'))
+            if n_src0 > STATE_STORE.get('accept_max', 0):
+                print('[mock] POST /game_state → 413 (삽화 %d장, 허용 %d장)'
+                      % (n_src0, STATE_STORE.get('accept_max', 0)), file=sys.stderr)
+                self._json({'err': 'too large'}, 413)
+                return
+        hist = st.get('history') if isinstance(st, dict) else None
+        ills = st.get('illusts') if isinstance(st, dict) else None
+        withsrc = sum(1 for x in (ills or []) if isinstance(x, dict) and x.get('src'))
+        cfgk = st.get('cfg') if isinstance(st, dict) else None
+        secrets = [k for k in ('key', 'keys', 'imgKey', 'imgKeys') if isinstance(cfgk, dict) and cfgk.get(k)]
+        STATE_STORE['cur'] = {'ts': b.get('ts') or int(time.time() * 1000),
+                              'turn': b.get('turn') if isinstance(b.get('turn'), int) else len(hist or []),
+                              'state': st}
+        print('[mock] POST /game_state turn=%s hist=%s illusts=%s(src %d장) bytes=%d 키유출=%s'
+              % (b.get('turn'), len(hist or []), len(ills or []), withsrc,
+                 len(raw), (secrets or '없음')),
+              file=sys.stderr)
+        self._json({'ok': True, 'turn': STATE_STORE['cur']['turn']})
+
+
+def _unused():
+    pass
+
 
 def main():
     global ARGS
@@ -185,8 +238,12 @@ def main():
     ap.add_argument('--port', type=int, default=8787)
     ap.add_argument('--root', default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ap.add_argument('--short', action='store_true', help='축약 응답(타자기 렌더 빨리 끝남)')
-    ap.add_argument('--scenario', default='ok', choices=['ok', 'need_replay', 'err', 'img_err'])
+    ap.add_argument('--scenario', default='ok',
+                    choices=['ok', 'need_replay', 'err', 'img_err', 'state413'])
+    ap.add_argument('--accept-max', type=int, default=0,
+                    help="state413 시나리오에서 받아줄 삽화 장수(이보다 많으면 413)")
     ARGS = ap.parse_args()
+    STATE_STORE['accept_max'] = ARGS.accept_max
     os.chdir(ARGS.root)
     srv = ThreadingHTTPServer(('127.0.0.1', ARGS.port), H)
     print('[mock] http://127.0.0.1:%d  root=%s  scenario=%s' % (ARGS.port, ARGS.root, ARGS.scenario),
