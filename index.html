@@ -423,7 +423,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.49</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.50</span></div>
 </div>
 
 <div id="hud">
@@ -2443,7 +2443,7 @@ async function runAssistant(){
     // 빈 응답 방어: 모델이 본문을 거의 안 냈으면(사고로 출력 소진 등) 에러로 처리해 깨끗이 재시도 가능하게
     if(!errored && !sanitizeBody(splitChoices(clean).body).replace(/[#>*_`~\s]/g,'').trim()){
       errored=true;
-      clean=(clean.trim()?clean+'\n\n':'')+'⚠️ 모델이 빈 응답을 반환했습니다'+(lastGemDiag?' ['+lastGemDiag+']':'')+'. 다시 시도해 주세요 — 안 되면 OpenRouter로 바꾸면 가장 안정적입니다.';
+      clean=(clean.trim()?clean+'\n\n':'')+'⚠️ 모델이 빈 응답을 반환했습니다'+(lastGemDiag?' ['+lastGemDiag+']':'')+' [진단: 수신 '+acc.length+'자/본문 '+sanitizeBody(splitChoices(stripImgTag(acc)).body).length+'자]. 다시 시도해 주세요 — 안 되면 OpenRouter로 바꾸면 가장 안정적입니다.';
     }
     await typer.finish();
     const {body, choices}=splitChoices(clean);
