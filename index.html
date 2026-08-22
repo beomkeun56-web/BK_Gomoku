@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.41</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.42</span></div>
 </div>
 
 <div id="hud">
@@ -551,7 +551,7 @@
 
         <label style="margin-top:10px">삽화 스타일 기준 <span style="color:var(--dim)">— 영어 권장</span></label>
         <textarea id="brainImgStyle" rows="2" placeholder="예: cinematic Korean drama style, muted colors, film grain" style="width:100%"></textarea>
-        <div class="hint" style="margin-top:4px">모든 삽화에 공통으로 적용할 화풍·색감입니다. GM의 이미지 프롬프트 작성 규칙에도 넣고, 서버로 보낼 때 앞에도 한 번 더 붙입니다(이중 보증). 비우면 아무것도 붙지 않습니다.</div>
+        <div class="hint" style="margin-top:4px">추가 기준(선택)입니다 — 기본 화풍은 아래 '이미지 출력 설정'의 화풍이 그대로 적용되고, 여기 적으면 그 뒤에 덧붙습니다. GM의 이미지 프롬프트 작성 규칙에도 넣고, 서버로 보낼 때 앞에도 한 번 더 붙입니다(이중 보증). 비우면 아무것도 붙지 않습니다.</div>
       </div>
     </div>
 
@@ -2223,8 +2223,10 @@ async function streamBrain(onToken, msgs, key){
 async function brainImage(prompt){
   const t0=Date.now();
   const engine=brainImgEngine(), st=brainImgStyle();
-  // 스타일 기준 이중 보증: GM 프롬프트 규칙(imgRuleBrain)에 더해, 서버로 보낼 때 앞에 한 번 더 붙인다.
-  const body={prompt:(st?(st+', '):'')+String(prompt||'').slice(0,4000), engine};
+  // 화풍은 기존 이미지 설정(드라마 스틸컷 등, styleFragment)을 그대로 쓰고,
+  // 추가 기준 칸(brainImgStyle)이 있으면 뒤에 덧붙인다(범근님 2026-08-22: 기존 화풍 재사용, 생성처만 그록).
+  const pre=[styleFragment(), st].filter(Boolean).join(', ');
+  const body={prompt:(pre?(pre+', '):'')+String(prompt||'').slice(0,4000), engine};
   const r=await fetch(brainEndpoint()+'/game_image',{method:'POST',
     headers:{'Content-Type':'application/json','X-BK-KEY':brainKey()},
     body:JSON.stringify(body)});
