@@ -419,7 +419,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.42</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.43</span></div>
 </div>
 
 <div id="hud">
@@ -2886,6 +2886,13 @@ async function buildSceneBrief(body){
   return (out||'').trim();
 }
 async function fetchIllust(story, skipBrief){
+  // 맥 구독 삽화 사용 중이면 수동(현재 턴) 생성도 같은 경로(그록/구글 선택)로 — 2026-08-22 범근님
+  // (자동 [IMG] 흐름과 수동 버튼이 다른 엔진을 타 캡션에 제미나이가 찍히던 불일치 수리)
+  if(cfg.provider==='brain' && useBrainIllust()){
+    const p=buildIllustPrompt(String(story||'').slice(0,1600), false);
+    const r=await brainImage(p);
+    return {src:r.src, model:r.model, ms:r.ms, usd:r.usd||0, costText:r.costText};
+  }
   const {prov, key, model, quality}=resolveImgCfg();
   if(!key) throw new Error('NOKEY');
   // 채팅 LLM으로 핵심 장면 요약(켜져 있고 채팅 키가 있을 때). skipBrief면 생략(속도↑). 실패 시 원문 사용
