@@ -427,7 +427,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.66</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.67</span></div>
 </div>
 
 <div id="hud">
@@ -1392,7 +1392,7 @@ function castPersonaText(){
 function imgReminder(){
   if(!useBrainIllust()) return '';
   let r='\n\n[★삽화 — 매 턴 필수] 이번 응답도 반드시 "가장 첫 줄"에 [IMG] 영어 프롬프트 [/IMG] 한 줄을 먼저 출력하고 줄을 바꿔 본문을 시작하라. 앞선 대화에 [IMG]가 안 보여도 그건 화면 표시용으로 지워진 것일 뿐, 규칙은 계속 유효하다. 반드시 [/IMG]로 닫을 것.';
-  if(cfg.brainCharRefs===true) r+=' ★참조 초상이 있는 고정 인물(주인공·보좌관 등)은 [IMG] 안에서 영어 역할명 대신 설정된 실명 그대로 지칭하라(예: "지범근 reads the document, 이채영 smirks beside him") — 실명이 참조 사진과 연결되므로 역할명만 쓰면 얼굴이 다른 사람으로 나온다.';
+  if(cfg.brainCharRefs===true) r+=' ★참조 초상이 있는 고정 인물(주인공·보좌관 등)은 [IMG] 안에서 영어 역할명 대신 설정된 실명 그대로 지칭하고, ★각 실명의 첫 언급엔 반드시 성별·나이를 괄호로 병기하라(예: "지범근 (male lawmaker, early 40s) reads the document, 이채영 (female aide, late 20s) smirks beside him") — 한글 이름만으론 이미지 모델이 성별을 몰라 남자를 여자로 그린 실사고가 있다. 역할명만 쓰면 얼굴이 다른 사람으로 나온다.';
   return r;
 }
 function activeToneReminder(){
