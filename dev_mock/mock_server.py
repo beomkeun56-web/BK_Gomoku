@@ -129,9 +129,11 @@ class H(SimpleHTTPRequestHandler):
         key = self.headers.get('X-BK-KEY') or ''
         b = self._body()
         sid = b.get('sid') or ''
-        print('[mock] /game sid=%s key=%s reset=%s replay=%d user=%r system=%s'
-              % (sid, ('있음' if key else '없음'), b.get('reset'), len(b.get('replay') or []),
-                 (b.get('user') or '')[:40], ('있음(%d자)' % len(b['system'])) if b.get('system') else '없음'),
+        sysx = b.get('system') or ''
+        print('[mock] /game sid=%s key=%s model=%s reset=%s replay=%d user=%r system=%s style줄=%s'
+              % (sid, ('있음' if key else '없음'), b.get('model'), b.get('reset'), len(b.get('replay') or []),
+                 (b.get('user') or '')[:30], ('있음(%d자)' % len(sysx)) if sysx else '없음',
+                 ('있음' if '스타일 기준을 반드시 반영' in sysx else '없음')),
               file=sys.stderr)
         if not key:
             self._json({'err': 'no key'}, 401)
@@ -165,8 +167,8 @@ class H(SimpleHTTPRequestHandler):
     def do_image(self):
         key = self.headers.get('X-BK-KEY') or ''
         b = self._body()
-        print('[mock] /game_image key=%s prompt=%r'
-              % (('있음' if key else '없음'), (b.get('prompt') or '')[:60]), file=sys.stderr)
+        print('[mock] /game_image key=%s engine=%s prompt=%r'
+              % (('있음' if key else '없음'), b.get('engine'), (b.get('prompt') or '')[:70]), file=sys.stderr)
         if not key:
             self._json({'err': 'no key'}, 401)
             return
