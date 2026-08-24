@@ -430,7 +430,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.84</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.85</span></div>
 </div>
 
 <div id="hud">
@@ -3386,7 +3386,42 @@ let setupScen='권력의 길', setupTone='__custom__';   // 프리셋 폐지 —
 document.querySelectorAll('#setupScen button').forEach(b=>b.onclick=()=>{
   setupScen=b.dataset.scen;
   document.querySelectorAll('#setupScen button').forEach(x=>x.classList.toggle('on',x===b));
+  applyScenSetup(setupScen);   // 시나리오에 맞춰 아래 설정 기본값·예시 칩 교체(2026-08-24 범근님)
 });
+// 시나리오별 설정 프리셋 — 남산의 계단(1971 중정)은 출신·소속·성향·측근·사연이 시대에 맞게 바뀐다.
+const SU_SCEN_FIELDS={
+  modern:{
+    suArea:{ph:'지역구/출신·배경 (예: 서울 마포을)', v:'강남', chips:[['강남','강남'],['마포을','서울 마포을'],['해운대갑','부산 해운대갑'],['광주 서구','광주 서구'],['수성갑','대구 수성갑']]},
+    suParty:{ph:'소속 정당·계파 (선택)', v:'민주당', chips:[['민주당','민주당'],['국민의힘','국민의힘'],['개혁신당','개혁신당'],['정의당','정의당'],['무소속','무소속']]},
+    suPersona:{ph:'나의 성향·페르소나 (예: 청렴·강단, 개혁가)', v:'실리주의 협상가', chips:[['실리주의 협상가','실리주의 협상가'],['청렴 개혁가','청렴·강단의 개혁가'],['냉철한 야심가','냉철한 야심가'],['포퓰리스트','대중을 휘어잡는 포퓰리스트'],['강성 투사','원칙주의 강성 투사']]},
+    suAidePersona:{ph:'역할·페르소나 (예: 까탈스럽지만 일 잘하는 비서실장)', v:'섹시한 말투의 매력적인 일잘하는 여비서', chips:[['섹시한 매력 여비서','섹시한 말투의 매력적인 일잘하는 여비서'],['까탈스런 비서실장','까탈스럽지만 일 잘하는 비서실장'],['충성스런 책사','충성스러운 책사형 참모'],['마당발 정무참모','능청스러운 마당발 정무참모'],['야망형 전략가','야망 있는 젊은 전략가']]},
+    suExtra:{ph:'가족·라이벌·배경 사연 등 자유롭게', v:'검사출신', chips:[['검사 출신','검사 출신, 적이 많음'],['정치 명문가','정치 명문가 출신, 가업처럼 정치를 물려받음'],['시민운동가 출신','자수성가한 시민운동가 출신'],['재벌가 사위','재벌가 사위, 비밀스러운 뒷배'],['군 장성 출신','군 장성 출신의 강골']]}
+  },
+  namsan:{
+    suArea:{ph:'출신 배경 (예: 육사 출신 / 고등고시)', v:'고등고시 출신 엘리트', chips:[['고시 출신','고등고시 출신 엘리트'],['육사 출신','육사 출신 장교'],['검사 출신','검사 출신, 남산이 스카우트'],['기자 출신','신문기자 출신 정보통'],['경찰 특채','치안국 특채 출신']]},
+    suParty:{ph:'소속·라인 (예: 중앙정보부 5국)', v:'중앙정보부 5국(대공수사)', chips:[['중정 5국','중앙정보부 5국(대공수사)'],['정치공작 라인','중앙정보부 정치공작 라인'],['각하 직계','각하 직계 라인'],['육사 인맥','군 육사 인맥'],['비주류 실무파','비주류 실무파']]},
+    suPersona:{ph:'나의 성향 (예: 냉철한 공작의 귀재)', v:'냉철한 공작의 귀재', chips:[['공작의 귀재','냉철한 공작의 귀재'],['각하 충성파','각하 바라기 충성파'],['공포의 심문관','공포의 심문관'],['실리주의 협상가','실리주의 협상가'],['이중적 야심가','겉은 충성, 속은 야심']]},
+    suAidePersona:{ph:'역할·페르소나 (예: 남산 분석관)', v:'섹시한 말투의 매력적인 남산 분석관', chips:[['섹시한 남산 분석관','섹시한 말투의 매력적인 남산 분석관'],['충성 행동대장','충성스러운 행동대장'],['도청 전문가','냉철한 도청·감청 전문가'],['요정가 정보통','요정가 정보통 마담'],['야망형 전략가','야망 있는 젊은 전략가']]},
+    suExtra:{ph:'배경 사연 (자유)', v:'각하와의 옛 인연이 있음', chips:[['각하와 옛 인연','각하와의 옛 인연이 있음'],['전임 부장의 사람','전임 부장이 키운 사람이라는 꼬리표'],['CIA 접촉선','미 CIA 접촉선을 몰래 보유'],['보안사 인맥','군 시절 상관이 보안사 실세'],['요정 커넥션','요정 마담과의 오랜 커넥션']]}
+  }
+};
+function applyScenSetup(scen){
+  const cfg=(scen==='남산의 계단')?SU_SCEN_FIELDS.namsan:SU_SCEN_FIELDS.modern;
+  for(const id in cfg){
+    const f=cfg[id], el=$(id); if(!el) continue;
+    if(f.ph) el.placeholder=f.ph;
+    if(f.v!=null) el.value=f.v;
+    const olds=[...document.querySelectorAll('#setupOverlay .ex button[data-t="'+id+'"]')];
+    if(olds.length && f.chips){
+      const parent=olds[0].parentElement;
+      olds.forEach(b=>b.remove());
+      f.chips.forEach(pair=>{ const b=document.createElement('button');
+        b.dataset.t=id; b.dataset.v=pair[1]; b.textContent=pair[0];
+        b.onclick=()=>{ const t=$(id); if(t){ t.value=pair[1]; t.focus(); } };
+        parent.appendChild(b); });
+    }
+  }
+}
 loadSuCm();   // 시작 화면 톤 수치 다이얼 초기값 표시(항상 노출)
 function syncSuCmLabels(){ CM_KEYS.forEach(k=>{ const el=$('sucmv_'+k); if(el) el.textContent=CM_LABELS[k][cmIdxFromVal(k,$('su_cm_'+k).value)]||''; }); }
 function loadSuCm(){ CM_KEYS.forEach(k=>{ const el=$('su_cm_'+k); if(el) el.value=String(cmGet(k, CM_DEF[k])); }); syncSuCmLabels(); }
