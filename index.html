@@ -430,7 +430,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.75</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.76</span></div>
 </div>
 
 <div id="hud">
@@ -1251,7 +1251,7 @@ const SYSTEM_PROMPT = SYS_HEAD + SYS_IMG_RULE + SYS_REST;
 // ★GM은 삽화 토글이 켜져 있으면 '매 턴' [IMG]를 낸다. 실제로 몇 턴마다 그릴지는 앱이 고른다
 //   (빈도를 바꿔도 시스템 프롬프트가 안 바뀌므로 세션 재구축이 필요 없다).
 const IMG_RULE_BRAIN_BASE = `[삽화 프롬프트 — 맨 앞에 1회]
-모든 응답의 "가장 첫 줄"에 이번 장면의 이미지 생성용 영어 프롬프트를 [IMG] ... [/IMG] 한 줄로 먼저 출력하고 줄을 바꿔 본문을 쓴다(화면에 표시되지 않는 내부용). 내용: 실제 한국 배경의 장소, 인물은 역할로만 지칭(lawmaker, aide 등)하고 각자의 행동·자세와 상하관계, ★각 인물의 시선을 구체 영어 문구로 반드시 명시 — 대화면 'the two face each other in direct eye contact', 사물이면 'looking down at the document on the desk'처럼 누가 무엇을 보는지 인물마다 쓴다(시선 명시가 없는 프롬프트는 불량), 카메라 샷(close-up/medium/wide)과 단순·명확한 구도, 핵심 소품. 조명은 장면의 시간대·긴장도에 맞춰 — 긴장·밀담·대치는 저조도(low-key, moody), 평온한 낮만 밝게('flat'·'evenly lit' 금지). 얼굴·외모 상세는 쓰지 않는다. 영어 60~90단어. ★반드시 [/IMG] 로 닫는다 — 닫지 않으면 본문이 통째로 숨는다.`;
+모든 응답의 "가장 첫 줄"에 이번 장면의 이미지 생성용 영어 프롬프트를 [IMG] ... [/IMG] 한 줄로 먼저 출력하고 줄을 바꿔 본문을 쓴다(화면에 표시되지 않는 내부용). 내용: 실제 한국 배경의 장소, 인물은 역할로만 지칭(lawmaker, aide 등)하고 각자의 행동·자세와 상하관계, ★각 인물의 시선을 구체 영어 문구로 반드시 명시 — 대화면 'the two face each other in direct eye contact', 사물이면 'looking down at the document on the desk'처럼 누가 무엇을 보는지 인물마다 쓴다(시선 명시가 없는 프롬프트는 불량), 카메라 샷(close-up/medium/wide)과 단순·명확한 구도, 핵심 소품. 조명은 장면의 시간대·긴장도에 맞춰 시네마틱 계열 어휘만 쓴다 — low-key, moody, window light shafts, practical lamps, rim light 등. ★'flat'·'even'·'overhead office light'·'fluorescent' 같은 평면 조명 단어는 절대 쓰지 말 것(긴장 장면도 밝은 낮 장면도 영화 조명으로). 얼굴·외모 상세는 쓰지 않는다. 영어 60~90단어. ★반드시 [/IMG] 로 닫는다 — 닫지 않으면 본문이 통째로 숨는다.`;
 // 스타일 기준이 있으면 규칙 끝에 한 줄 덧붙인다(설정에서 비우면 아무것도 안 붙음).
 function imgRuleBrain(){
   const st=brainImgStyle();
@@ -3002,11 +3002,11 @@ function buildIllustPrompt(story, hasRef){
   p+='[OTHER WOMEN] Every other woman looks realistic and natural for her actual age, role and situation — ordinary, varied, believable bodies and context-appropriate clothing; never force the bombshell figure on them. ';
   p+='[FAITHFUL TO SCENE] The [SCENE] below is the exact current moment of this turn: match its characters, place, time of day, actions and mood precisely; do not invent an unrelated situation; include the props/food naturally present (a Korean restaurant table has real side dishes, soup and rice — never an empty table). ';
   p+='[LOCATION ACCURACY] First infer from the text WHAT place, WHAT status of people and WHAT situation this is, then match architecture, furniture, lighting, crowd and props exactly to that real Korean context and grade — no generic or wrong backgrounds, no mismatched shabbiness or excess luxury, never a derelict/warehouse/interrogation-room look unless the text says so. A National Assembly member\'s office is a clean modern office: carpet, large wooden desk, leather chair, bookshelves, documents, the national flag, a sofa set. ';
-  p+='[LIGHTING & MOOD] Motivated, directional cinematic lighting with real depth: a clear key light, gentle shadows, balanced exposure — never flat, evenly lit, washed-out or blown out. Match brightness and color temperature to the scene\'s time of day and emotion: tense/secret/confrontational moments are low-key, moody, high-contrast; calm daytime is brighter but still filmic. Natural skin tones; expressions clearly readable. ';
+  p+='[LIGHTING & MOOD — overrides the scene text] Motivated, directional cinematic lighting with real depth: a clear key light, gentle shadows, balanced exposure — never flat, evenly lit, washed-out or blown out. If the [SCENE] below mentions flat, even, bright office or fluorescent lighting, REINTERPRET it as moody motivated cinematic light (window shafts, practical lamps, soft shadow) — flat bright rendering is forbidden in every case. Match brightness and color temperature to the scene\'s time of day and emotion: tense/secret/confrontational moments are low-key, moody, high-contrast; calm daytime is brighter but still filmic. Natural skin tones; expressions clearly readable. ';
   p+='[ROLES & HIERARCHY] Show each person\'s status from the text through posture, gaze and position; never invert the hierarchy — a lawmaker looks central and composed with authority while an aide reports or presents respectfully. Make it instantly clear who speaks, who listens, who reports or pressures. ';
   p+='[SHOT] Pick the single most impactful shot for this moment and vary angle/size from the previous image: face close-up for dialogue/confrontation tension, food visible for meals, the decisive moment for action. Do not repeat the same two-people-facing composition every turn. ';
   if(cfg.wide16) p+='[ASPECT] Wide 16:9 horizontal cinematic frame — compose for a widescreen movie still. ';
-  if(cfg.cinBoost) p+='[QUALITY] Ultra-detailed, sharp focus, professional cinematic photography, rich filmic color grading, subtle film grain, high dynamic range, lifelike skin and fabric texture — no blur or artifacts. ';
+  if(cfg.cinBoost) p+='[QUALITY] A true Korean drama film-still: shot on a cinema camera with shallow depth of field, cinematic teal-and-amber color grade, subtle film grain, high dynamic range, ultra-detailed sharp focus on faces, lifelike skin and fabric texture — never a flat bright snapshot look, no blur or artifacts. ';
   p+='[INTERACTION] In any dialogue scene the speakers FACE EACH OTHER with direct eye contact unless the scene states otherwise; every person\'s gaze is visibly locked on their conversation partner or the object in their hands — two people in the same frame are connected by gaze and body language, never each staring off in different directions. ';
   p+='\n\n[SCENE]\n'+plainScene(story);
   return p;
