@@ -430,7 +430,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.74</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.75</span></div>
 </div>
 
 <div id="hud">
@@ -2330,6 +2330,9 @@ async function brainCall(body, key, onToken){
     if(!ended) throw e;   // done/err/need_replay 이후의 abort는 정상 종료
   }
   if(err) throw new Error('두뇌서버: '+err);
+  // 종결 프레임 없이 스트림이 끝남 = 중간 절단(모바일 연결 유실) — 정상 완료로 오인해 반쪽
+  // 응답을 저장하면 선택지 없는 턴이 박제된다(2026-08-23 실사고) → 오류로 돌려 깨끗이 재시도.
+  if(!ended && !needReplay) throw new Error('서버 응답이 중간에 끊겼습니다 — 같은 선택지를 다시 눌러 주세요.');
   return {emitted, needReplay};
 }
 async function streamBrain(onToken, msgs, key){
@@ -4302,6 +4305,14 @@ function mkIllustBox(im, isRecap){
 }
 // 시작: 저장된 게임 복원
 restore();
+// 직전 턴이 끊겨 선택지 없이 저장된 경우의 자활로(2026-08-23): 입력창을 열고 안내한다.
+setTimeout(()=>{ try{
+  const lastMsg=history.length?history[history.length-1]:null;
+  if(lastMsg && lastMsg.role==='assistant' && !busy && choicesEl && !choicesEl.children.length){
+    const row=$('inputRow'); if(row) row.classList.remove('hidden');
+    toast('직전 턴이 끊겨 선택지가 없습니다 — 입력창에 "계속"이라고 치면 이어집니다.', 7000);
+  }
+}catch(e){} }, 800);
 // 서버 이어하기: 직전 부팅에서 서버 상태를 적용했으면 안내 한 줄, 아니면 서버와 대조(무음·비동기)
 { let t=null; try{ t=sessionStorage.getItem('__brainSyncToast'); sessionStorage.removeItem('__brainSyncToast'); }catch(e){}
   if(t) toast('서버에서 이어하기 ('+t+'턴)');
