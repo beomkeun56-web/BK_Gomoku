@@ -430,7 +430,7 @@
 <body>
 
 <div class="topbar hidden" id="topbar">
-  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.97</span></div>
+  <div class="brand" title="메인 화면으로"><span class="mark">✦</span> Reign of Nations <span class="ver" id="ver">v5.98</span></div>
 </div>
 
 <div id="hud">
@@ -535,9 +535,22 @@
       <select id="brainModelSel">
         <option value="sonnet">소넷 (기본·권장)</option>
         <option value="opus">오푸스 (품질↑, 구독 한도 소모 큼)</option>
+        <option value="gpt-astra">GPT-6 Astra (ChatGPT 구독 · 코덱스)</option>
+        <option value="gpt-sol">GPT-5.6 Sol (ChatGPT 구독)</option>
+        <option value="gpt-luna">GPT-5.6 Luna (ChatGPT 구독)</option>
+        <option value="gpt-terra">GPT-5.6 Terra (ChatGPT 구독)</option>
+        <option value="gpt-5.5">GPT-5.5 (ChatGPT 구독)</option>
       </select>
       <div class="hint" style="margin-top:4px">맥미니 claude 구독으로 돌아갑니다. <b>오푸스는 구독 한도를 훨씬 빨리 씁니다</b> — 평소엔 소넷 권장. 모델을 바꾸면 <b>다음 턴에 세션을 자동으로 새로 세워(대화 기록 복원 포함) 바로 적용</b>됩니다.</div>
 
+      <label style="margin-top:12px">GPT 추론 강도 <span style="color:var(--dim)">— GPT 모델에만 적용</span></label>
+      <select id="brainEffortSel">
+        <option value="low">low (빠름 · 기본)</option>
+        <option value="medium">medium</option>
+        <option value="high">high</option>
+        <option value="xhigh">xhigh (느림 · 품질↑)</option>
+      </select>
+      <div class="hint" style="margin-top:4px">GPT 모델은 맥미니의 ChatGPT 구독(코덱스 CLI)으로 돌아가 <b>API 과금 0</b>입니다. 토큰 스트리밍이 없어 본문이 한 번에 뜹니다(low 기준 턴당 약 15초 실측). 모델이나 강도를 바꾸면 다음 턴에 세션을 새로 세웁니다.</div>
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:14px">
         <input type="checkbox" id="brainIllust" style="width:auto"> 삽화 생성
       </label>
@@ -548,6 +561,7 @@
         <label>삽화 엔진</label>
         <select id="brainImgEngine">
           <option value="grok">그록 (구독분 · 0원)</option>
+          <option value="gpt">GPT (ChatGPT 구독분 · 0원 · 약 60초)</option>
           <option value="google">구글 (장당 약 54원)</option>
         </select>
         <div class="hint" style="margin-top:4px">그록은 구독에 포함돼 <b>0원</b>, 구글은 <b>장당 약 54원</b>이 듭니다.</div>
@@ -1311,7 +1325,10 @@ function brainEndpoint(){
 function setBrainEndpoint(v){ try{ v=(v||'').trim().replace(/\/+$/,''); if(v) localStorage.setItem(BRAIN_EP_KEY, v); else localStorage.removeItem(BRAIN_EP_KEY); }catch(e){} }
 function brainKey(){ return (((cfg.keys&&cfg.keys.brain)||'') || (cfg.provider==='brain'?(cfg.key||''):'')).trim(); }
 // GM 모델(소넷 기본 / 오푸스). 데몬이 세션 생성 때 반영하므로, 바꾸면 다음 턴에 세션을 새로 세운다.
-function brainModel(){ return (cfg.brainModel==='opus')?'opus':'sonnet'; }
+const BRAIN_MODELS=['sonnet','opus','gpt-astra','gpt-sol','gpt-luna','gpt-terra','gpt-5.5'];   // gpt-* = 맥 ChatGPT 구독(코덱스) 경로(2026-09-09)
+function brainModel(){ return BRAIN_MODELS.includes(cfg.brainModel)?cfg.brainModel:'sonnet'; }
+function brainEffort(){ return ['low','medium','high','xhigh'].includes(cfg.brainEffort)?cfg.brainEffort:'low'; }   // gpt 전용 추론 강도
+function brainSessKey(){ const m=brainModel(); return m.startsWith('gpt-')?(m+'/'+brainEffort()):m; }   // 데몬 세션 고정 인자(모델+강도)
 const BRAIN_MODEL_SESS_KEY='gukga_v1_brain_model_sess';   // 지금 데몬 세션이 쓰고 있는 모델
 function brainSessModel(){ try{ return localStorage.getItem(BRAIN_MODEL_SESS_KEY)||''; }catch(e){ return ''; } }
 function setBrainSessModel(m){ try{ localStorage.setItem(BRAIN_MODEL_SESS_KEY, m); }catch(e){} }
@@ -1319,7 +1336,7 @@ function setBrainSessModel(m){ try{ localStorage.setItem(BRAIN_MODEL_SESS_KEY, m
 function brainImgOn(){ return cfg.brainIllust===true; }
 function useBrainIllust(){ return cfg.provider==='brain' && brainImgOn(); }
 // 삽화 엔진: 그록(구독분·0원) 기본 / 구글(장당 약 54원)
-function brainImgEngine(){ return (cfg.brainImgEngine==='google')?'google':'grok'; }
+function brainImgEngine(){ return ['google','gpt'].includes(cfg.brainImgEngine)?cfg.brainImgEngine:'grok'; }   // gpt = 맥 데몬 코덱스 image_gen(구독분, 약 60초)
 const BRAIN_IMG_USD_GOOGLE=0.0386;   // 약 54원(환율 1400 기준) — 비용 배지 표시용 추정치
 function brainImgUsd(){ return brainImgEngine()==='google' ? BRAIN_IMG_USD_GOOGLE : 0; }
 // 삽화 생성 빈도(턴). 앱이 턴 수를 세어 고른다 — 프롬프트는 매 턴 [IMG]를 받으므로 세션 재구축이 필요 없다.
@@ -2373,11 +2390,11 @@ async function streamBrain(onToken, msgs, key){
   const user=(last && typeof last.content==='string')?last.content:'';
   // 데몬에 이미 올라가 있어야 할 대화(= 이번 턴 입력 앞의 전부)
   const prior=msgs.slice(0,-1).map(m=>({role:(m.role==='assistant'?'assistant':'user'), content:String(m.content==null?'':m.content)}));
-  const model=brainModel();
+  const model=brainModel(), effort=brainEffort(), sessKey=brainSessKey();
   // 처음부터 다시 세워야 하는 경우: ①앱 기록과 데몬 보유분이 어긋남(새 게임·되감기·불러오기·이어서)
   //   ②GM 모델이 바뀜(데몬은 세션 생성 때 모델을 정하므로, 바꾸면 그 자리에서 세션을 새로 세워 즉시 적용)
-  const full={sid, model, reset:true, system:brainSystemText(), replay:prior, user};
-  let body = (prior.length!==brainSyncN() || model!==brainSessModel()) ? full : {sid, model, user};
+  const full={sid, model, effort, reset:true, system:brainSystemText(), replay:prior, user};
+  let body = (prior.length!==brainSyncN() || sessKey!==brainSessModel()) ? full : {sid, model, effort, user};
   for(let attempt=0; attempt<2; attempt++){
     let r;
     try{ r=await brainCall(body, key, onToken); }
@@ -2388,7 +2405,7 @@ async function streamBrain(onToken, msgs, key){
       }
       throw e;
     }
-    if(!r.needReplay){ brainSetSyncN(prior.length+2); setBrainSessModel(model); return; }   // 이번 user + GM 응답까지 데몬이 보유
+    if(!r.needReplay){ brainSetSyncN(prior.length+2); setBrainSessModel(sessKey); return; }   // 이번 user + GM 응답까지 데몬이 보유
     if(attempt>0 || r.emitted>0) throw new Error('두뇌서버 세션 복원에 실패했습니다. 다시 시도해 주세요.');
     brainNote('⏳ 세션 복원 중… (대화 기록을 두뇌서버에 다시 올리는 중)');
     body=full;
@@ -2413,7 +2430,7 @@ async function brainImage(prompt){
   const usd=brainImgUsd();
   addCost(usd,'img');   // 그록=0원(구독분) / 구글=약 54원 — 비용 배지에 반영
   return {src:'data:'+(j.mime||'image/png')+';base64,'+j.b64,
-          model:(engine==='google'?'구글 삽화':'그록 삽화'), ms:Date.now()-t0, usd,
+          model:(engine==='google'?'구글 삽화':engine==='gpt'?'GPT 삽화':'그록 삽화'), ms:Date.now()-t0, usd,
           costText:(engine==='google'?'약 54원':'0원')};   // 설정 라벨과 같은 표기(환율 변동으로 53/54 흔들리지 않게 고정)
 }
 
@@ -4120,6 +4137,7 @@ function populateAllForm(){
     const e1=$('brainEp'); if(e1) e1.value=ep;
     const e2=$('brainIllust'); if(e2) e2.checked=(cfg.brainIllust===true);
     const e3=$('brainModelSel'); if(e3) e3.value=brainModel();
+    const e3b=$('brainEffortSel'); if(e3b) e3b.value=brainEffort();
     const e4=$('brainImgEngine'); if(e4) e4.value=brainImgEngine();
     const e5=$('brainImgEvery'); if(e5) e5.value=String(brainImgEvery());
     const e6=$('brainImgStyle'); if(e6) e6.value=cfg.brainImgStyle||'';
@@ -4305,10 +4323,11 @@ $('cfgSave').onclick=()=>{
   // 맥 구독(brain): 두뇌서버 주소 + GM 모델 + 삽화(토글·엔진·빈도·스타일)
   { const ep=$('brainEp'); if(ep) setBrainEndpoint(ep.value); }
   { const bm=$('brainModelSel');
-    if(bm && bm.value!==brainModel()){ cfg.brainModel=(bm.value==='opus'?'opus':'sonnet'); brainSetSyncN(-1); }   // 모델 변경 → 다음 턴에 reset+replay로 재구축(즉시 적용)
+    if(bm && bm.value!==brainModel()){ cfg.brainModel=BRAIN_MODELS.includes(bm.value)?bm.value:'sonnet'; brainSetSyncN(-1); }
+    const bf=$('brainEffortSel'); if(bf && bf.value!==brainEffort()){ cfg.brainEffort=bf.value; brainSetSyncN(-1); }   // 모델 변경 → 다음 턴에 reset+replay로 재구축(즉시 적용)
   }
   { const bi=$('brainIllust'); if(bi){ const nv=bi.checked; if(nv!==(cfg.brainIllust===true)) brainSetSyncN(-1); cfg.brainIllust=nv; } }   // 삽화 토글 변경 → 세션 재구축(진행 중에도 [IMG] 규칙 반영, 2026-08-22 실사용 신고 수리)
-  { const be=$('brainImgEngine'); if(be) cfg.brainImgEngine=(be.value==='google'?'google':'grok'); }
+  { const be=$('brainImgEngine'); if(be) cfg.brainImgEngine=(['google','gpt'].includes(be.value)?be.value:'grok'); }
   { const bv=$('brainImgEvery'); if(bv) cfg.brainImgEvery=parseInt(bv.value)||1; }
   { const bs=$('brainImgStyle'); if(bs){ const v=bs.value.trim(); if(v!==(cfg.brainImgStyle||'')) brainSetSyncN(-1); cfg.brainImgStyle=v; } }
   { const bc=$('brainCharRefs'); if(bc) cfg.brainCharRefs=bc.checked; }
