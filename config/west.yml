@@ -23,6 +23,11 @@ manifest:
       remote: urob
       revision: main
       clone-depth: 1
+    # 260929 범근님: 숫자층 자동 복귀(num_word). ZMK main 과 같은 계열 main 사용
+    - name: zmk-auto-layer
+      remote: urob
+      revision: main
+      clone-depth: 1
     - name: zmk-rgbled-widget
       remote: hitsmaxft
       revision: main
