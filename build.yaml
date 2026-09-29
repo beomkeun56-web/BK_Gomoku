@@ -2,11 +2,12 @@
 include:
   - board: cornix_left//zmk
     shield: cornix_indicator
-    snippet: studio-rpc-usb-uart
+    snippet: studio-rpc-usb-uart nrf52840-nosd   # 260929: Cornix LP 스톡 RMK 는 SoftDevice 없는 플래시 배치(amon2051 README). SD 배치로 빌드하면 굽기 실패
     artifact-name: cornix_left
 
   - board: cornix_right//zmk
     shield: cornix_indicator
+    snippet: nrf52840-nosd
     artifact-name: cornix_right
 
   - board: cornix_right//zmk

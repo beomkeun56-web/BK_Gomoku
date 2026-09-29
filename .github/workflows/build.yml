@@ -11,23 +11,3 @@ on:
 jobs:
   build:
     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
-
-  # 260929 범근님 맥은 배포 키로만 접근하므로 빌드 결과(uf2)를 이 브랜치의 firmware/ 폴더에 도로 올린다
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: firmware
-          path: firmware
-      - name: commit firmware back
-        run: |
-          git config user.name "zmk-build-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add firmware
-          git commit -m "firmware: build ${GITHUB_SHA::7}" || exit 0
-          git push
