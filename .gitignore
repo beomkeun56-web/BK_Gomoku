@@ -1,0 +1,9 @@
+
+.env
+.direnv
+result
+.envrc
+.build
+target
+
+firmware
