@@ -17,7 +17,7 @@
  *   M0      -> &m0          : Ctrl+V 뒤 Enter
  *   "LCtl A" 같은 두 줄 키 -> &kp LC(A) (조합키)
  *   빈 키   -> &none
- *   2층 오른손 윗줄(원래 빈 키) -> 블루투스 프로필 0·1·2 / 페어링 지우기 / USB·BT 출력 전환 (ZMK 는 페어링 관리 키가 필요)
+ *   2층 오른손 윗줄(원래 빈 키) -> 블루투스 프로필 0·1·2 / 페어링 지우기 / USB·BT 출력 전환 / 맨 끝 = 굽기 모드(&bootloader, 리셋 버튼 없이 uf2 드라이브 진입. 범근님 '리셋 버튼 없는데' 260929)
  */
 #include <behaviors.dtsi>
 #include <behaviors/num_word.dtsi>
@@ -91,12 +91,12 @@
 
         excel_layer {
             display-name = "Excel";
-            // | Esc   | --     | --    | -- | --    | --     |           | BT0 | BT1 | BT2 | BT지우기 | USB/BT | --    |
+            // | Esc   | --     | --    | -- | --    | --     |           | BT0 | BT1 | BT2 | BT지우기 | USB/BT | 굽기모드 |
             // | LShft | Ctrl+R | 1     | 2  | 3     | --     |           | --  | --  | --  | --      | --     | --    |
             // | TG2   | Up     | 4     | 5  | 6     | Ctrl+A | -- | --   | --  | --  | --  | --      | Up     | --    |
             // | Left  | Down   | Enter | -- | Space | --     |           | --  | --  | --  | Left    | Down   | Right |
             bindings = <
-&kp ESC     &none      &none    &none   &none      &none                                &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_CLR  &out OUT_TOG  &none
+&kp ESC     &none      &none    &none   &none      &none                                &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_CLR  &out OUT_TOG  &bootloader
 &kp LSHFT   &kp LC(R)  &kp N1   &kp N2  &kp N3     &none                                &none         &none         &none         &none       &none         &none
 &tog EXCEL  &kp UP     &kp N4   &kp N5  &kp N6     &kp LC(A)  &none        &none        &none         &none         &none         &none       &kp UP        &none
 &kp LEFT    &kp DOWN   &kp RET  &none   &kp SPACE  &none                                &none         &none         &none         &kp LEFT    &kp DOWN      &kp RIGHT
