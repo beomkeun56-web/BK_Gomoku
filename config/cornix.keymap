@@ -10,7 +10,7 @@
  *  41-43 | 44-46   thumbs (왼쪽 Enter · 숫자층 · M0 / 오른쪽 숫자층토글 · Space · RAlt)
  *
  * Vial 대응:
- *   OSL(1)  -> &num_word 1  : 숫자·기호층. 숫자/기호를 치는 동안 유지, Space·Enter·화살표·한글 등 다른 키에서 자동 복귀
+ *   OSL(1)  -> &num_word 1  : 숫자·기호층. 숫자/기호·화살표·따옴표를 치는 동안 유지, Space·Enter·한글 등 다른 키에서 자동 복귀(260930)
  *   TG(1)   -> &tog 1       : 숫자층 켜기/끄기 토글(길게 입력할 때)
  *   TG(2)   -> &tog 2       : 엑셀층 끄기(2층 안의 키)
  *   왼쪽 안쪽 키 "+" -> &tt 2 : 누르고 있으면 엑셀층, 톡 치면 켜둔 채 유지(260928 확정 "안쪽 TG(2)→TT(2)")
@@ -31,7 +31,9 @@
 
 &num_word {
     // 숫자 키는 기본으로 유지. 사칙연산·소수점·천단위·퍼센트도 유지. 그 밖의 키(Space·Enter·화살표·한글 자모 등)는 즉시 기본층 복귀.
-    continue-list = <BSPC DEL DOT COMMA PLUS MINUS STAR FSLH EQUAL KP_PLUS KP_MINUS KP_ASTERISK KP_SLASH PRCNT>;
+    // 260930 범근님 "화살표 제외하고 . ' % 제외하고 다시 빌드": 화살표 4개와 작은따옴표(SQT)도 유지 목록에 넣어
+    //   숫자층에서 눌러도 자동 복귀하지 않게 한다(엑셀 셀 이동·텍스트 접두어). 마침표·퍼센트는 종전대로 유지 목록.
+    continue-list = <BSPC DEL DOT COMMA PLUS MINUS STAR FSLH EQUAL KP_PLUS KP_MINUS KP_ASTERISK KP_SLASH PRCNT SQT LEFT RIGHT UP DOWN>;
     ignore-modifiers;
 };
 
