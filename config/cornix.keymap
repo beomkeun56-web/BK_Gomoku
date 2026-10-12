@@ -16,15 +16,15 @@
  *            기호·Bksp·Del·화살표를 치는 동안 유지, 왼손 키·Space·Enter 등에서 자동 복귀.
  *            두벌식 자음이 왼손이라 한글 첫 글자를 치면 꺼진다(261012 범근님 지시).
  *   LOCK (4) 잠금층: 옛 Vial 1층 그대로(숫자+기호+엑셀 단축키 Ctrl++ Alt+1 Ctrl+D Ctrl+1 포함, 글자 없음).
- *            기본층 Ctrl+A 자리(위치 25)의 &tog LOCK 으로 켜고, 숫자층 위치 24 로도 켠다. 잠금층 안 위치 13·24·42·44 로 끈다.
+ *            기본층·잠금층 모두 위치 25(Ctrl+A 자리)의 &tog LOCK 으로 켜고 끈다(같은 물리 키). 잠금층에서는 24·42·44 로도 끌 수 있다.
  *   EXCEL(2) 엑셀층: 변경 없음. 왼쪽 노브 누름(위치 30) &tt 2 (누르는 동안 엑셀층, 톡 치면 켜둔 채 유지).
  *   오른쪽 노브 누름(위치 31) = 블루투스 3번(&bt BT_SEL 2).
  *
  * 들어가기·나오기:
  *   기본층 위치 42(왼쪽 엄지 가운데)  &num_word NUM -> 숫자층, 다른 키에서 자동 복귀
  *   기본층 위치 44(오른쪽 엄지 첫 키) &sym_word SYM -> 기호층, 왼손·Space·Enter 등에서 자동 복귀
- *   기본층 위치 25(옛 Ctrl+A 자리)    &tog LOCK -> 잠금층 켜기, 숫자층 위치 24 도 같음
- *   잠금층 위치 13·24·42·44           &tog LOCK -> 잠금층 끄기
+ *   기본층 위치 25(옛 Ctrl+A 자리)    &tog LOCK -> 잠금층 켜기
+ *   잠금층 위치 25·24·42·44           &tog LOCK -> 잠금층 끄기(25 가 켠 키와 같은 자리)
  *
  * Vial 대응 (원래 문서):
  *   TG(2)   -> &tog 2       : 엑셀층 끄기(2층 안의 키)
@@ -150,15 +150,15 @@
 
         lock_layer {
             display-name = "Lock";
-            // 옛 Vial 1층 그대로(13·24·42·44 만 잠금 끄기)
+            // 옛 Vial 1층 그대로(24·25·42·44 만 잠금 끄기, 25 는 기본층 켜기 키와 같은 자리)
             // | Esc   | 1  | 2    | 3  | 4    | 5  |           | 6   | 7  | 8  | 9  | 0  | Bksp |
-            // | LShft | LOCK(끄기) | KP* | KP+ | #  | $  |      | -   | =  | [  | ]  | KP/ | Enter |
-            // | LOCK(끄기) | Up | Ctrl++ | Alt+1 | Ctrl+D | Ctrl+1 | -- | -- | `  | ,  | :  | '  | Up | Del |
+            // | LShft | @ | KP* | KP+ | #  | $  |      | -   | =  | [  | ]  | KP/ | Enter |
+            // | LOCK(끄기) | LOCK(끄기) | Ctrl++ | Alt+1 | Ctrl+D | Ctrl+1 | -- | -- | `  | ,  | :  | '  | Up | Del |
             // | LCtrl | Down | -- | Enter | LOCK(끄기) | M0 |    | LOCK(끄기) | Space | .  | Left | Down | Right |
             bindings = <
 &kp ESC       &kp N1        &kp N2        &kp N3        &kp N4        &kp N5        &kp N6        &kp N7        &kp N8        &kp N9        &kp N0        &kp BSPC
-&kp LSHFT     &tog LOCK     &kp KP_ASTERISK &kp KP_PLUS   &kp HASH      &kp DLLR      &kp MINUS     &kp EQUAL     &kp LBKT      &kp RBKT      &kp KP_SLASH  &kp RET
-&tog LOCK     &kp UP        &kp LC(KP_PLUS) &kp LA(N1)    &kp LC(D)     &kp LC(N1)    &none         &none         &kp GRAVE     &kp COMMA     &kp COLON     &kp SQT       &kp UP        &kp DEL
+&kp LSHFT     &kp AT     &kp KP_ASTERISK &kp KP_PLUS   &kp HASH      &kp DLLR      &kp MINUS     &kp EQUAL     &kp LBKT      &kp RBKT      &kp KP_SLASH  &kp RET
+&tog LOCK     &tog LOCK   &kp LC(KP_PLUS) &kp LA(N1)    &kp LC(D)     &kp LC(N1)    &none         &none         &kp GRAVE     &kp COMMA     &kp COLON     &kp SQT       &kp UP        &kp DEL
 &kp LCTRL     &kp DOWN      &none         &kp RET       &tog LOCK     &m0           &tog LOCK     &kp SPACE     &kp DOT       &kp LEFT      &kp DOWN      &kp RIGHT
             >;
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
