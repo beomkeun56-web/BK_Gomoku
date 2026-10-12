@@ -1,17 +1,29 @@
 /*
- * Cornix LP keymap for 범근님 (2026-09-29)
- * 원천: Vial 현재 설정 사진 3장(Layer 0·1·2, Macros M0) + 260928 확정 결정(Layer 3 없음, 자동 복귀).
+ * Cornix LP keymap for 범근님 (2026-10-12 개정, 원본 2026-09-29)
+ * 원천: Vial 현재 설정 사진 3장(Layer 0·1·2, Macros M0) + 261012 범근님 지시(숫자층 윗줄만, 기호층 분리, 잠금층 신설).
  *
  * Key positions (50):
  *   0- 5 |  6-11   top row
  *  12-17 | 18-23   home row
  *  24-29 | 32-37   bottom row      30 = left inner(knob press), 31 = right inner(knob press)
  *  38-40 | 47-49   outer bottom keys (왼쪽 LCtrl LGui LAlt / 오른쪽 Left Down Right)
- *  41-43 | 44-46   thumbs (왼쪽 Enter · 숫자층 · M0 / 오른쪽 숫자층토글 · Space · RAlt)
+ *  41-43 | 44-46   thumbs (왼쪽 Enter · 숫자 · M0 / 오른쪽 기호 · Space · RAlt)
  *
- * Vial 대응:
- *   OSL(1)  -> &num_word 1  : 숫자·기호층. 숫자/기호·화살표·따옴표를 치는 동안 유지, Space·Enter·한글 등 다른 키에서 자동 복귀(260930)
- *   TG(1)   -> &tog 1       : 숫자층 켜기/끄기 토글(길게 입력할 때)
+ * 층 구조(5개): BASE 0, NUM 1, EXCEL 2, SYM 3, LOCK 4
+ *   NUM  (1) 숫자층: 윗줄 숫자(1~0)·Esc·Bksp 만 살리고 나머지는 전부 투명. 왼쪽 엄지 &num_word 톡으로 들어가
+ *            숫자·Bksp·Del·점·쉼표를 치는 동안 유지, 2열(홈줄)이나 한글 자모 등 다른 키를 치면 자동으로 기본층 복귀.
+ *   SYM  (3) 기호층: 오른쪽 엄지 &sym_word 톡으로 들어가 기호를 치는 동안 유지, 기호가 아닌 키(글자·Space·Enter 등)에서 자동 복귀.
+ *            숫자층 홈줄에 기호를 두고 유지 목록에 넣으면 "3" 뒤 "ㄴ"이 "="로 나오는 충돌이 생겨 기호를 별도 층으로 분리(261012 범근님 지시).
+ *   LOCK (4) 잠금층: 숫자+기호 전부, 글자 없음. 숫자층/기호층의 왼쪽 안쪽 아래(위치 24) 또는 잠금층 안의 LOCK 키로 켜고 끈다(길게 섞어 칠 때).
+ *   EXCEL(2) 엑셀층: 변경 없음. 왼쪽 안쪽 키 &tt 2 (누르는 동안 엑셀층, 톡 치면 켜둔 채 유지).
+ *
+ * 들어가기·나오기:
+ *   기본층 위치 42(왼쪽 엄지 가운데)  &num_word NUM -> 숫자층, 2열·한글·그 밖의 키에서 자동 복귀
+ *   기본층 위치 44(오른쪽 엄지 첫 키) &sym_word SYM -> 기호층, 기호 아닌 키에서 자동 복귀
+ *   숫자층·기호층 위치 24             &tog LOCK -> 잠금층 켜기(켜지면 자동 복귀 층은 꺼진다)
+ *   잠금층 위치 24·42·44              &tog LOCK -> 잠금층 끄기
+ *
+ * Vial 대응 (원래 문서):
  *   TG(2)   -> &tog 2       : 엑셀층 끄기(2층 안의 키)
  *   왼쪽 안쪽 키 "+" -> &tt 2 : 누르고 있으면 엑셀층, 톡 치면 켜둔 채 유지(260928 확정 "안쪽 TG(2)→TT(2)")
  *   M0      -> &m0          : Ctrl+V 뒤 Enter
@@ -28,12 +40,13 @@
 #define BASE  0
 #define NUM   1
 #define EXCEL 2
+#define SYM   3
+#define LOCK  4
 
 &num_word {
-    // 숫자 키는 기본으로 유지. 사칙연산·소수점·천단위·퍼센트도 유지. 그 밖의 키(Space·Enter·화살표·한글 자모 등)는 즉시 기본층 복귀.
-    // 260930 범근님 "화살표 제외하고 . ' % 제외하고 다시 빌드": 화살표 4개와 작은따옴표(SQT)도 유지 목록에 넣어
-    //   숫자층에서 눌러도 자동 복귀하지 않게 한다(엑셀 셀 이동·텍스트 접두어). 마침표·퍼센트는 종전대로 유지 목록.
-    continue-list = <BSPC DEL DOT COMMA PLUS MINUS STAR FSLH EQUAL KP_PLUS KP_MINUS KP_ASTERISK KP_SLASH PRCNT SQT LEFT RIGHT UP DOWN>;
+    // 261012 범근님 지시: 숫자층은 윗줄 숫자만. 숫자·Bksp·Del·점·쉼표만 유지하고, 2열(홈줄)이나 한글 자모 등 그 밖의 키는 즉시 기본층 복귀.
+    //   기호·화살표는 유지 목록에서 제거(기호는 Layer 3 sym_word 로 분리). 모듈 기본값의 ignore-numbers 는 그대로 두고 ignore-modifiers 유지.
+    continue-list = <N0 N1 N2 N3 N4 N5 N6 N7 N8 N9 DOT COMMA BSPC DEL KP_DOT>;
     ignore-modifiers;
 };
 
@@ -45,6 +58,14 @@
             flavor = "hold-preferred";
             tapping-term-ms = <200>;
             bindings = <&mo>, <&tog>;
+        };
+
+        // 261012: 기호층(SYM) 자동 복귀. num_word 와 같은 모듈(urob/zmk-auto-layer)의 zmk,behavior-auto-layer 두 번째 인스턴스.
+        sym_word: sym_word {
+            compatible = "zmk,behavior-auto-layer";
+            #binding-cells = <1>;
+            continue-list = <EXCL AT HASH DLLR PRCNT CARET AMPS STAR LPAR RPAR MINUS EQUAL LBKT RBKT LBRC RBRC BSLH PIPE SEMI COLON SQT DQT COMMA DOT FSLH LT GT QMARK GRAVE TILDE UNDER PLUS N1 N2 N3 N4 N5 N6 N7 N8 N9 N0 BSPC DEL>;
+            ignore-modifiers;
         };
     };
 
@@ -66,27 +87,28 @@
             // | Tab   | Q      | W    | E     | R   | T  |              | Y   | U     | I    | O    | P    | Bksp  |
             // | LShft | A      | S    | D     | F   | G  |              | H   | J     | K    | L    | /    | Enter |
             // | Del   | Ctrl+A | Z    | X     | C   | V  | TT2 | -      | B   | N     | M    | .    | Up   | RShft |
-            // | LCtrl | LGui   | LAlt | Enter | NUM | M0 |              | TG1 | Space | RAlt | Left | Down | Right |
+            // | LCtrl | LGui   | LAlt | Enter | NUM | M0 |              | SYM | Space | RAlt | Left | Down | Right |
+            // (NUM = 왼쪽 엄지 num_word 숫자층 톡, SYM = 오른쪽 엄지 sym_word 기호층 톡)
             bindings = <
-&kp TAB    &kp Q      &kp W     &kp E    &kp R          &kp T                                     &kp Y     &kp U      &kp I     &kp O     &kp P     &kp BSPC
-&kp LSHFT  &kp A      &kp S     &kp D    &kp F          &kp G                                     &kp H     &kp J      &kp K     &kp L     &kp FSLH  &kp RET
-&kp DEL    &kp LC(A)  &kp Z     &kp X    &kp C          &kp V   &tt EXCEL EXCEL  &kp KP_MINUS     &kp B     &kp N      &kp M     &kp DOT   &kp UP    &kp RSHFT
-&kp LCTRL  &kp LGUI   &kp LALT  &kp RET  &num_word NUM  &m0                                       &tog NUM  &kp SPACE  &kp RALT  &kp LEFT  &kp DOWN  &kp RIGHT
+&kp TAB       &kp Q         &kp W         &kp E         &kp R         &kp T    &kp Y         &kp U         &kp I         &kp O         &kp P         &kp BSPC
+&kp LSHFT     &kp A         &kp S         &kp D         &kp F         &kp G    &kp H         &kp J         &kp K         &kp L         &kp FSLH      &kp RET
+&kp DEL       &kp LC(A)     &kp Z         &kp X         &kp C         &kp V    &tt EXCEL EXCEL &kp KP_MINUS    &kp B         &kp N         &kp M         &kp DOT       &kp UP        &kp RSHFT
+&kp LCTRL     &kp LGUI      &kp LALT      &kp RET       &num_word NUM &m0    &sym_word SYM &kp SPACE     &kp RALT      &kp LEFT      &kp DOWN      &kp RIGHT
             >;
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
         };
 
         num_layer {
             display-name = "Num";
-            // | Esc   | 1    | 2      | 3     | 4        | 5      |           | 6   | 7     | 8 | 9    | 0    | Bksp  |
-            // | LShft | @    | *      | +     | #        | $      |           | -   | =     | [ | ]    | /    | Enter |
-            // | TG1   | Up   | Ctrl++ | Alt+1 | Ctrl+D   | Ctrl+1 | -- | --   | `   | ,     | : | '    | Up   | Del   |
-            // | LCtrl | Down | --     | Enter | TG1(끄기) | M0    |           | TG1 | Space | . | Left | Down | Right |
+            // | Esc | 1 | 2 | 3 | 4 | 5 |           | 6 | 7 | 8 | 9 | 0 | Bksp |
+            // | 홈줄 12-23 전부 투명(2열을 치면 자동 복귀) |
+            // | LOCK(잠금 켜기) | 나머지 전부 투명 |
+            // | 아래줄 전부 투명 |
             bindings = <
-&kp ESC    &kp N1    &kp N2           &kp N3       &kp N4     &kp N5                             &kp N6     &kp N7     &kp N8     &kp N9    &kp N0        &kp BSPC
-&kp LSHFT  &kp AT    &kp KP_ASTERISK  &kp KP_PLUS  &kp HASH   &kp DLLR                           &kp MINUS  &kp EQUAL  &kp LBKT   &kp RBKT  &kp KP_SLASH  &kp RET
-&tog NUM   &kp UP    &kp LC(KP_PLUS)  &kp LA(N1)   &kp LC(D)  &kp LC(N1)  &none     &none        &kp GRAVE  &kp COMMA  &kp COLON  &kp SQT   &kp UP        &kp DEL
-&kp LCTRL  &kp DOWN  &none            &kp RET      &tog NUM   &m0                                &tog NUM   &kp SPACE  &kp DOT    &kp LEFT  &kp DOWN      &kp RIGHT
+&kp ESC       &kp N1        &kp N2        &kp N3        &kp N4        &kp N5    &kp N6        &kp N7        &kp N8        &kp N9        &kp N0        &kp BSPC
+&trans        &trans        &trans        &trans        &trans        &trans    &trans        &trans        &trans        &trans        &trans        &trans
+&tog LOCK     &trans        &trans        &trans        &trans        &trans    &trans        &trans    &trans        &trans        &trans        &trans        &trans        &trans
+&trans        &trans        &trans        &trans        &trans        &trans    &trans        &trans        &trans        &trans        &trans        &trans
             >;
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
         };
@@ -102,6 +124,36 @@
 &kp LSHFT   &kp LC(R)  &kp N1   &kp N2  &kp N3     &none                                &none         &none         &none         &none       &none         &none
 &tog EXCEL  &kp UP     &kp N4   &kp N5  &kp N6     &kp LC(A)  &none        &none        &none         &none         &none         &none       &kp UP        &none
 &kp LEFT    &kp DOWN   &kp RET  &none   &kp SPACE  &none                                &none         &none         &none         &kp LEFT    &kp DOWN      &kp RIGHT
+            >;
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
+        };
+
+        sym_layer {
+            display-name = "Sym";
+            // | Esc   | !  | @    | #  | $    | %  |           | ^   | &  | *  | (  | )  | Bksp |
+            // | LShft | -  | =    | [  | ]    | \  |           | ;   | '  | ,  | .  | /  | Enter |
+            // | LOCK  | `  | ~    | _  | +    | |  | -- | --   | {   | }  | :  | "  | Up | -- |
+            // | 아래줄 전부 투명 |
+            bindings = <
+&kp ESC       &kp EXCL      &kp AT        &kp HASH      &kp DLLR      &kp PRCNT    &kp CARET     &kp AMPS      &kp STAR      &kp LPAR      &kp RPAR      &kp BSPC
+&kp LSHFT     &kp MINUS     &kp EQUAL     &kp LBKT      &kp RBKT      &kp BSLH    &kp SEMI      &kp SQT       &kp COMMA     &kp DOT       &kp FSLH      &kp RET
+&tog LOCK     &kp GRAVE     &kp TILDE     &kp UNDER     &kp PLUS      &kp PIPE    &trans        &trans    &kp LBRC      &kp RBRC      &kp COLON     &kp DQT       &kp UP        &trans
+&trans        &trans        &trans        &trans        &trans        &trans    &trans        &trans        &trans        &trans        &trans        &trans
+            >;
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
+        };
+
+        lock_layer {
+            display-name = "Lock";
+            // | Esc   | 1  | 2    | 3  | 4    | 5  |           | 6   | 7  | 8  | 9  | 0  | Bksp |
+            // | LShft | -  | =    | [  | ]    | \  |           | ;   | '  | ,  | .  | /  | Enter |
+            // | LOCK(끄기) | Ctrl+A | ` | ~ | _ | + | | | KP- | ( | ) | KP+ | KP* | Up | RShft |
+            // | LCtrl | LGui | LAlt | Enter | LOCK | M0 |    | LOCK | Space | RAlt | Left | Down | Right |
+            bindings = <
+&kp ESC       &kp N1        &kp N2        &kp N3        &kp N4        &kp N5    &kp N6        &kp N7        &kp N8        &kp N9        &kp N0        &kp BSPC
+&kp LSHFT     &kp MINUS     &kp EQUAL     &kp LBKT      &kp RBKT      &kp BSLH    &kp SEMI      &kp SQT       &kp COMMA     &kp DOT       &kp FSLH      &kp RET
+&tog LOCK     &kp LC(A)     &kp GRAVE     &kp TILDE     &kp UNDER     &kp PLUS    &kp PIPE      &kp KP_MINUS    &kp LPAR      &kp RPAR      &kp KP_PLUS   &kp KP_ASTERISK &kp UP        &kp RSHFT
+&kp LCTRL     &kp LGUI      &kp LALT      &kp RET       &tog LOCK     &m0    &tog LOCK     &kp SPACE     &kp RALT      &kp LEFT      &kp DOWN      &kp RIGHT
             >;
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
         };
